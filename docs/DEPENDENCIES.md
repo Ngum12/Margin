@@ -70,4 +70,5 @@ Dev transitive licences (from `package-lock.json`): MIT 203, Apache-2.0 18, ISC 
 - Node.js 24 / npm: frontend build.
 
 ## Planned
-- Phase 2: python-multipart (Apache-2.0) for PDF uploads, plus PDF and QR libraries; listed for approval at the start of Phase 2.
+- **Phase 2** (submitted for approval 2026-10-14): python-multipart 0.0.32, pypdfium2 5.14.0, reportlab 5.0.1, segno 1.6.6, zxing-cpp 3.1.1, pillow 12.3.0; transitive charset-normalizer 3.5.2. See the approval table in the conversation record; this file is updated with the final list on install.
+- **Phase 4** (owner request 2026-10-14): Playwright for real-browser tests of the review screen, dev only: `@playwright/test` (Apache-2.0, currently 1.64.0, depends on `playwright` and `playwright-core`, same licence). Browser binaries are a separate download (`npx playwright install`), which needs explicit approval under the no-ad-hoc-downloads rule; the alternative is driving the Microsoft Edge already installed on Windows (`channel: "msedge"`), which needs no download. Exact versions confirmed when Phase 4 starts.

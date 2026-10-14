@@ -3,9 +3,13 @@
 On-premise AI marking assistant for secondary schools. Full requirements: `PROJECT_BRIEF.md` (read it). Plan: `docs/PLAN.md`. Decisions: `docs/DECISIONS.md`. Out-of-scope ideas: `docs/BACKLOG.md`. Dependency licences: `docs/DEPENDENCIES.md`.
 
 ## Current phase
-**Phase 0: complete and approved.** **Phase 1 (accounts, classes, exams, mark schemes): built, awaiting owner review.** Do not start Phase 2 until the owner says so.
+**Phase 0: complete and approved.** **Phase 1: complete and approved (2026-10-14).** **Phase 2 (cover sheets, upload, split): dependency list sent for approval; not started.** Carried-forward Phase 2 requirements are in `docs/PLAN.md`.
 
 Workflow: one phase at a time → plan → build → `python scripts/check.py` passes → commit → stop and report. Never claim something works without running it. Record decisions and deviations in `docs/DECISIONS.md` first. Out-of-scope ideas go to `docs/BACKLOG.md`.
+
+## Commit and test-failure rules (permanent, set by the owner)
+- **Never commit until `python scripts/check.py` has passed in full and its output has been read.** Run the suite as its own step, read the summary, then commit in a separate step. Never chain a commit after a test command whose result has not been checked.
+- **A test that fails even once must be investigated, not just re-run.** Find the cause, fix it, and record the cause (or, if it cannot be reproduced, what was tried and the most likely cause) in the commit message and in `docs/DECISIONS.md` if it changes how tests are written.
 
 ## Dependency and package rules (permanent, set by the owner)
 - **Never run unvetted packages.** No `npx --yes`, no `npx <pkg>` for packages not already in the lockfile, no `pip install`/`uv tool run`/`uvx` of ad hoc tools, no curl/wget downloads of scripts or binaries.

@@ -213,3 +213,15 @@ i18n:
 ### Risks and open points for Phase 1
 - **Secure cookies on a school LAN.** `Secure` cookies are not sent over plain HTTP, and most school servers will be reached by IP over HTTP. Proposed: `MARGIN_COOKIE_SECURE` defaults to true in production; Phase 6 ships HTTPS with a locally generated certificate. Until then development runs with it false. Recorded as D-016; owner may want to weigh in.
 - French translations are draft until reviewed.
+
+---
+
+## Phase 2: requirements carried forward from owner review (2026-10-14)
+
+To be expanded into a full Phase 2 plan once dependencies are approved.
+
+- **Return to draft is blocked once scripts exist.** As soon as any script (or any page from an upload)
+  has been recorded for an exam, `ready -> draft` is refused with `409 exam.has_scripts`, because the
+  mark scheme must not change under uploaded work. Translated in English and French. Test: upload a
+  synthetic scan for a ready exam, then assert the transition is refused and the exam stays `ready`.
+- Phase 1 status rules otherwise stay as they are (D-014, D-024).

@@ -22,3 +22,7 @@ Ideas and features deliberately not built yet. Add here instead of expanding sco
 - Admin audit-log viewer and export.
 - Real-browser end-to-end tests (for example Playwright; needs dependency approval). Phase 1 UI is covered by jsdom component tests plus an HTTP end-to-end script.
 - Editing exam details after `ready` (for example fixing a title typo during marking).
+- Rendering of maths and chemistry notation in transcriptions and mark schemes: superscripts (x^2,
+  Na^+), subscripts (H_2O), fractions ((a+b)/(c-d)), square roots and reaction arrows, shown as formatted
+  text in the review screen while the stored text keeps the agreed plain notation. Must be bundled
+  locally (no CDN), and its licence approved like any dependency.
