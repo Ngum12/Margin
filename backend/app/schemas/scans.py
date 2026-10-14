@@ -4,6 +4,7 @@ from pydantic import Field
 
 from app.db.models import PageState, ScriptStatus, UnassignedReason, UploadStatus
 from app.schemas.common import ApiModel
+from app.services.page_counts import PageCountFlag
 
 
 class CoverSheetRowOut(ApiModel):
@@ -51,10 +52,14 @@ class ScriptOut(ApiModel):
     student: StudentRef
     status: ScriptStatus
     pages: list[PageOut]
+    # Set when the page count is unusually far from the class's typical count (D-036).
+    page_count_flag: PageCountFlag | None = None
 
 
 class ScriptsOut(ApiModel):
     scripts: list[ScriptOut]
+    # Median pages per script (cover included); None with fewer than 3 scripts.
+    typical_page_count: int | None
     # Students of the class with no script yet.
     missing: list[StudentRef]
 

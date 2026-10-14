@@ -306,7 +306,7 @@
       "before_first_cover": "Se trouve avant la première fiche de couverture du fichier.",
       "follows_unassigned_cover": "Suit une fiche de couverture qui n'a pas pu être placée.",
       "qr_damaged": "Fiche de couverture dont le code QR est abîmé.",
-      "qr_unreadable": "Ressemble à une fiche de couverture, mais aucun code QR n'a pu être lu.",
+      "qr_unreadable": "Fiche de couverture trouvée, mais code illisible.",
       "qr_conflict": "Deux codes QR différents sur la même page.",
       "qr_not_ours": "Fiche de couverture avec un code QR qui ne provient pas de ce système.",
       "qr_bad_checksum": "Code QR mal lu (contrôle échoué).",
@@ -315,6 +315,11 @@
       "duplicate_in_upload": "La même fiche de couverture apparaît deux fois dans ce fichier.",
       "already_uploaded": "Cet élève a déjà des pages issues d'un téléversement précédent.",
       "returned_by_teacher": "Remise dans les pages non attribuées par un enseignant."
+    },
+    "pageFlag": {
+      "no_answer_pages": "À vérifier : seulement une fiche de couverture, aucune page de réponse.",
+      "more_than_usual": "À vérifier : plus de pages que d'habitude (habituel : {{typical}}). Les pages d'un autre élève ont peut-être été ajoutées.",
+      "fewer_than_usual": "À vérifier : moins de pages que d'habitude (habituel : {{typical}}). Des pages manquent peut-être."
     }
   }
 }

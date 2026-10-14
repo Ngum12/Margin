@@ -306,7 +306,7 @@
       "before_first_cover": "Comes before the first cover sheet in the file.",
       "follows_unassigned_cover": "Follows a cover sheet that could not be placed.",
       "qr_damaged": "Cover sheet with a damaged QR code.",
-      "qr_unreadable": "Looks like a cover sheet, but no QR code could be read.",
+      "qr_unreadable": "Cover sheet found but code unreadable.",
       "qr_conflict": "Two different QR codes on one page.",
       "qr_not_ours": "Cover sheet with a QR code that was not made by this system.",
       "qr_bad_checksum": "QR code read incorrectly (failed its check).",
@@ -315,6 +315,11 @@
       "duplicate_in_upload": "The same cover sheet appears twice in this file.",
       "already_uploaded": "This student already has pages from an earlier upload.",
       "returned_by_teacher": "Returned to the tray by a teacher."
+    },
+    "pageFlag": {
+      "no_answer_pages": "Check: only a cover sheet, no answer pages.",
+      "more_than_usual": "Check: more pages than usual (typical: {{typical}}). Another student's pages may have been added.",
+      "fewer_than_usual": "Check: fewer pages than usual (typical: {{typical}}). Some pages may be missing."
     }
   }
 }

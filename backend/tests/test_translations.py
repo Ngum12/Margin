@@ -10,6 +10,7 @@ import pytest
 
 from app import errors
 from app.db.models import UnassignedReason
+from app.services.page_counts import PageCountFlag
 
 REPO = Path(__file__).resolve().parents[2]
 APP_DIR = REPO / "backend" / "app"
@@ -81,3 +82,10 @@ def test_every_tray_reason_is_translated(language: str) -> None:
     ]
 
     assert missing == []
+
+
+@pytest.mark.parametrize("language", ["en", "fr"])
+def test_every_page_count_flag_is_translated(language: str) -> None:
+    locale = json.loads((LOCALES / f"{language}.json").read_text(encoding="utf-8"))
+
+    assert all(isinstance(_lookup(locale, f"scans.pageFlag.{f.value}"), str) for f in PageCountFlag)

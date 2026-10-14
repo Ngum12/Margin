@@ -14,7 +14,14 @@ from app.sheets.cover_pdf import SheetInfo, SheetStudent, build_cover_sheets_pdf
 from app.sheets.tokens import new_token
 from tests.conftest import World
 from tests.factories import ApiUser, Factory, make_ready_exam, upload_pdf
-from tests.scan_builder import ScanBuilder, answer_page, damage_qr, erase_qr, render_pdf_pages
+from tests.scan_builder import (
+    ScanBuilder,
+    answer_page,
+    damage_qr,
+    erase_frame,
+    erase_qr,
+    render_pdf_pages,
+)
 
 CODES = ["AAAAAA", "BBBBBB", "CCCCCC", "DDDDDD", "EEEEEE", "FFFFFF"]
 
@@ -228,3 +235,69 @@ def test_cover_images_are_upright_after_rotation(
     bottom = sum(dark(x, y) for y in range(35, 70) for x in range(50))
     assert page.state == PageState.ASSIGNED
     assert top > bottom
+
+
+def test_cover_with_unreadable_code_is_never_merged_into_previous_script(
+    alice: ApiUser, setup: dict[str, Any], db: Session
+) -> None:
+    """Owner fix 2026-10-14: frame found but code unreadable -> tray, with its following pages."""
+    c = setup["covers"]
+    scan = (
+        ScanBuilder()
+        .add(c["AAAAAA"])
+        .add(answer_page(1))
+        .add(answer_page(2))
+        .add(erase_qr(c["BBBBBB"]))
+        .add(answer_page(3))
+        .add(answer_page(4))
+        .add(c["CCCCCC"])
+        .add(answer_page(5))
+    ).build()
+
+    upload = upload_pdf(alice, setup["exam"]["id"], scan).json()
+
+    placements = _placements(db, upload["id"])
+    assert [p[1] for p in placements] == ["AAAAAA"] * 3 + [None] * 3 + ["CCCCCC"] * 2
+    assert [p[2] for p in placements[3:6]] == [
+        "qr_unreadable",
+        "follows_unassigned_cover",
+        "follows_unassigned_cover",
+    ]
+    scripts = alice.get(f"/api/exams/{setup['exam']['id']}/scripts").json()
+    pages = {s["student"]["code"]: len(s["pages"]) for s in scripts["scripts"]}
+    assert pages == {"AAAAAA": 3, "CCCCCC": 2}
+
+
+def test_unusual_page_count_is_flagged_when_a_cover_is_completely_unreadable(
+    alice: ApiUser, setup: dict[str, Any]
+) -> None:
+    """Residual risk of D-029: codes and frame both destroyed, so the cover looks like an answer
+    page and joins the previous script. The page-count check (D-036) flags it for the teacher."""
+    c = setup["covers"]
+    builder = ScanBuilder()
+    for i, code in enumerate(["AAAAAA", "BBBBBB", "CCCCCC", "DDDDDD"]):
+        builder.add(c[code]).add(answer_page(10 * i)).add(answer_page(10 * i + 1))
+    # EEEEEE's cover is unrecognisable; its pages will follow DDDDDD's.
+    builder.add(erase_frame(erase_qr(c["EEEEEE"]))).add(answer_page(50)).add(answer_page(51))
+
+    upload_pdf(alice, setup["exam"]["id"], builder.build())
+
+    overview = alice.get(f"/api/exams/{setup['exam']['id']}/scripts").json()
+    flags = {s["student"]["code"]: s["page_count_flag"] for s in overview["scripts"]}
+    assert overview["typical_page_count"] == 3
+    assert flags == {"AAAAAA": None, "BBBBBB": None, "CCCCCC": None, "DDDDDD": "more_than_usual"}
+    assert "EEEEEE" in [m["code"] for m in overview["missing"]]
+
+
+def test_script_with_only_a_cover_is_flagged(alice: ApiUser, setup: dict[str, Any]) -> None:
+    c = setup["covers"]
+    upload_pdf(
+        alice,
+        setup["exam"]["id"],
+        ScanBuilder().add(c["AAAAAA"]).add(c["BBBBBB"]).add(answer_page(1)).build(),
+    )
+
+    overview = alice.get(f"/api/exams/{setup['exam']['id']}/scripts").json()
+
+    flags = {s["student"]["code"]: s["page_count_flag"] for s in overview["scripts"]}
+    assert flags == {"AAAAAA": "no_answer_pages", "BBBBBB": None}

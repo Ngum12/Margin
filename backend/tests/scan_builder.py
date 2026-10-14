@@ -76,6 +76,18 @@ def erase_qr(cover: Image.Image) -> Image.Image:
     return erased
 
 
+def erase_frame(cover: Image.Image) -> Image.Image:
+    """Remove the thick frame (e.g. trimmed or washed out by the scanner)."""
+    erased = cover.copy()
+    draw = ImageDraw.Draw(erased)
+    scale = cover.width / 210
+    band = round((FRAME_INSET_MM + FRAME_WIDTH_MM + 1) * scale)
+    w, h = cover.size
+    for box in [(0, 0, w, band), (0, h - band, w, h), (0, 0, band, h), (w - band, 0, w, h)]:
+        draw.rectangle(box, fill="white")
+    return erased
+
+
 @dataclass
 class ScanPage:
     image: Image.Image

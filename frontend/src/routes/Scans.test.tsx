@@ -56,6 +56,7 @@ function setup(language: "en" | "fr" = "en") {
     200,
     {
       scripts: [],
+      typical_page_count: null,
       missing: [
         { id: 1, code: "AAAAAA", display_name: "Ama Fon" },
         { id: 2, code: "BBBBBB", display_name: null },
@@ -163,6 +164,44 @@ describe("scans screen", () => {
 
     expect(await screen.findByText(fr.errors.upload.pdf_unreadable)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: fr.scans.retry })).toBeInTheDocument();
+  });
+});
+
+describe("page count check", () => {
+  it("asks the teacher to check a script with unusually many pages", async () => {
+    const api = setup();
+    const page = trayPage({ state: "assigned", unassigned_reason: null });
+    const student = (id: number, code: string) => ({ id, code, display_name: null });
+    api.on("GET /api/exams/7/scripts", [
+      200,
+      {
+        scripts: [
+          {
+            id: 1,
+            student: student(1, "AAAAAA"),
+            status: "waiting",
+            pages: Array(8).fill(page),
+            page_count_flag: "more_than_usual",
+          },
+          {
+            id: 2,
+            student: student(2, "BBBBBB"),
+            status: "waiting",
+            pages: Array(3).fill(page),
+            page_count_flag: null,
+          },
+        ],
+        typical_page_count: 3,
+        missing: [],
+      },
+    ]);
+    renderApp("/exams/7/scans");
+
+    expect(
+      await screen.findByText(
+        "Check: more pages than usual (typical: 3). Another student's pages may have been added.",
+      ),
+    ).toBeInTheDocument();
   });
 });
 

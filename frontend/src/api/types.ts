@@ -166,14 +166,18 @@ export interface StudentRef {
   display_name: string | null;
 }
 
+export type PageCountFlag = "no_answer_pages" | "more_than_usual" | "fewer_than_usual";
+
 export interface ScriptWithPages {
   id: number;
   student: StudentRef;
   status: string;
   pages: ScanPage[];
+  page_count_flag: PageCountFlag | null;
 }
 
 export interface ScriptsOverview {
   scripts: ScriptWithPages[];
+  typical_page_count: number | null;
   missing: StudentRef[];
 }

@@ -75,5 +75,5 @@ Dev transitive licences (from `package-lock.json`): MIT 203, Apache-2.0 18, ISC 
 - Node.js 24 / npm: frontend build.
 
 ## Planned
-- **Phase 2:** installed as approved, except python-multipart 0.0.32 (approved, not installed; D-027).
+- **Phase 2:** installed as approved. python-multipart was approved but not needed (D-027) and has been removed from the approved list (owner, 2026-10-14); adding it later needs a new approval.
 - **Phase 4** (owner request 2026-10-14): Playwright for real-browser tests of the review screen, dev only: `@playwright/test` (Apache-2.0, currently 1.64.0, depends on `playwright` and `playwright-core`, same licence). Browser binaries are a separate download (`npx playwright install`), which needs explicit approval under the no-ad-hoc-downloads rule; the alternative is driving the Microsoft Edge already installed on Windows (`channel: "msedge"`), which needs no download. Exact versions confirmed when Phase 4 starts.

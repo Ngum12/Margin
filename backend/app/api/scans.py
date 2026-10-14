@@ -26,6 +26,7 @@ from app.schemas.scans import (
 from app.services import cover_sheets
 from app.services import uploads as upload_service
 from app.services.access import visible_exams
+from app.services.page_counts import page_count_flag, typical_page_count
 from app.services.upload_processor import UploadProcessor
 
 router = APIRouter(tags=["scans"])
@@ -222,6 +223,7 @@ def _student_ref(student: Student) -> StudentRef:
 def list_scripts(exam_id: int, db: DbSession, user: CurrentUser) -> ScriptsOut:
     scripts = upload_service.list_scripts(db, user, exam_id)
     missing = upload_service.students_without_scripts(db, user, exam_id)
+    typical = typical_page_count([len(s.pages) for s in scripts])
     return ScriptsOut(
         scripts=[
             ScriptOut(
@@ -229,9 +231,11 @@ def list_scripts(exam_id: int, db: DbSession, user: CurrentUser) -> ScriptsOut:
                 student=_student_ref(s.student),
                 status=s.status,
                 pages=[_page_out(p, {}) for p in s.pages],
+                page_count_flag=page_count_flag(len(s.pages), typical),
             )
             for s in scripts
         ],
+        typical_page_count=typical,
         missing=[_student_ref(st) for st in missing],
     )
 

@@ -365,6 +365,13 @@ function ScriptList({
                   {t("scans.pageCount", { count: script.pages.length })}
                 </span>
               </button>
+              {script.page_count_flag && (
+                <p className="warning-text">
+                  {t(`scans.pageFlag.${script.page_count_flag}`, {
+                    typical: overview.typical_page_count ?? "?",
+                  })}
+                </p>
+              )}
               {open === script.id && (
                 <ul className="page-grid">
                   {script.pages.map((page) => (

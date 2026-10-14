@@ -133,7 +133,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-027 · 2026-10-14 · Uploads streamed as a raw PDF body; python-multipart not installed
 - **Decision:** `POST /api/exams/{id}/uploads` takes the PDF as the raw request body (`Content-Type: application/pdf`) with the file name URL-encoded in `X-Filename`. The server streams it straight into `MARGIN_DATA_DIR/uploads/incoming/`, enforcing `MARGIN_MAX_UPLOAD_MB` and computing SHA-256 on the way, then checks for `%PDF-`. One request per file.
 - **Alternatives:** multipart form upload with `python-multipart` (approved 2026-10-14).
-- **Reason:** with multipart, Starlette spools file parts to the system temp folder before our code sees them, with no size limit on file parts; streaming the raw body keeps the size limit, the checksum and the storage location under our control. `python-multipart` is therefore not installed; the approval is unused.
+- **Reason:** with multipart, Starlette spools file parts to the system temp folder before our code sees them, with no size limit on file parts; streaming the raw body keeps the size limit, the checksum and the storage location under our control. `python-multipart` is therefore not installed, and the owner removed it from the approved list (2026-10-14).
 
 ### D-028 · 2026-10-14 · PDF rendering and QR reading in a child process with a timeout
 - **Decision:** `app/pdf/render_worker.py` runs as `python -m app.pdf.render_worker` (started by `app/pdf/runner.py` with `subprocess.run(..., timeout=MARGIN_RENDER_TIMEOUT_SECONDS)`). It opens the PDF with PDFium, renders every page, reads QR codes and detects the cover frame, writes JPEGs and finally `manifest.json` atomically. Exit codes map to `upload.pdf_unreadable`, `upload.too_many_pages`; a missing manifest or other exit code is `upload.render_crashed`; a timeout kills the child and gives `upload.render_timeout`. Renders are capped at 40 megapixels per page.
@@ -169,3 +169,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-035 · 2026-10-14 · Exams with uploads cannot return to draft
 - **Decision:** `ready -> draft` is refused with `409 exam.has_scripts` once any upload exists for the exam.
 - **Reason:** owner requirement; the mark scheme must not change under scanned work.
+
+### D-036 · 2026-10-14 · Unreadable covers and unusual page counts (owner fix after Phase 2)
+- **Decision:** a page with the cover frame but no readable QR goes to the tray with its following pages, reason "Cover sheet found but code unreadable" (`qr_unreadable`; this was already the behaviour, now worded as the owner asked and covered by a dedicated real-image test). In addition, every script gets a page-count check: typical = median pages per script (cover included) once the exam has at least 3 scripts; a script is flagged when it has only a cover sheet, or its count is at least `max(2, round(typical / 2))` pages above or below typical. The Scans screen shows a "check this script" note; nothing is changed automatically.
+- **Reason:** owner requirement. Catches the residual risk in D-029 (cover with codes *and* frame unreadable, merged into the previous script), tested end to end.
