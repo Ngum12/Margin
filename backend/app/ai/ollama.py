@@ -76,8 +76,8 @@ class OllamaReader:
     def _ask(self, prompt: str, image: bytes) -> str:
         error = ModelOutputInvalidError("no_attempt")
         for _ in range(self._retries + 1):
-            raw = self._client.chat_json(self.model.name, prompt, READER_SCHEMA, images=[image])
             try:
+                raw = self._client.chat_json(self.model.name, prompt, READER_SCHEMA, images=[image])
                 return parse_reader_output(raw)
             except ModelOutputInvalidError as exc:
                 logger.warning("Reader output invalid (%s)", exc)
@@ -126,8 +126,8 @@ class OllamaMarker:
         )
         error = ModelOutputInvalidError("no_attempt")
         for _ in range(self._retries + 1):
-            raw = self._client.chat_json(self.model.name, prompt, MARKER_SCHEMA)
             try:
+                raw = self._client.chat_json(self.model.name, prompt, MARKER_SCHEMA)
                 return parse_marker_output(raw, question, answer)
             except ModelOutputInvalidError as exc:
                 error = exc

@@ -19,7 +19,9 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
+from app.ai.eval_cache import EvalCache, text_hash
 from app.ai.types import (
     ExamSpec,
     Marker,
@@ -187,15 +189,33 @@ def evaluate_marking(
     specs: dict[str, ExamSpec],
     expected: dict[tuple[str, str, str], Expected],
     progress: Callable[[str], None] | None = None,
+    cache: EvalCache | None = None,
+    cache_prefix: str = "",
 ) -> MarkingSummary:
     """``scripts``: (subject, student, answer text) to mark."""
     summary = MarkingSummary()
     for subject, student, answer in scripts:
-        comparisons, seconds = compare_script(
-            marker, specs[subject], subject, student, answer, expected
-        )
-        summary.comparisons.extend(comparisons)
-        summary.seconds.append(seconds)
+        key = f"mark|{cache_prefix}|{subject}/{student}|{text_hash(answer)}"
+        cached = cache.get(key) if cache else None
+        note = " (cached)"
+        if cached is None:
+            comparisons, seconds = compare_script(
+                marker, specs[subject], subject, student, answer, expected
+            )
+            cached = {"comparisons": [_to_json(c) for c in comparisons], "seconds": seconds}
+            if cache:
+                cache.put(key, cached)
+            note = ""
+        summary.comparisons.extend(_from_json(c) for c in cached["comparisons"])
+        summary.seconds.append(cached["seconds"])
         if progress:
-            progress(f"  marked {subject}/{student}: {seconds:.1f}s")
+            progress(f"  marked {subject}/{student}: {cached['seconds']:.1f}s{note}")
     return summary
+
+
+def _to_json(c: QuestionComparison) -> dict[str, Any]:
+    return {**vars(c), "proposed_categories": list(c.proposed_categories)}
+
+
+def _from_json(data: dict[str, Any]) -> QuestionComparison:
+    return QuestionComparison(**{**data, "proposed_categories": tuple(data["proposed_categories"])})

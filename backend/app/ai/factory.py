@@ -8,7 +8,13 @@ from app.config import Settings
 
 
 def ollama_client(settings: Settings) -> OllamaClient:
-    return OllamaClient(settings.model_base_url, settings.model_timeout_seconds)
+    return OllamaClient(
+        settings.model_base_url,
+        settings.model_timeout_seconds,
+        think=settings.model_think,
+        max_output_tokens=settings.model_max_output_tokens,
+        context_tokens=settings.model_context_tokens,
+    )
 
 
 def build_reader(settings: Settings) -> Reader:

@@ -10,11 +10,18 @@ import json
 from typing import Any
 from urllib.parse import urlsplit
 
-from app.ai.types import ModelUnavailableError
+from app.ai.types import ModelOutputInvalidError, ModelUnavailableError
 
 
 class OllamaClient:
-    def __init__(self, base_url: str, timeout_seconds: float) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: float,
+        think: bool | None = None,
+        max_output_tokens: int | None = None,
+        context_tokens: int | None = None,
+    ) -> None:
         parts = urlsplit(base_url)
         if parts.scheme not in ("http", "https") or not parts.hostname:
             raise ValueError("model_base_url must be an http(s) URL")
@@ -23,6 +30,13 @@ class OllamaClient:
         self._port = parts.port or (443 if self._https else 80)
         self._prefix = parts.path.rstrip("/")
         self._timeout = timeout_seconds
+        # None: leave it to the model's default; True/False: Ollama's "think" switch.
+        self._think = think
+        self._options: dict[str, Any] = {"temperature": 0}
+        if max_output_tokens is not None:
+            self._options["num_predict"] = max_output_tokens
+        if context_tokens is not None:
+            self._options["num_ctx"] = context_tokens
 
     def _request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
         connection_class = (
@@ -73,19 +87,22 @@ class OllamaClient:
         message: dict[str, Any] = {"role": "user", "content": prompt}
         if images:
             message["images"] = [base64.b64encode(image).decode("ascii") for image in images]
-        data = self._request(
-            "POST",
-            "/api/chat",
-            {
-                "model": model,
-                "messages": [message],
-                "stream": False,
-                "format": schema,
-                "options": {"temperature": 0},
-                "keep_alive": "30m",
-            },
-        )
+        body: dict[str, Any] = {
+            "model": model,
+            "messages": [message],
+            "stream": False,
+            "format": schema,
+            "options": self._options,
+            "keep_alive": "30m",
+        }
+        if self._think is not None:
+            body["think"] = self._think
+        data = self._request("POST", "/api/chat", body)
         content = data.get("message", {}).get("content")
         if not isinstance(content, str):
             raise ModelUnavailableError("bad_response")
+        if data.get("done_reason") == "length":
+            # Cut off at the output cap (or the context filled up, e.g. by long "thinking"):
+            # whatever came back is incomplete and must not be used.
+            raise ModelOutputInvalidError("output_cut_off")
         return content

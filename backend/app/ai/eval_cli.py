@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app.ai.eval_cache import EvalCache
 from app.ai.evaluation import SubjectReport, evaluate, find_scripts
 from app.ai.factory import build_marker, build_reader, ollama_client
 from app.ai.marking_evaluation import (
@@ -55,6 +56,11 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         help="mark the model's transcription, the true transcription, or both",
     )
     parser.add_argument("--report", type=Path, help="write a JSON report here")
+    parser.add_argument(
+        "--cache",
+        type=Path,
+        help="resume file (default: next to --report); finished calls are skipped on rerun",
+    )
 
 
 @dataclass
@@ -219,15 +225,31 @@ def run(args: argparse.Namespace) -> int:
             for code in scripts
         }
 
+    cache_path = args.cache or (args.report.with_suffix(".cache.jsonl") if args.report else None)
+    cache = EvalCache(cache_path) if cache_path else None
+    if cache is not None:
+        print(f"Resume file: {cache_path} ({len(cache)} finished calls)", flush=True)
+
     runs = []
     for model in _models(settings, args.models):
         model_settings = settings.model_copy(update={"reader_model": model, "marker_model": model})
         reader = build_reader(model_settings)
+        marker = build_marker(model_settings)
+        prefix = (
+            f"{model}|{reader.model.version}|{reader.prompt_version}|{marker.prompt_version}"
+            f"|px={settings.reader_max_image_px}|think={settings.model_think}"
+        )
         print(f"\n== {model} ({reader.model.version}), prompt {reader.prompt_version}", flush=True)
-        reading = evaluate(reader, scripts, subject_config, progress=lambda m: print(m, flush=True))
+        reading = evaluate(
+            reader,
+            scripts,
+            subject_config,
+            progress=lambda m: print(m, flush=True),
+            cache=cache,
+            cache_prefix=prefix,
+        )
         marking: dict[str, MarkingSummary] = {}
         if expected is not None:
-            marker = build_marker(model_settings)
             sources = ["reader", "truth"] if args.marking_input == "both" else [args.marking_input]
             for source in sources:
                 items = [
@@ -242,7 +264,13 @@ def run(args: argparse.Namespace) -> int:
                     for s in r.scripts
                 ]
                 marking[source] = evaluate_marking(
-                    marker, items, specs, expected, progress=lambda m: print(m, flush=True)
+                    marker,
+                    items,
+                    specs,
+                    expected,
+                    progress=lambda m: print(m, flush=True),
+                    cache=cache,
+                    cache_prefix=f"{prefix}|{source}",
                 )
         runs.append(ModelRun(model, reader.model.version, reader.prompt_version, reading, marking))
 

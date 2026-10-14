@@ -39,12 +39,22 @@ class Settings(BaseSettings):
 
     # AI backend: "mock" (deterministic, no model server) or "ollama".
     ai_backend: Literal["mock", "ollama"] = "mock"
-    reader_model: str = "qwen3-vl:8b"
-    marker_model: str = "qwen3-vl:8b"
+    # Instruct variants: the plain qwen3-vl tags are "thinking" models (D-046).
+    reader_model: str = "qwen3-vl:8b-instruct"
+    marker_model: str = "qwen3-vl:8b-instruct"
     # Seconds to wait for one model reply; slow machines may need a lot (see the Phase 3 report).
     model_timeout_seconds: int = Field(default=900, ge=5)
     # Extra attempts when the model replies with output that fails validation.
     model_output_retries: int = Field(default=2, ge=0, le=5)
+    # Models with a "thinking" mode (e.g. Qwen3-VL) reason before replying when this is true.
+    # Off by default: much faster on modest hardware; see docs/DECISIONS.md D-046.
+    model_think: bool = False
+    # Hard cap on tokens per model reply: a model that rambles (or reasons at length) is cut off
+    # and its reply treated as invalid, instead of occupying the machine for many minutes.
+    model_max_output_tokens: int = Field(default=2048, ge=64)
+    # Model context window (prompt + image + reply). Ollama's default of 4096 is too small for a
+    # page image plus prompt plus reply.
+    model_context_tokens: int = Field(default=8192, ge=2048)
     # Page images are shrunk to at most this many pixels on the long side before sending.
     reader_max_image_px: int = Field(default=1600, ge=512, le=4000)
     # Mock models only: artificial delay per call in seconds (demos and tests).

@@ -25,6 +25,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.ai.eval_cache import EvalCache
 from app.ai.types import ModelOutputInvalidError, PageImage, Reader
 from app.subjects.registry import SubjectConfig
 
@@ -179,6 +180,8 @@ def evaluate(
     scripts: dict[str, list[EvalScript]],
     subject_config: Callable[[str], SubjectConfig],
     progress: Callable[[str], None] | None = None,
+    cache: EvalCache | None = None,
+    cache_prefix: str = "",
 ) -> list[SubjectReport]:
     reports = []
     for subject, items in scripts.items():
@@ -189,16 +192,31 @@ def evaluate(
             seconds: list[float] = []
             invalid = 0
             for index, image in enumerate(script.images):
-                started = time.monotonic()
-                try:
-                    # sidecar_text is deliberately None: the Reader never sees the ground truth.
-                    result = reader.transcribe([PageImage(index, image, None)], config)
-                    texts.append(result.pages[0].text)
-                except ModelOutputInvalidError:
+                key = f"read|{cache_prefix}|{subject}/{script.name}/{image.name}"
+                cached = cache.get(key) if cache else None
+                note = " (cached)"
+                if cached is None:
+                    started = time.monotonic()
+                    text: str | None
+                    try:
+                        # sidecar_text is deliberately None: the Reader never sees the ground truth.
+                        result = reader.transcribe([PageImage(index, image, None)], config)
+                        text = result.pages[0].text
+                    except ModelOutputInvalidError:
+                        text = None
+                    cached = {"text": text, "seconds": time.monotonic() - started}
+                    if cache:
+                        cache.put(key, cached)
+                    note = ""
+                if cached["text"] is None:
                     invalid += 1
-                seconds.append(time.monotonic() - started)
+                else:
+                    texts.append(cached["text"])
+                seconds.append(cached["seconds"])
                 if progress:
-                    progress(f"  read {subject}/{script.name}/{image.name}: {seconds[-1]:.1f}s")
+                    progress(
+                        f"  read {subject}/{script.name}/{image.name}: {seconds[-1]:.1f}s{note}"
+                    )
             transcription = "\n".join(texts)
             report.scripts.append(
                 ScriptResult(

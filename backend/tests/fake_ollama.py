@@ -8,11 +8,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 Reply = str | Callable[[dict[str, Any]], str]
+# Prefix a scripted reply with this to make the fake report done_reason "length".
+CUT_OFF = "<<cut-off>>"
 
 
 class FakeOllama:
     def __init__(self, models: dict[str, str] | None = None) -> None:
-        self.models = models if models is not None else {"qwen3-vl:8b": "sha256:" + "ab" * 32}
+        self.models = (
+            models if models is not None else {"qwen3-vl:8b-instruct": "sha256:" + "ab" * 32}
+        )
         self.requests: list[dict[str, Any]] = []
         self.replies: deque[Reply] = deque()
         self.default_reply: Reply = json.dumps({"text": "fake transcription"})
@@ -65,12 +69,16 @@ class FakeOllama:
                     return
                 reply = fake.replies.popleft() if fake.replies else fake.default_reply
                 content = reply(body) if callable(reply) else reply
+                done_reason = "stop"
+                if content.startswith(CUT_OFF):
+                    content, done_reason = content.removeprefix(CUT_OFF), "length"
                 self._send(
                     200,
                     {
                         "model": body["model"],
                         "message": {"role": "assistant", "content": content},
                         "done": True,
+                        "done_reason": done_reason,
                     },
                 )
 

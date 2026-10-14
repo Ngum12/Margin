@@ -41,9 +41,9 @@ function aiStatus(overrides: Partial<AiStatus> = {}): AiStatus {
       worker_online: true,
       ai_backend: "ollama",
       model_server_reachable: true,
-      reader_model: "qwen3-vl:8b",
+      reader_model: "qwen3-vl:8b-instruct",
       reader_model_installed: true,
-      marker_model: "qwen3-vl:8b",
+      marker_model: "qwen3-vl:8b-instruct",
       marker_model_installed: true,
     },
     ...overrides,
@@ -255,7 +255,7 @@ describe("AI marking panel", () => {
 
     expect(await screen.findByText(en.ai.workerOffline)).toBeInTheDocument();
     expect(
-      screen.getByText("The AI model qwen3-vl:8b is not installed on the model server."),
+      screen.getByText("The AI model qwen3-vl:8b-instruct is not installed on the model server."),
     ).toBeInTheDocument();
   });
 

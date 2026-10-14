@@ -25,7 +25,7 @@ from app.ai.types import (
 from app.ai.validation import MARKER_SCHEMA, READER_SCHEMA
 from app.clock import utcnow
 from app.subjects.registry import SubjectConfig, get_registry
-from tests.fake_ollama import FakeOllama
+from tests.fake_ollama import CUT_OFF, FakeOllama
 
 
 def _chemistry() -> SubjectConfig:
@@ -56,9 +56,9 @@ def client(fake: FakeOllama) -> OllamaClient:
 
 
 def test_resolve_model_uses_the_installed_digest(fake: FakeOllama) -> None:
-    model = resolve_model(client(fake), "qwen3-vl:8b")
+    model = resolve_model(client(fake), "qwen3-vl:8b-instruct")
 
-    assert model == ModelInfo("qwen3-vl:8b", "sha256:ababa", "ollama")
+    assert model == ModelInfo("qwen3-vl:8b-instruct", "sha256:ababa", "ollama")
 
 
 def test_missing_model_is_reported_as_unavailable(fake: FakeOllama) -> None:
@@ -78,7 +78,10 @@ def test_reader_request_is_deterministic_schema_constrained_and_shrinks_images(
 ) -> None:
     fake.replies.append(json.dumps({"text": "H_2O is a compound"}))
     reader = OllamaReader(
-        client(fake), resolve_model(client(fake), "qwen3-vl:8b"), max_image_px=800, output_retries=0
+        client(fake),
+        resolve_model(client(fake), "qwen3-vl:8b-instruct"),
+        max_image_px=800,
+        output_retries=0,
     )
 
     result = reader.transcribe([page], CHEMISTRY)
@@ -99,7 +102,10 @@ def test_reader_request_is_deterministic_schema_constrained_and_shrinks_images(
 def test_reader_retries_invalid_output_then_gives_up(fake: FakeOllama, page: PageImage) -> None:
     fake.replies.extend(["not json", '{"text": 3}', '{"wrong": "x"}'])
     reader = OllamaReader(
-        client(fake), ModelInfo("qwen3-vl:8b", "x", "ollama"), max_image_px=800, output_retries=2
+        client(fake),
+        ModelInfo("qwen3-vl:8b-instruct", "x", "ollama"),
+        max_image_px=800,
+        output_retries=2,
     )
 
     with pytest.raises(ModelOutputInvalidError):
@@ -110,7 +116,10 @@ def test_reader_retries_invalid_output_then_gives_up(fake: FakeOllama, page: Pag
 def test_reader_recovers_when_a_retry_is_valid(fake: FakeOllama, page: PageImage) -> None:
     fake.replies.extend(["not json", '{"text": "ok"}'])
     reader = OllamaReader(
-        client(fake), ModelInfo("qwen3-vl:8b", "x", "ollama"), max_image_px=800, output_retries=2
+        client(fake),
+        ModelInfo("qwen3-vl:8b-instruct", "x", "ollama"),
+        max_image_px=800,
+        output_retries=2,
     )
 
     assert reader.transcribe([page], CHEMISTRY).pages[0].text == "ok"
@@ -156,7 +165,9 @@ def test_marker_marks_each_question_separately_with_schema(fake: FakeOllama) -> 
             _points((20, 1, "hydrogen")),
         ]
     )
-    marker = OllamaMarker(client(fake), ModelInfo("qwen3-vl:8b", "x", "ollama"), output_retries=0)
+    marker = OllamaMarker(
+        client(fake), ModelInfo("qwen3-vl:8b-instruct", "x", "ollama"), output_retries=0
+    )
 
     proposal = marker.mark(
         _answer("1(a) it conducts electricity\n1(b) hydrogen"), ExamSpec(CHEMISTRY, QUESTIONS)
@@ -174,7 +185,9 @@ def test_marker_marks_each_question_separately_with_schema(fake: FakeOllama) -> 
 def test_marker_failure_on_one_question_is_reported_not_invented(fake: FakeOllama) -> None:
     invented = _points((10, 1, "metals are excellent conductors"), (11, 0, ""))
     fake.replies.extend([invented, invented, _points((20, 1, "hydrogen"))])
-    marker = OllamaMarker(client(fake), ModelInfo("qwen3-vl:8b", "x", "ollama"), output_retries=1)
+    marker = OllamaMarker(
+        client(fake), ModelInfo("qwen3-vl:8b-instruct", "x", "ollama"), output_retries=1
+    )
 
     proposal = marker.mark(
         _answer("1(a) it conducts\n1(b) hydrogen"), ExamSpec(CHEMISTRY, QUESTIONS)
@@ -189,7 +202,7 @@ def test_prompts_never_contain_student_identity(fake: FakeOllama, page: PageImag
     fake.replies.extend(
         [json.dumps({"text": "x"}), _points((10, 0, ""), (11, 0, "")), _points((20, 0, ""))]
     )
-    model = ModelInfo("qwen3-vl:8b", "x", "ollama")
+    model = ModelInfo("qwen3-vl:8b-instruct", "x", "ollama")
     OllamaReader(client(fake), model, max_image_px=800, output_retries=0).transcribe(
         [page], CHEMISTRY
     )
@@ -211,3 +224,37 @@ def test_prompts_never_contain_student_identity(fake: FakeOllama, page: PageImag
         "content",
         "images",
     }
+
+
+def test_cut_off_reply_is_invalid_and_retried(fake: FakeOllama, page: PageImage) -> None:
+    """A reply stopped by the output cap (e.g. a model that keeps "thinking") is never used."""
+    fake.replies.extend([CUT_OFF + '{"text": "partial', '{"text": "complete"}'])
+    reader = OllamaReader(
+        client(fake), ModelInfo("qwen3-vl:4b", "x", "ollama"), max_image_px=800, output_retries=1
+    )
+
+    assert reader.transcribe([page], CHEMISTRY).pages[0].text == "complete"
+    assert len(fake.requests) == 2
+
+
+def test_cut_off_on_every_try_flags_invalid(fake: FakeOllama, page: PageImage) -> None:
+    fake.replies.extend([CUT_OFF + "{", CUT_OFF + "{"])
+    reader = OllamaReader(
+        client(fake), ModelInfo("qwen3-vl:4b", "x", "ollama"), max_image_px=800, output_retries=1
+    )
+
+    with pytest.raises(ModelOutputInvalidError, match="output_cut_off"):
+        reader.transcribe([page], CHEMISTRY)
+
+
+def test_output_cap_context_and_think_are_sent(fake: FakeOllama, page: PageImage) -> None:
+    capped = OllamaClient(fake.url, 5, think=False, max_output_tokens=512, context_tokens=8192)
+    reader = OllamaReader(
+        capped, ModelInfo("qwen3-vl:4b", "x", "ollama"), max_image_px=800, output_retries=0
+    )
+
+    reader.transcribe([page], CHEMISTRY)
+
+    request = fake.requests[0]
+    assert request["think"] is False
+    assert request["options"] == {"temperature": 0, "num_predict": 512, "num_ctx": 8192}
