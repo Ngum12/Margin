@@ -178,7 +178,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-037 · 2026-10-14 · Ollama client on the standard library; httpx stays dev-only
 - **Decision:** `app/ai/ollama_client.py` uses `http.client` (standard library). `httpx` remains a development dependency (test client only).
 - **Alternatives:** `httpx` as a runtime dependency (approved 2026-10-14).
-- **Reason:** making `httpx` a runtime dependency also ships `certifi` (MPL-2.0, weak copyleft) whose CA bundle is useless for plain HTTP to a local Ollama. The standard library does everything needed (one JSON POST, timeouts) with no new shipped code. The `httpx` runtime approval is unused.
+- **Reason:** making `httpx` a runtime dependency also ships `certifi` (MPL-2.0, weak copyleft) whose CA bundle is useless for plain HTTP to a local Ollama. The standard library does everything needed (one JSON POST, timeouts) with no new shipped code. The owner dropped the `httpx` runtime approval (2026-10-14).
 
 ### D-038 · 2026-10-14 · Job queue and worker
 - **Decision:** `job` table with a unique idempotency key per step (`upload:<id>`, `transcribe:<script>`, `mark:<script>`). Claiming is a conditional `UPDATE ... WHERE status='queued'`, committed immediately, so two workers can never take the same job. Failed attempts back off exponentially (30 s doubling, capped at 15 min) up to `MARGIN_JOB_MAX_ATTEMPTS` (default 6), then the job is `failed` with a code (never content). The worker heartbeats every `MARGIN_JOB_STALE_SECONDS / 3`; jobs whose heartbeat is older than `MARGIN_JOB_STALE_SECONDS` (default 120) are re-queued, at worker start **and whenever the worker is idle** (the kill-and-restart test found that start-up alone missed a job abandoned moments before a restart). `scripts/run.py` starts the worker next to the web app; `python -m app.worker` runs it alone.
@@ -200,6 +200,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-042 · 2026-10-14 · AI marking is started explicitly, then runs automatically
 - **Decision:** after uploading and clearing the unassigned tray, the teacher presses "Start AI marking" (Phase 3 shows it on the Scans screen; Phase 4 builds the full queue screen). That queues transcription for every waiting script; transcription then queues marking automatically, and the exam moves `ready -> marking -> reviewing` on its own. Uploads are processed automatically on arrival.
 - **Alternatives:** start AI marking automatically after each upload.
+- **Approved by the owner 2026-10-14.**
 - **Reason:** brief screen 6 ("button to start AI marking"). Marking locks a script's pages, so starting before the tray is cleared would stop the teacher from adding stray pages to it. The brief's Phase 3 test ("a full exam goes from upload to ai_marked automatically") is met from the moment marking starts: no further human step is needed.
 
 ### D-043 · 2026-10-14 · Evaluation metrics
@@ -209,3 +210,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-044 · 2026-10-14 · Network guard test design
 - **Decision:** the guard records every `socket.connect` in the test process while the full pipeline runs with the Ollama implementations against a fake model server, and requires the set of destinations to equal exactly the model host and port. Connects made inside `socket.socketpair()` are ignored (on Windows the event loop's internal socket pair is emulated with a loopback connect). A static test allows networking imports only in `app/ai/ollama_client.py` (plus `socket.gethostname` in the worker). The render worker child process does no networking and is covered by the static test.
 - **Reason:** brief section 3.
+
+### D-045 · 2026-10-14 · Evaluation covers several models and marking
+- **Decision:** `evaluate` also accepts the script-folder layout (`<subject>/<student>/page*.jpg` + one `truth.txt` per script), runs any number of models in one go (`--models vision` = every installed Ollama model with the vision capability; each model reads and marks), and with `--mark-schemes` + `--expected-marks` compares proposed marks per question with a teacher's expected marks: exact agreement, mean absolute difference (over answered questions), failed questions, and the same figures for `language_expression` questions plus marks lost and how often such answers were labelled a conceptual error. Marking is measured both on the model's own transcription (the real pipeline) and on the true transcription (the marker alone). A question's proposed mark is the sum of its points, capped at the question maximum.
+- **Reason:** owner requirement: compare models on reading and marking, and check that weak English is not penalised.

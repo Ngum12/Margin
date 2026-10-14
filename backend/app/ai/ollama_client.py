@@ -54,6 +54,13 @@ class OllamaClient:
         data = self._request("GET", "/api/tags")
         return {m["name"]: m.get("digest", "") for m in data.get("models", [])}
 
+    def models_with_capability(self, capability: str) -> list[str]:
+        """Installed models that report a capability, e.g. "vision"."""
+        data = self._request("GET", "/api/tags")
+        return sorted(
+            m["name"] for m in data.get("models", []) if capability in (m.get("capabilities") or [])
+        )
+
     def chat_json(
         self,
         model: str,

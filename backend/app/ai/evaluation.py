@@ -1,15 +1,17 @@
 """Measure a Reader against typed ground truth (owner requirement, Phase 3).
 
-Folder layout::
+Two folder layouts are accepted under ``<root>/<subject_code>/``:
 
-    <root>/<subject_code>/<name>.jpg|.jpeg|.png   page image
-    <root>/<subject_code>/<name>.txt              exact typed transcription (agreed notation)
+- one folder per script: ``<student>/page1.jpg, page2.jpg, ...`` with ``<student>/truth.txt``
+  holding the whole script's exact transcription (pages in order);
+- one file pair per page: ``<name>.jpg|.png`` with ``<name>.txt``.
 
-Metrics, micro-averaged over all pages of a subject (summed errors / summed reference length):
+Metrics, micro-averaged over all scripts of a subject (summed errors / summed reference length):
 - CER: character edit distance / reference characters.
 - WER: word edit distance / reference words (words split on whitespace).
 - Key-token recall: share of the reference's numbers, formulae and operators that also appear in
   the transcription (counted as multisets).
+- Invalid outputs: pages where the Reader's reply failed validation after its retries.
 
 Text is compared as written: case, spelling and punctuation matter (the Reader must keep the
 student's errors). Only line endings and trailing spaces are normalised. The ground truth is
@@ -27,6 +29,7 @@ from app.ai.types import ModelOutputInvalidError, PageImage, Reader
 from app.subjects.registry import SubjectConfig
 
 IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png")
+TRUTH_NAME = "truth.txt"
 
 # Formulae and notation (H_2O, x^2, Na^+, CO_2, H_2SO_4), then numbers, then operators.
 _KEY_TOKEN = re.compile(
@@ -100,77 +103,111 @@ def score(reference: str, hypothesis: str) -> Score:
     )
 
 
-@dataclass
-class PageResult:
+@dataclass(frozen=True)
+class EvalScript:
     subject: str
-    name: str
-    seconds: float
-    valid_output: bool
+    name: str  # student folder, or page file stem in the one-pair-per-page layout
+    images: tuple[Path, ...]
+    truth: Path
+
+
+def _natural_key(path: Path) -> list[object]:
+    return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", path.name)]
+
+
+def find_scripts(root: Path, subject: str | None = None) -> dict[str, list[EvalScript]]:
+    """Map subject code -> scripts that have both images and ground truth."""
+    found: dict[str, list[EvalScript]] = {}
+    for folder in sorted(p for p in root.iterdir() if p.is_dir()):
+        if subject and folder.name != subject:
+            continue
+        scripts: list[EvalScript] = []
+        for student in sorted((p for p in folder.iterdir() if p.is_dir()), key=_natural_key):
+            images = sorted(
+                (p for p in student.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES),
+                key=_natural_key,
+            )
+            truth = student / TRUTH_NAME
+            if images and truth.is_file():
+                scripts.append(EvalScript(folder.name, student.name, tuple(images), truth))
+        for image in sorted(folder.iterdir(), key=_natural_key):
+            pair = image.with_suffix(".txt")
+            if image.suffix.lower() in IMAGE_SUFFIXES and pair.is_file():
+                scripts.append(EvalScript(folder.name, image.stem, (image,), pair))
+        if scripts:
+            found[folder.name] = scripts
+    return found
+
+
+@dataclass
+class ScriptResult:
+    script: EvalScript
+    transcription: str
+    page_seconds: list[float]
+    invalid_pages: int
     score: Score
 
 
 @dataclass
 class SubjectReport:
     subject: str
-    pages: list[PageResult] = field(default_factory=list)
+    scripts: list[ScriptResult] = field(default_factory=list)
 
     @property
     def total(self) -> Score:
         total = Score()
-        for page in self.pages:
-            total.add(page.score)
+        for result in self.scripts:
+            total.add(result.score)
         return total
 
     @property
-    def seconds_per_page(self) -> float:
-        return sum(p.seconds for p in self.pages) / len(self.pages) if self.pages else 0.0
+    def pages(self) -> int:
+        return sum(len(r.page_seconds) for r in self.scripts)
 
     @property
-    def invalid_outputs(self) -> int:
-        return sum(1 for p in self.pages if not p.valid_output)
+    def seconds_per_page(self) -> float:
+        seconds = [s for r in self.scripts for s in r.page_seconds]
+        return sum(seconds) / len(seconds) if seconds else 0.0
 
-
-def find_pages(root: Path, subject: str | None = None) -> dict[str, list[tuple[Path, Path]]]:
-    """Map subject code -> [(image, ground truth)], skipping images without ground truth."""
-    found: dict[str, list[tuple[Path, Path]]] = {}
-    for folder in sorted(p for p in root.iterdir() if p.is_dir()):
-        if subject and folder.name != subject:
-            continue
-        pairs = [
-            (image, image.with_suffix(".txt"))
-            for image in sorted(folder.iterdir())
-            if image.suffix.lower() in IMAGE_SUFFIXES and image.with_suffix(".txt").is_file()
-        ]
-        if pairs:
-            found[folder.name] = pairs
-    return found
+    @property
+    def invalid_pages(self) -> int:
+        return sum(r.invalid_pages for r in self.scripts)
 
 
 def evaluate(
     reader: Reader,
-    pages: dict[str, list[tuple[Path, Path]]],
+    scripts: dict[str, list[EvalScript]],
     subject_config: Callable[[str], SubjectConfig],
     progress: Callable[[str], None] | None = None,
 ) -> list[SubjectReport]:
     reports = []
-    for subject, pairs in pages.items():
+    for subject, items in scripts.items():
         config = subject_config(subject)
         report = SubjectReport(subject)
-        for index, (image, truth) in enumerate(pairs):
-            started = time.monotonic()
-            try:
-                # sidecar_text is deliberately None: the Reader never sees the ground truth.
-                result = reader.transcribe([PageImage(index, image, None)], config)
-                text, valid = result.pages[0].text, True
-            except ModelOutputInvalidError:
-                text, valid = "", False
-            seconds = time.monotonic() - started
-            report.pages.append(
-                PageResult(
-                    subject, image.name, seconds, valid, score(truth.read_text("utf-8"), text)
+        for script in items:
+            texts: list[str] = []
+            seconds: list[float] = []
+            invalid = 0
+            for index, image in enumerate(script.images):
+                started = time.monotonic()
+                try:
+                    # sidecar_text is deliberately None: the Reader never sees the ground truth.
+                    result = reader.transcribe([PageImage(index, image, None)], config)
+                    texts.append(result.pages[0].text)
+                except ModelOutputInvalidError:
+                    invalid += 1
+                seconds.append(time.monotonic() - started)
+                if progress:
+                    progress(f"  read {subject}/{script.name}/{image.name}: {seconds[-1]:.1f}s")
+            transcription = "\n".join(texts)
+            report.scripts.append(
+                ScriptResult(
+                    script,
+                    transcription,
+                    seconds,
+                    invalid,
+                    score(script.truth.read_text("utf-8"), transcription),
                 )
             )
-            if progress:
-                progress(f"{subject}/{image.name}: {seconds:.1f}s")
         reports.append(report)
     return reports

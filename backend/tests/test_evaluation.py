@@ -5,11 +5,28 @@ import pytest
 from PIL import Image
 
 from app import cli
-from app.ai.evaluation import edit_distance, find_pages, key_tokens, normalise, score
+from app.ai.evaluation import edit_distance, find_scripts, key_tokens, normalise, score
+from app.ai.marking_evaluation import (
+    Expected,
+    MarkingSummary,
+    QuestionComparison,
+    compare_script,
+    exam_spec_from_csv,
+    load_expected,
+)
+from app.ai.mock import MockMarker
+from app.ai.types import ExamSpec
 from app.config import get_settings
+from app.subjects.registry import get_registry
 
 MOCK_TEXT = (
     "1(a) Metals conduct electricity and they are malleable.\n1(b) Hydrogen gas H_2 is given off."
+)
+SCHEME = (
+    "question_label,question_prompt,question_max_marks,point_description,point_marks,point_alternatives\n"
+    "1a,Properties of metals,2,Conducts electricity,1,\n"
+    "1a,Properties of metals,2,Malleable,1,\n"
+    "1b,Gas given off,1,Hydrogen,1,\n"
 )
 
 
@@ -50,62 +67,147 @@ def test_key_tokens(text: str, tokens: list[str]) -> None:
 def test_key_token_recall_counts_multisets() -> None:
     s = score("x = 2 and y = 2", "x = 2 and y 3")
 
-    assert (s.key_found, s.key_total) == (2, 4)  # one "=" and one "2" found of two each
+    assert (s.key_found, s.key_total) == (2, 4)
 
 
-def _dataset(root: Path, pages: dict[str, str]) -> None:
-    for name, truth in pages.items():
-        subject, stem = name.split("/")
-        folder = root / subject
-        folder.mkdir(parents=True, exist_ok=True)
-        Image.new("RGB", (100, 140), "white").save(folder / f"{stem}.jpg")
-        (folder / f"{stem}.txt").write_text(truth, encoding="utf-8")
+def _image(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (100, 140), "white").save(path)
 
 
-def test_find_pages_needs_ground_truth(tmp_path: Path) -> None:
-    _dataset(tmp_path, {"chemistry/p1": "x"})
-    Image.new("RGB", (10, 10)).save(tmp_path / "chemistry" / "no_truth.jpg")
+def test_find_scripts_reads_student_folders_and_page_pairs(tmp_path: Path) -> None:
+    _image(tmp_path / "chemistry" / "student_2" / "page10.jpg")
+    _image(tmp_path / "chemistry" / "student_2" / "page2.jpg")
+    (tmp_path / "chemistry" / "student_2" / "truth.txt").write_text("x", encoding="utf-8")
+    _image(tmp_path / "chemistry" / "student_9" / "page1.jpg")  # no truth: skipped
+    _image(tmp_path / "chemistry" / "loose.jpg")
+    (tmp_path / "chemistry" / "loose.txt").write_text("y", encoding="utf-8")
 
-    assert [img.name for img, _ in find_pages(tmp_path)["chemistry"]] == ["p1.jpg"]
+    scripts = find_scripts(tmp_path)["chemistry"]
+
+    assert [s.name for s in scripts] == ["student_2", "loose"]
+    assert [p.name for p in scripts[0].images] == ["page2.jpg", "page10.jpg"]  # natural order
 
 
-def test_cli_evaluates_reader_per_subject_and_writes_report(
+def _spec(tmp_path: Path) -> ExamSpec:
+    path = tmp_path / "margin_chemistry_term1.csv"
+    path.write_text(SCHEME, encoding="utf-8")
+    chemistry = get_registry().get("cm_gce_ol", "chemistry")
+    assert chemistry is not None
+    return exam_spec_from_csv(path, chemistry)
+
+
+def test_compare_script_caps_and_matches_questions(tmp_path: Path) -> None:
+    spec = _spec(tmp_path)
+    expected = {
+        ("chemistry", "s1", "1a"): Expected(2, "language_expression"),
+        ("chemistry", "s1", "1b"): Expected(1, "correct"),
+    }
+
+    comparisons, _ = compare_script(
+        MockMarker(), spec, "chemistry", "s1", "it conducts electricity, it is malleable", expected
+    )
+
+    assert [(c.question, c.expected, c.proposed) for c in comparisons] == [
+        ("1a", 2, 2),
+        ("1b", 1, 0),
+    ]
+
+
+def test_summary_metrics_separate_language_cases() -> None:
+    summary = MarkingSummary(
+        [
+            QuestionComparison("c", "s1", "1", 2, "language_expression", 1, ("conceptual_error",)),
+            QuestionComparison("c", "s1", "2", 3, "language_expression", 3),
+            QuestionComparison("c", "s1", "3", 1, "correct", 1),
+            QuestionComparison("c", "s1", "4", 2, "correct", None),  # marker failed
+        ],
+        [1.0, 3.0],
+    )
+
+    assert summary.questions() == 4
+    assert summary.failed() == 1
+    assert summary.exact_agreement() == pytest.approx(2 / 4)
+    assert summary.mean_absolute_difference() == pytest.approx(1 / 3)
+    assert summary.exact_agreement(language_only=True) == pytest.approx(1 / 2)
+    assert summary.marks_lost(language_only=True) == 1
+    assert summary.language_called_conceptual() == 1
+    assert summary.seconds_per_script == 2.0
+
+
+def test_load_expected(tmp_path: Path) -> None:
+    path = tmp_path / "expected.csv"
+    path.write_text(
+        "subject,student,profile,question,expected_marks,category,note\n"
+        'chemistry,student_2,"weak English, correct ideas",1A,2,language_expression,"x, y"\n',
+        encoding="utf-8",
+    )
+
+    assert load_expected(path) == {
+        ("chemistry", "student_2", "1a"): Expected(2, "language_expression")
+    }
+
+
+def test_cli_evaluates_reading_and_marking_and_writes_report(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     data = tmp_path / "data"
-    _dataset(
-        data,
-        {
-            "chemistry/p1": MOCK_TEXT,  # identical to what MockReader returns
-            "chemistry/p2": MOCK_TEXT.replace("H_2", "H_3"),
-            "mathematics/p1": "x^2 = 16",
-        },
+    for student, truth in {
+        "student_1": MOCK_TEXT,
+        "student_2": MOCK_TEXT.replace("H_2", "H_3"),
+    }.items():
+        _image(data / "chemistry" / student / "page1.jpg")
+        (data / "chemistry" / student / "truth.txt").write_text(truth, encoding="utf-8")
+    schemes = tmp_path / "schemes"
+    schemes.mkdir()
+    (schemes / "margin_chemistry_term1.csv").write_text(SCHEME, encoding="utf-8")
+    expected = tmp_path / "expected.csv"
+    expected.write_text(
+        "subject,student,question,expected_marks,category\n"
+        "chemistry,student_1,1a,2,correct\nchemistry,student_1,1b,1,correct\n"
+        "chemistry,student_2,1a,2,language_expression\nchemistry,student_2,1b,1,correct\n",
+        encoding="utf-8",
     )
     monkeypatch.setenv("MARGIN_DATA_DIR", str(tmp_path / "state"))
     get_settings.cache_clear()
     report = tmp_path / "report.json"
 
-    code = cli.main(["evaluate", "--data", str(data), "--backend", "mock", "--report", str(report)])
+    code = cli.main(
+        [
+            "evaluate",
+            "--data",
+            str(data),
+            "--backend",
+            "mock",
+            "--mark-schemes",
+            str(schemes),
+            "--expected-marks",
+            str(expected),
+            "--report",
+            str(report),
+        ]
+    )
     get_settings.cache_clear()
 
     assert code == 0
     out = capsys.readouterr().out
-    assert "chemistry" in out
-    assert "mathematics" in out
+    assert "Marking vs expected marks" in out
     result = json.loads(report.read_text(encoding="utf-8"))
-    assert result["reader"]["model"] == "mock-reader"
-    assert result["reader"]["prompt_version"].startswith("reader-v1#")
-    chemistry = next(s for s in result["subjects"] if s["subject"] == "chemistry")
-    assert chemistry["pages"] == 2
-    assert chemistry["page_results"][0]["cer"] == 0
-    assert chemistry["page_results"][1]["cer"] == pytest.approx(1 / len(MOCK_TEXT))
-    assert chemistry["page_results"][1]["key_token_recall"] < 1
-    maths = next(s for s in result["subjects"] if s["subject"] == "mathematics")
-    assert maths["key_token_recall"] == 0  # MockReader never writes x^2 = 16
+    model = result["models"][0]
+    assert model["model"] == "mock"
+    assert model["prompt_version"].startswith("reader-v1#")
+    scripts = model["reading"][0]["scripts"]
+    assert scripts[0]["cer"] == 0  # identical to what MockReader returns
+    assert scripts[1]["cer"] == pytest.approx(1 / len(MOCK_TEXT))
+    marking = model["marking"]
+    assert set(marking) == {"reader", "truth"}
+    assert marking["truth"]["questions"] == 4
+    assert marking["truth"]["language_expression"]["questions"] == 1
 
 
 def test_cli_rejects_unknown_subject_folder(tmp_path: Path) -> None:
-    _dataset(tmp_path, {"astrology/p1": "x"})
+    _image(tmp_path / "astrology" / "s1" / "page1.jpg")
+    (tmp_path / "astrology" / "s1" / "truth.txt").write_text("x", encoding="utf-8")
 
     with pytest.raises(SystemExit, match="Unknown subject"):
         cli.main(["evaluate", "--data", str(tmp_path), "--backend", "mock"])

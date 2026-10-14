@@ -386,3 +386,14 @@ Mock pipeline and kill/restart tests pass; full check suite passes and is read; 
 - **This machine's GPU (NVIDIA T550, 4 GB) cannot hold an 8B vision model**; Ollama will split it between GPU and CPU, so pages may take tens of seconds or more. Measured and reported; overnight runs are the intended use.
 - No real handwriting ground truth exists yet; the sample evaluation set will be synthetic and clearly labelled so. Real teacher-typed transcriptions are needed for meaningful numbers.
 - Qwen3-VL's adherence to the JSON schema at temperature 0 is unknown until measured; invalid-output rates are reported by the evaluation and the job logs.
+
+---
+
+## Phase 4: scope additions (owner, 2026-10-14; full plan to be written when Phase 4 starts)
+
+**Page orientation** (a physically upside-down answer page with no PDF rotation flag stays upside down today):
+1. **Rotate button per page** in the script view. The rotation is stored on the page (0/90/180/270) and audit-logged; the original image file is never changed (rotation is applied when displaying and before transcription). Test: rotate, check stored value, audit event, original file bytes unchanged, transcription input rotated.
+2. **Stack rotation from the cover sheet**: when a cover sheet's QR orientation shows it was scanned rotated, apply the same correction to the answer pages that follow it (until the next cover). Test: a stack scanned upside down comes out upright, answer pages included.
+3. **Automatic orientation check per answer page before transcription**, recorded as "auto-rotated" with the angle so the teacher can see and undo it. Test: an upside-down answer page is detected and corrected; undo restores the original orientation; pages already upright are left alone.
+
+Phase 4 does not start until the owner approves the model results (Phase 3).
