@@ -76,6 +76,10 @@ def main() -> int:
     if not (FRONTEND / "node_modules").is_dir():
         subprocess.run([npm, "ci"], cwd=FRONTEND, check=True)  # noqa: S603
 
+    # Bring the database schema up to date before serving (safe to run every time).
+    migrate = [_tool("uv"), "run", "--frozen", "python", "-m", "app.cli", "migrate"]
+    subprocess.run(migrate, cwd=BACKEND, env=env, check=True)  # noqa: S603
+
     if args.dev:
         env.setdefault("MARGIN_ENV", "development")
         env["MARGIN_BACKEND_URL"] = f"http://{host}:{port}"

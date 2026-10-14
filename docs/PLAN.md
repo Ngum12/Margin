@@ -1,6 +1,6 @@
 # Plan: Phase 0 and Phase 1
 
-Status: Phase 0 complete and approved (2026-10-14). Phase 1 approved; waiting on dependency approval (D-019).
+Status: Phase 0 complete and approved (2026-10-14). Phase 1 built (2026-10-14), awaiting owner review. Refinements made while building are recorded in DECISIONS (D-021 to D-026).
 Source of truth for requirements: `PROJECT_BRIEF.md`. Decisions referenced here are recorded in `docs/DECISIONS.md`.
 
 ---

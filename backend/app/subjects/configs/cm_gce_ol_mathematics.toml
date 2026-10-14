@@ -1,0 +1,15 @@
+# Cameroon GCE Ordinary Level: Mathematics
+code = "mathematics"
+curriculum = "cm_gce_ol"
+
+[names]
+en = "Mathematics"
+fr = "Mathématiques"
+
+[reader]
+notation_hints = [
+  "Powers with caret: x^2, 10^-3",
+  "Fractions with slash and brackets: (a+b)/(c-d)",
+  "Square roots: sqrt(x)",
+  "Keep each line of working on its own line, in the order written",
+]

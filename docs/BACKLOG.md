@@ -16,3 +16,9 @@ Ideas and features deliberately not built yet. Add here instead of expanding sco
 - Native-speaker review of French translations; track draft strings in `docs/TRANSLATIONS.md`.
 - Install `make` on Windows dev machines, or document `winget install GnuWin32.Make` (optional; `python scripts/check.py` is equivalent).
 - Licence audit script that fails `check` if a new dependency has a non-permissive licence.
+- Teacher-facing read-only view of their class's students (the API exists: `GET /api/classes/{id}/students`); Phase 1 shows students in the admin screens only.
+- Users changing their own password; "sign out of all devices"; list of active sessions.
+- Sign-in throttling per client IP in addition to per username.
+- Admin audit-log viewer and export.
+- Real-browser end-to-end tests (for example Playwright; needs dependency approval). Phase 1 UI is covered by jsdom component tests plus an HTTP end-to-end script.
+- Editing exam details after `ready` (for example fixing a title typo during marking).

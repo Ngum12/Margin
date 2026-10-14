@@ -1,17 +1,239 @@
 {
   "app": {
-    "title": "Assistant de correction",
-    "tagline": "Une correction assistée par IA qui reste dans votre établissement."
+    "title": "Assistant de correction"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "choose": "Choisir…",
+    "optional": "Facultatif",
+    "actions": "Actions",
+    "save": "Enregistrer",
+    "saved": "Enregistré."
   },
   "language": {
     "label": "Langue",
     "en": "English",
     "fr": "Français"
   },
-  "status": {
-    "heading": "État du système",
-    "checking": "Vérification du serveur…",
-    "ok": "Le serveur fonctionne (version {{version}}).",
-    "unavailable": "Le serveur est injoignable. Vérifiez que l'Assistant de correction fonctionne sur cet ordinateur ou sur le réseau de l'établissement."
+  "nav": {
+    "label": "Menu principal",
+    "exams": "Examens",
+    "classes": "Classes",
+    "users": "Comptes du personnel",
+    "signOut": "Se déconnecter"
+  },
+  "signIn": {
+    "title": "Connexion",
+    "intro": "Utilisez l'identifiant et le mot de passe fournis par l'administrateur de votre établissement.",
+    "username": "Identifiant",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "submitting": "Connexion…"
+  },
+  "home": {
+    "title": "Vos examens",
+    "newExam": "Nouvel examen",
+    "empty": "Vous n'avez pas encore d'examen. Choisissez « Nouvel examen » pour en créer un.",
+    "totalMarks": "Total des points",
+    "waiting": "En attente",
+    "aiMarked": "Corrigées par l'IA",
+    "confirmed": "Validées"
+  },
+  "exam": {
+    "title": "Titre",
+    "class": "Classe",
+    "subject": "Matière",
+    "date": "Date de l'examen",
+    "status": "Statut",
+    "saveDetails": "Enregistrer les informations"
+  },
+  "examStatus": {
+    "draft": "Brouillon",
+    "ready": "Prêt",
+    "marking": "Correction",
+    "reviewing": "Relecture",
+    "completed": "Terminé"
+  },
+  "newExam": {
+    "title": "Nouvel examen",
+    "noClasses": "Vous n'avez pas encore de classe. Demandez à l'administrateur de créer une classe et de vous l'attribuer.",
+    "create": "Créer l'examen"
+  },
+  "editor": {
+    "title": "Questions et barème",
+    "examTotal": "Total de l'examen : {{total}} points",
+    "questionHeading": "Question {{number}}",
+    "label": "Numéro de la question",
+    "maxMarks": "Points maximum",
+    "moveUp": "Monter la question {{number}}",
+    "moveDown": "Descendre la question {{number}}",
+    "removeQuestion": "Supprimer la question",
+    "prompt": "Énoncé de la question",
+    "pointDescription": "Élément du barème",
+    "pointMarks": "Points",
+    "alternatives": "Accepter aussi",
+    "alternativesHint": "Une réponse par ligne",
+    "removePoint": "Supprimer",
+    "addPoint": "Ajouter un élément",
+    "pointsTotal": "Les éléments totalisent {{total}} sur {{max}} points",
+    "addQuestion": "Ajouter une question",
+    "mustFix": "Corrigez ceci avant d'enregistrer :",
+    "beforeReady": "Complétez ceci avant de marquer l'examen comme prêt :",
+    "saved": "Barème enregistré.",
+    "save": "Enregistrer le barème",
+    "saveFirst": "Enregistrez d'abord vos modifications",
+    "nowReady": "L'examen est prêt. Étape suivante : les fiches de couverture.",
+    "markReady": "Marquer comme prêt",
+    "backToDraft": "Repasser en brouillon",
+    "confirmDelete": "Supprimer cet examen et son barème ? Cette action est irréversible.",
+    "deleteExam": "Supprimer l'examen",
+    "unsaved": "Vous avez des modifications non enregistrées.",
+    "lockedHelp": "Le barème ne peut être modifié que lorsque l'examen est en brouillon.",
+    "marksCount_one": "{{count}} point",
+    "marksCount_other": "{{count}} points",
+    "alsoAccept": "accepter aussi"
+  },
+  "import": {
+    "title": "Importer depuis un fichier CSV",
+    "help": "Une ligne par élément du barème. Répétez les colonnes de la question sur chaque ligne de cette question. Séparez les réponses acceptées par |. La première ligne doit être :",
+    "choose": "Choisir un fichier CSV",
+    "problems": "Le fichier n'a pas pu être importé :",
+    "summary": "{{questions}} questions trouvées, pour un total de {{marks}} points.",
+    "load": "Charger dans l'éditeur",
+    "replaceWarning": "Cela remplace les questions de l'éditeur. Rien n'est enregistré avant de choisir « Enregistrer le barème »."
+  },
+  "users": {
+    "title": "Comptes du personnel",
+    "username": "Identifiant",
+    "usernameHint": "Lettres, chiffres, points, tirets. Majuscules et minuscules sont équivalentes.",
+    "displayName": "Nom",
+    "role": "Rôle",
+    "status": "État",
+    "active": "Actif",
+    "inactive": "Désactivé",
+    "deactivate": "Désactiver",
+    "reactivate": "Réactiver",
+    "newPassword": "Nouveau mot de passe",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "add": "Ajouter un compte",
+    "password": "Mot de passe",
+    "passwordHint": "Au moins {{min}} caractères.",
+    "create": "Créer le compte"
+  },
+  "roles": {
+    "teacher": "Enseignant",
+    "admin": "Administrateur"
+  },
+  "classes": {
+    "title": "Classes",
+    "empty": "Aucune classe pour le moment.",
+    "name": "Nom de la classe",
+    "year": "Année scolaire",
+    "teacher": "Enseignant",
+    "students": "Élèves",
+    "add": "Ajouter une classe",
+    "create": "Créer la classe"
+  },
+  "students": {
+    "privacyNote": "Les élèves sont identifiés par leur code sur les fiches de couverture et auprès de l'IA. Les noms sont facultatifs et restent sur cet ordinateur.",
+    "empty": "Aucun élève dans cette classe pour le moment.",
+    "code": "Code",
+    "name": "Nom",
+    "consent": "Consentement (données d'entraînement)",
+    "consentRecorded": "Consentement enregistré le",
+    "consentYes": "Donné",
+    "consentNo": "Non donné",
+    "add": "Ajouter des élèves",
+    "namesLabel": "Noms, un par ligne",
+    "namesHint": "Laissez vide pour ajouter des élèves avec un code seulement.",
+    "countLabel": "Ou nombre d'élèves",
+    "countHint": "Utilisé seulement si aucun nom n'est saisi.",
+    "create": "Ajouter les élèves"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "network": {
+      "unreachable": "Le serveur de l'Assistant de correction est injoignable. Vérifiez qu'il fonctionne sur cet ordinateur ou sur le réseau de l'établissement."
+    },
+    "server": {
+      "error": "Le serveur a rencontré un problème. Veuillez réessayer."
+    },
+    "not_found": "Cet élément n'existe pas ou vous n'y avez pas accès.",
+    "forbidden": "Vous n'êtes pas autorisé à faire cela.",
+    "conflict": "Cette modification est en conflit avec l'état actuel. Rechargez la page et réessayez.",
+    "validation_failed": "Certaines informations ne sont pas valides.",
+    "auth": {
+      "required": "Veuillez vous connecter.",
+      "invalid_credentials": "L'identifiant ou le mot de passe est incorrect.",
+      "too_many_attempts": "Trop de tentatives échouées. Attendez 15 minutes ou demandez à l'administrateur de réinitialiser votre mot de passe.",
+      "csrf_failed": "Votre session n'a pas pu être vérifiée. Rechargez la page et réessayez.",
+      "admin_required": "Seuls les administrateurs peuvent faire cela."
+    },
+    "user": {
+      "username_taken": "Cet identifiant est déjà utilisé.",
+      "last_admin": "L'établissement doit garder au moins un administrateur actif.",
+      "cannot_deactivate_self": "Vous ne pouvez pas désactiver votre propre compte."
+    },
+    "class": {
+      "duplicate": "Une classe portant ce nom existe déjà pour cette année scolaire.",
+      "teacher_invalid": "Choisissez un membre du personnel actif comme enseignant."
+    },
+    "exam": {
+      "subject_unknown": "Cette matière n'est pas disponible pour le programme de votre établissement.",
+      "locked": "Cet examen ne peut plus être modifié.",
+      "not_draft": "Cette action n'est possible que lorsque l'examen est en brouillon.",
+      "not_ready": "Le barème n'est pas encore complet.",
+      "invalid_transition": "L'examen ne peut pas passer à ce statut maintenant."
+    },
+    "mark_scheme": {
+      "invalid": "Le barème contient des erreurs. Corrigez-les puis enregistrez à nouveau."
+    },
+    "import": {
+      "wrong_type": "Choisissez un fichier CSV.",
+      "too_large": "Le fichier est trop volumineux."
+    },
+    "request": {
+      "invalid": "Certaines informations sont manquantes ou invalides."
+    }
+  },
+  "issues": {
+    "unknown": "Il y a un problème avec ces informations.",
+    "exam": {
+      "no_questions": "Ajoutez au moins une question.",
+      "too_many_questions": "Un examen peut comporter au plus {{max}} questions.",
+      "subject_unknown": "Choisissez une matière dans la liste."
+    },
+    "question": {
+      "label_required": "Chaque question doit avoir un numéro, par exemple 1(a).",
+      "label_too_long": "Le numéro d'une question ne peut pas dépasser {{max}} caractères.",
+      "label_duplicate": "Le numéro « {{label}} » est déjà utilisé par la question {{first}}.",
+      "max_marks_invalid": "Les points maximum doivent être un nombre entier de 1 à {{max}}.",
+      "too_many_points": "Une question peut avoir au plus {{max}} éléments de barème.",
+      "no_points": "La question {{label}} doit avoir au moins un élément de barème.",
+      "points_below_max": "Question {{label}} : les éléments totalisent {{points_total}}, moins que le maximum de {{max_marks}}. La note maximale serait impossible.",
+      "points_exceed_max": "Question {{label}} : les éléments totalisent {{points_total}}, plus que le maximum de {{max_marks}}. C'est normal pour les questions « {{max_marks}} au choix » ; la note sera plafonnée à {{max_marks}}."
+    },
+    "point": {
+      "marks_invalid": "Les points d'un élément doivent être un nombre entier de 1 à {{max}}.",
+      "description_required": "Chaque élément du barème doit avoir une description."
+    },
+    "class": {
+      "teacher_invalid": "Choisissez un membre du personnel actif comme enseignant."
+    },
+    "import": {
+      "too_large": "Le fichier dépasse {{max_kb}} Ko.",
+      "not_utf8": "Le fichier n'est pas enregistré en UTF-8. Dans votre tableur, enregistrez au format « CSV UTF-8 ».",
+      "missing_columns": "Colonnes manquantes : {{columns}}.",
+      "too_many_rows": "Le fichier contient plus de {{max}} lignes.",
+      "row_extra_cells": "La ligne {{row}} contient plus de cellules que de colonnes.",
+      "label_required": "La ligne {{row}} n'a pas de numéro de question.",
+      "max_marks_not_number": "Ligne {{row}} : les points maximum de la question doivent être un nombre entier.",
+      "point_marks_not_number": "Ligne {{row}} : les points de l'élément doivent être un nombre entier.",
+      "row_invalid": "La ligne {{row}} n'a pas pu être lue.",
+      "question_not_contiguous": "Ligne {{row}} : les lignes de la question {{label}} doivent se suivre.",
+      "question_inconsistent": "Ligne {{row}} : la question {{label}} a un énoncé ou un maximum différent de la ligne {{first_row}}.",
+      "malformed_csv": "Le fichier n'est pas un fichier CSV valide.",
+      "empty": "Le fichier ne contient aucune ligne de barème."
+    }
   }
 }

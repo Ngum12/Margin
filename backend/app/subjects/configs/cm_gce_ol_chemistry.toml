@@ -1,0 +1,15 @@
+# Cameroon GCE Ordinary Level: Chemistry
+code = "chemistry"
+curriculum = "cm_gce_ol"
+
+[names]
+en = "Chemistry"
+fr = "Chimie"
+
+[reader]
+notation_hints = [
+  "Subscripts with underscore: H_2O, CO_2, H_2SO_4",
+  "Charges with caret: Na^+, SO_4^2-",
+  "Reaction arrows: -> (reversible: <=>)",
+  "State symbols in brackets as written: (s), (l), (g), (aq)",
+]

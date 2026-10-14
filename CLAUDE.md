@@ -3,7 +3,7 @@
 On-premise AI marking assistant for secondary schools. Full requirements: `PROJECT_BRIEF.md` (read it). Plan: `docs/PLAN.md`. Decisions: `docs/DECISIONS.md`. Out-of-scope ideas: `docs/BACKLOG.md`. Dependency licences: `docs/DEPENDENCIES.md`.
 
 ## Current phase
-**Phase 0 (Foundation): complete and approved.** **Phase 1 (accounts, classes, exams, mark schemes): approved, in progress** per `docs/PLAN.md`. Marks are stored as integer half-mark units (D-018).
+**Phase 0: complete and approved.** **Phase 1 (accounts, classes, exams, mark schemes): built, awaiting owner review.** Do not start Phase 2 until the owner says so.
 
 Workflow: one phase at a time → plan → build → `python scripts/check.py` passes → commit → stop and report. Never claim something works without running it. Record decisions and deviations in `docs/DECISIONS.md` first. Out-of-scope ideas go to `docs/BACKLOG.md`.
 
@@ -11,6 +11,8 @@ Workflow: one phase at a time → plan → build → `python scripts/check.py` p
 - **Never run unvetted packages.** No `npx --yes`, no `npx <pkg>` for packages not already in the lockfile, no `pip install`/`uv tool run`/`uvx` of ad hoc tools, no curl/wget downloads of scripts or binaries.
 - **Never add a new dependency (runtime or dev, backend or frontend) without owner approval.** First list each package with version, licence, purpose, and its new transitive packages and their licences; then wait for explicit approval. Only then install, pin exactly, and record it in `docs/DEPENDENCIES.md`.
 - Upgrades of existing dependencies follow the same rule.
+- **At the start of each phase**, list every new dependency the phase needs in one table (package, version, licence, purpose, transitive packages) for approval together. Anything not on that approved list still needs separate approval.
+- Commit both lockfiles (`backend/uv.lock`, `frontend/package-lock.json`).
 
 ## Non-negotiables (breaking any is a critical bug)
 - **Data stays in the school.** The only outbound network calls go to the configured model server (`MARGIN_MODEL_BASE_URL`, default local Ollama). No telemetry, analytics, external fonts, CDNs or third-party scripts; all assets bundled locally. A test must fail on any other outbound connection (Phase 3).
@@ -36,7 +38,13 @@ Browser (React/TS, Vite build) --> FastAPI app (backend/app) --> SQLite (WAL) vi
 - `backend/app/main.py` `create_app(settings)`: API under `/api`, security headers (strict CSP), SPA served from `frontend/dist` with client-route fallback.
 - `backend/app/config.py`: `Settings` (pydantic-settings, `MARGIN_` prefix). Document every setting in `.env.example`.
 - `backend/app/ai/` (Phase 3): `Reader` / `Marker` interfaces; `Ollama*` and `Mock*` implementations; versioned prompts in `ai/prompts/`. The app depends only on the interfaces.
-- Business logic in services, not HTTP handlers. Queries only through SQLAlchemy (PostgreSQL-swappable).
+- Business logic in `app/services/` (no FastAPI imports); HTTP in `app/api/`. Queries only through SQLAlchemy (PostgreSQL-swappable).
+- **Access scoping** lives in `app/services/access.py`: every class, exam and student query goes through the `visible_*` scopes; out-of-scope ids raise `NotFoundError` (404).
+- **Errors:** services raise `app.errors.DomainError` subclasses with a stable `code`; the API returns `{code, detail, issues}`; the frontend translates `errors.<code>` and `issues.<code>`. Add en and fr text for every new code (a test enforces it).
+- **Audit:** every change to users, classes, students, consent and exams goes through `app.services.audit.record` (append-only, guarded in the ORM). Never put names or passwords in audit values.
+- **Marks:** stored as integer half marks (`app/marks.py`, D-018); the API and UI use whole marks.
+- **Schema changes:** edit models, run `cd backend && uv run alembic revision --autogenerate -m "..."`, review the file (delete the duplicate enum CHECK constraints Alembic emits), and keep `tests/test_migrations.py` passing.
+- Request DB transactions commit before the response is sent (`Depends(..., scope="function")`, D-021).
 - Frontend: React + TypeScript strict, plain CSS with tokens (`src/styles.css`), same-origin `fetch` only (`src/api.ts`).
 
 ## Commands
@@ -48,7 +56,8 @@ Run from the repository root. Requires `uv` and Node/npm. Python 3.12 is uv-mana
 | **All checks** | `python scripts/check.py` (`make check`) |
 | Auto-fix formatting | `python scripts/check.py --fix` (`make fix`) |
 | One side only | `python scripts/check.py backend` / `frontend` |
-| Run app (prod mode) | `python scripts/run.py` → http://127.0.0.1:8000 (`make run`) |
+| First-time setup | `cd backend`, then `uv run python -m app.cli migrate`, `uv run python -m app.cli init-school --name ... --country ...`, `uv run python -m app.cli create-user --username ... --display-name ... --role admin` |
+| Run app (prod mode) | `python scripts/run.py` → http://127.0.0.1:8000 (`make run`; applies migrations first) |
 | Dev (reload + Vite) | `python scripts/run.py --dev` → Vite at http://localhost:5173 (`make dev`) |
 | Backend tests only | `cd backend && uv run pytest` |
 | Frontend tests only | `cd frontend && npm test` |

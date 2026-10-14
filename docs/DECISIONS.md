@@ -40,7 +40,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Reason:** one process to run on a school machine, as the brief requires.
 
 ### D-008 · 2026-10-14 · Strict Content-Security-Policy from day one
-- **Decision:** Every response carries `Content-Security-Policy: default-src 'self'` (plus related directives) and standard hardening headers. Swagger UI (`/api/docs`), which loads from a CDN, is enabled only when `MARGIN_ENV=development`.
+- **Decision:** Every response carries `Content-Security-Policy: default-src 'self'` (plus related directives) and standard hardening headers. Swagger UI and ReDoc load from a CDN, so they are never served (changed in Phase 1; the CSP would block them anyway). The raw schema `/api/openapi.json` is served only when `MARGIN_ENV=development`.
 - **Alternatives:** add headers at deployment time via a reverse proxy.
 - **Reason:** non-negotiable "no external fonts, CDNs or third-party scripts" is then enforced by the browser, not only by convention.
 
@@ -103,3 +103,29 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-020 · 2026-10-14 · CSV import sent as a raw request body
 - **Decision:** the frontend reads the CSV file locally and POSTs its text (`Content-Type: text/csv`, size-limited) instead of a multipart upload, so Phase 1 does not need `python-multipart`.
 - **Reason:** one less dependency now. Phase 2 (PDF uploads) will request `python-multipart` (Apache-2.0) for approval.
+
+### D-021 · 2026-10-14 · Request transaction runs before the response is sent
+- **Decision:** the DB session dependency is declared with `Depends(..., scope="function")`, so commit or rollback happens before FastAPI sends the response. FastAPI 0.143's default for `yield` dependencies ends them after the response is sent, which would hide a failed commit from the client.
+- **Reason:** never report success for a change that was not stored. Checked in the installed FastAPI source (`param_functions.py`).
+
+### D-022 · 2026-10-14 · Student names and passwords never enter the audit log
+- **Decision:** audit snapshots for students record `code`, `class_id`, `has_display_name` and consent, not the name. Password resets are logged as an action with no values. Tests assert neither appears in audit rows. Sign-in outcomes go to the app log with the staff username only.
+- **Alternatives:** full before/after snapshots.
+- **Reason:** names are optional, local-only data; the audit log may later be exported for review.
+
+### D-023 · 2026-10-14 · Out-of-scope ids return 404; admin-only actions return 403
+- **Decision:** a teacher requesting another teacher's class, exam or student gets the same 404 as for a missing id. Admin-only endpoints answer 403 `auth.admin_required` (their existence is not secret).
+- **Reason:** prevents probing for other teachers' data while keeping clear messages for role errors. Scoping is enforced in `app/services/access.py` queries, not in route handlers.
+
+### D-024 · 2026-10-14 · Mark scheme saved as a whole; drafts may be incomplete
+- **Decision:** the editor sends the full mark scheme (`PUT /api/exams/{id}/mark-scheme`), replacing questions and points in one transaction and one audit event. Saving is refused only for blocking problems (missing or duplicate labels, marks out of range); incomplete schemes save as drafts and must be completed before "ready". The frontend mirrors the rules (`src/exam/markScheme.ts`) with the same issue codes; the server stays authoritative.
+- **Alternatives:** per-question and per-point endpoints.
+- **Reason:** simpler and atomic; mark schemes are small. Nothing references questions while an exam is a draft, so replacing rows is safe. Revisit before Phase 3 if edits after marking starts are needed.
+
+### D-025 · 2026-10-14 · Admin setup through a CLI; migrations on start
+- **Decision:** `python -m app.cli migrate | init-school | create-user` (from `backend/`). Passwords are prompted, or read from a named environment variable, never passed as arguments. `scripts/run.py` runs `migrate` before starting the server.
+- **Reason:** first-run setup without exposing an unauthenticated setup page on the school network.
+
+### D-026 · 2026-10-14 · Every backend error and issue code must be translated
+- **Decision:** `backend/tests/test_translations.py` scans the backend for error and issue codes and fails if `en.json` or `fr.json` lacks text for any of them. A frontend test asserts the two locales have identical keys.
+- **Reason:** teachers must never see a raw code. It already caught one missing string.

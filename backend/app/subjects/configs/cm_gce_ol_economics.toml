@@ -1,0 +1,14 @@
+# Cameroon GCE Ordinary Level: Economics
+code = "economics"
+curriculum = "cm_gce_ol"
+
+[names]
+en = "Economics"
+fr = "Économie"
+
+[reader]
+notation_hints = [
+  "Currency as written, e.g. FCFA 5000, 5,000 frs",
+  "Percentages as written: 12%",
+  "Describe graphs and diagrams as [DIAGRAM]",
+]

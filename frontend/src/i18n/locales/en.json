@@ -1,17 +1,239 @@
 {
   "app": {
-    "title": "Marking Assistant",
-    "tagline": "AI-assisted marking that stays inside your school."
+    "title": "Marking Assistant"
+  },
+  "common": {
+    "loading": "Loading…",
+    "choose": "Choose…",
+    "optional": "Optional",
+    "actions": "Actions",
+    "save": "Save",
+    "saved": "Saved."
   },
   "language": {
     "label": "Language",
     "en": "English",
     "fr": "Français"
   },
-  "status": {
-    "heading": "System status",
-    "checking": "Checking the server…",
-    "ok": "Server is running (version {{version}}).",
-    "unavailable": "The server cannot be reached. Check that the Marking Assistant is running on this computer or school network."
+  "nav": {
+    "label": "Main menu",
+    "exams": "Exams",
+    "classes": "Classes",
+    "users": "Staff accounts",
+    "signOut": "Sign out"
+  },
+  "signIn": {
+    "title": "Sign in",
+    "intro": "Use the username and password given to you by your school administrator.",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…"
+  },
+  "home": {
+    "title": "Your exams",
+    "newExam": "New exam",
+    "empty": "You have no exams yet. Choose “New exam” to set one up.",
+    "totalMarks": "Total marks",
+    "waiting": "Waiting",
+    "aiMarked": "AI marked",
+    "confirmed": "Confirmed"
+  },
+  "exam": {
+    "title": "Title",
+    "class": "Class",
+    "subject": "Subject",
+    "date": "Exam date",
+    "status": "Status",
+    "saveDetails": "Save details"
+  },
+  "examStatus": {
+    "draft": "Draft",
+    "ready": "Ready",
+    "marking": "Marking",
+    "reviewing": "Reviewing",
+    "completed": "Completed"
+  },
+  "newExam": {
+    "title": "New exam",
+    "noClasses": "You have no classes yet. Ask your school administrator to create a class and assign it to you.",
+    "create": "Create exam"
+  },
+  "editor": {
+    "title": "Questions and mark scheme",
+    "examTotal": "Exam total: {{total}} marks",
+    "questionHeading": "Question {{number}}",
+    "label": "Question label",
+    "maxMarks": "Maximum marks",
+    "moveUp": "Move question {{number}} up",
+    "moveDown": "Move question {{number}} down",
+    "removeQuestion": "Remove question",
+    "prompt": "Question text",
+    "pointDescription": "Mark scheme point",
+    "pointMarks": "Marks",
+    "alternatives": "Also accept",
+    "alternativesHint": "One answer per line",
+    "removePoint": "Remove",
+    "addPoint": "Add point",
+    "pointsTotal": "Points add up to {{total}} of {{max}} marks",
+    "addQuestion": "Add question",
+    "mustFix": "Fix these before saving:",
+    "beforeReady": "Complete these before marking the exam as ready:",
+    "saved": "Mark scheme saved.",
+    "save": "Save mark scheme",
+    "saveFirst": "Save your changes first",
+    "nowReady": "The exam is ready. Cover sheets come next.",
+    "markReady": "Mark as ready",
+    "backToDraft": "Return to draft",
+    "confirmDelete": "Delete this exam and its mark scheme? This cannot be undone.",
+    "deleteExam": "Delete exam",
+    "unsaved": "You have unsaved changes.",
+    "lockedHelp": "The mark scheme can only be changed while the exam is a draft.",
+    "marksCount_one": "{{count}} mark",
+    "marksCount_other": "{{count}} marks",
+    "alsoAccept": "also accept"
+  },
+  "import": {
+    "title": "Import from a CSV file",
+    "help": "One row per mark scheme point. Repeat the question columns on every row of the same question. Separate alternative answers with |. The first row must be:",
+    "choose": "Choose a CSV file",
+    "problems": "The file could not be imported:",
+    "summary": "Found {{questions}} questions worth {{marks}} marks in total.",
+    "load": "Load into the editor",
+    "replaceWarning": "This replaces the questions in the editor. Nothing is saved until you choose “Save mark scheme”."
+  },
+  "users": {
+    "title": "Staff accounts",
+    "username": "Username",
+    "usernameHint": "Letters, numbers, dots, dashes. Not case-sensitive.",
+    "displayName": "Name",
+    "role": "Role",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Deactivated",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "newPassword": "New password",
+    "resetPassword": "Reset password",
+    "add": "Add a staff account",
+    "password": "Password",
+    "passwordHint": "At least {{min}} characters.",
+    "create": "Create account"
+  },
+  "roles": {
+    "teacher": "Teacher",
+    "admin": "Administrator"
+  },
+  "classes": {
+    "title": "Classes",
+    "empty": "No classes yet.",
+    "name": "Class name",
+    "year": "Academic year",
+    "teacher": "Teacher",
+    "students": "Students",
+    "add": "Add a class",
+    "create": "Create class"
+  },
+  "students": {
+    "privacyNote": "Students are identified by their code on cover sheets and to the AI. Names are optional and stay on this computer.",
+    "empty": "No students in this class yet.",
+    "code": "Code",
+    "name": "Name",
+    "consent": "Training-data consent",
+    "consentRecorded": "Consent recorded",
+    "consentYes": "Given",
+    "consentNo": "Not given",
+    "add": "Add students",
+    "namesLabel": "Names, one per line",
+    "namesHint": "Leave empty to add students by code only.",
+    "countLabel": "Or number of students",
+    "countHint": "Used only when no names are entered.",
+    "create": "Add students"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": {
+      "unreachable": "The Marking Assistant server cannot be reached. Check that it is running on this computer or the school network."
+    },
+    "server": {
+      "error": "The server had a problem. Please try again."
+    },
+    "not_found": "This item does not exist, or you do not have access to it.",
+    "forbidden": "You are not allowed to do this.",
+    "conflict": "This change conflicts with the current state. Reload the page and try again.",
+    "validation_failed": "Some information is not valid.",
+    "auth": {
+      "required": "Please sign in.",
+      "invalid_credentials": "The username or password is incorrect.",
+      "too_many_attempts": "Too many failed attempts. Wait 15 minutes, or ask your administrator to reset your password.",
+      "csrf_failed": "Your session could not be verified. Reload the page and try again.",
+      "admin_required": "Only administrators can do this."
+    },
+    "user": {
+      "username_taken": "This username is already used.",
+      "last_admin": "The school must keep at least one active administrator.",
+      "cannot_deactivate_self": "You cannot deactivate your own account."
+    },
+    "class": {
+      "duplicate": "A class with this name already exists for that academic year.",
+      "teacher_invalid": "Choose an active staff member as the teacher."
+    },
+    "exam": {
+      "subject_unknown": "This subject is not available for your school's curriculum.",
+      "locked": "This exam can no longer be changed.",
+      "not_draft": "This can only be done while the exam is a draft.",
+      "not_ready": "The mark scheme is not complete yet.",
+      "invalid_transition": "The exam cannot move to that status now."
+    },
+    "mark_scheme": {
+      "invalid": "The mark scheme has errors. Fix them and save again."
+    },
+    "import": {
+      "wrong_type": "Choose a CSV file.",
+      "too_large": "The file is too large."
+    },
+    "request": {
+      "invalid": "Some information is missing or not valid."
+    }
+  },
+  "issues": {
+    "unknown": "There is a problem with this information.",
+    "exam": {
+      "no_questions": "Add at least one question.",
+      "too_many_questions": "An exam can have at most {{max}} questions.",
+      "subject_unknown": "Choose a subject from the list."
+    },
+    "question": {
+      "label_required": "Every question needs a label, for example 1(a).",
+      "label_too_long": "Question labels can be at most {{max}} characters.",
+      "label_duplicate": "Label “{{label}}” is already used by question {{first}}.",
+      "max_marks_invalid": "Maximum marks must be a whole number from 1 to {{max}}.",
+      "too_many_points": "A question can have at most {{max}} mark scheme points.",
+      "no_points": "Question {{label}} needs at least one mark scheme point.",
+      "points_below_max": "Question {{label}}: points add up to {{points_total}}, less than the maximum of {{max_marks}}. Full marks would be impossible.",
+      "points_exceed_max": "Question {{label}}: points add up to {{points_total}}, more than the maximum of {{max_marks}}. That is fine for “any {{max_marks}}” questions; marks will be capped at {{max_marks}}."
+    },
+    "point": {
+      "marks_invalid": "Point marks must be a whole number from 1 to {{max}}.",
+      "description_required": "Every mark scheme point needs a description."
+    },
+    "class": {
+      "teacher_invalid": "Choose an active staff member as the teacher."
+    },
+    "import": {
+      "too_large": "The file is larger than {{max_kb}} KB.",
+      "not_utf8": "The file is not saved as UTF-8 text. In your spreadsheet, save as “CSV UTF-8”.",
+      "missing_columns": "These columns are missing: {{columns}}.",
+      "too_many_rows": "The file has more than {{max}} rows.",
+      "row_extra_cells": "Row {{row}} has more cells than there are columns.",
+      "label_required": "Row {{row}} has no question label.",
+      "max_marks_not_number": "Row {{row}}: question maximum marks must be a whole number.",
+      "point_marks_not_number": "Row {{row}}: point marks must be a whole number.",
+      "row_invalid": "Row {{row}} could not be read.",
+      "question_not_contiguous": "Row {{row}}: the rows for question {{label}} must be next to each other.",
+      "question_inconsistent": "Row {{row}}: question {{label}} has a different text or maximum than on row {{first_row}}.",
+      "malformed_csv": "The file is not a valid CSV file.",
+      "empty": "The file contains no mark scheme rows."
+    }
   }
 }

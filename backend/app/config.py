@@ -43,9 +43,27 @@ class Settings(BaseSettings):
     # Only for a deliberate, temporary plain-HTTP deployment on a trusted network.
     allow_insecure_cookies_in_production: bool = False
 
+    # SQLAlchemy URL. Unset: SQLite file at <data_dir>/margin.db.
+    database_url: str | None = None
+
+    # Sessions end after this much inactivity, and in any case after the absolute lifetime.
+    session_idle_minutes: int = Field(default=120, ge=5)
+    session_absolute_hours: int = Field(default=12, ge=1)
+
+    # Sign-in throttling: this many failures for a username within the window blocks
+    # further attempts until the window has passed.
+    login_max_failures: int = Field(default=5, ge=1)
+    login_failure_window_minutes: int = Field(default=15, ge=1)
+
     @property
     def log_dir(self) -> Path:
         return self.data_dir / "logs"
+
+    @property
+    def resolved_database_url(self) -> str:
+        if self.database_url:
+            return self.database_url
+        return f"sqlite:///{(self.data_dir / 'margin.db').as_posix()}"
 
     @property
     def session_cookie_secure(self) -> bool:
