@@ -183,7 +183,9 @@
       "locked": "Cet examen ne peut plus être modifié.",
       "not_draft": "Cette action n'est possible que lorsque l'examen est en brouillon.",
       "not_ready": "Le barème n'est pas encore complet.",
-      "invalid_transition": "L'examen ne peut pas passer à ce statut maintenant."
+      "invalid_transition": "L'examen ne peut pas passer à ce statut maintenant.",
+      "has_scripts": "Des copies ont été téléversées pour cet examen ; il ne peut plus repasser en brouillon.",
+      "sheets_need_ready": "Marquez d'abord l'examen comme prêt."
     },
     "mark_scheme": {
       "invalid": "Le barème contient des erreurs. Corrigez-les puis enregistrez à nouveau."
@@ -194,6 +196,23 @@
     },
     "request": {
       "invalid": "Certaines informations sont manquantes ou invalides."
+    },
+    "upload": {
+      "not_pdf": "Ce fichier n'est pas un PDF.",
+      "too_large": "Le fichier est trop volumineux. Scannez par petits lots.",
+      "duplicate_file": "Ce fichier exact a déjà été téléversé pour cet examen.",
+      "not_failed": "Seuls les téléversements en échec peuvent être relancés.",
+      "pdf_unreadable": "Le PDF n'a pas pu être ouvert. Il est peut-être endommagé ou protégé par un mot de passe. Scannez-le à nouveau.",
+      "render_timeout": "Le traitement du PDF a pris trop de temps. Scannez par petits lots.",
+      "render_crashed": "Le PDF n'a pas pu être traité. Réessayez ou scannez-le à nouveau.",
+      "too_many_pages": "Le PDF contient trop de pages. Scannez par petits lots.",
+      "processing_error": "Une erreur s'est produite pendant le traitement de ce fichier. Réessayez."
+    },
+    "page": {
+      "already_assigned": "Certaines pages sont déjà dans une copie. Remettez-les d'abord dans les pages non attribuées."
+    },
+    "script": {
+      "locked": "Cette copie est déjà en cours de correction ; ses pages ne peuvent plus changer."
     }
   },
   "issues": {
@@ -234,6 +253,68 @@
       "question_inconsistent": "Ligne {{row}} : la question {{label}} a un énoncé ou un maximum différent de la ligne {{first_row}}.",
       "malformed_csv": "Le fichier n'est pas un fichier CSV valide.",
       "empty": "Le fichier ne contient aucune ligne de barème."
+    }
+  },
+  "examTabs": {
+    "label": "Sections de l'examen",
+    "setup": "Questions et barème",
+    "sheets": "Fiches de couverture",
+    "scans": "Copies scannées"
+  },
+  "sheets": {
+    "needReady": "Marquez l'examen comme prêt (après avoir complété le barème) avant d'imprimer les fiches de couverture ou de téléverser les copies.",
+    "noStudents": "Cette classe n'a pas encore d'élèves. Demandez à l'administrateur de les ajouter.",
+    "help": "Imprimez une fiche de couverture par élève. Chaque élève place sa fiche sur ses copies. Après l'examen, scannez toute la pile dans l'ordre.",
+    "prepare": "Préparer les fiches de couverture ({{count}} à créer)",
+    "download": "Télécharger les fiches de couverture (PDF)",
+    "privacy": "Les fiches de couverture n'affichent que les codes des élèves, jamais leurs noms. Utilisez cette liste pour les distribuer.",
+    "sheet": "Fiche de couverture",
+    "ready": "Prête",
+    "notYet": "Non préparée"
+  },
+  "scans": {
+    "uploadTitle": "Téléverser les copies scannées",
+    "uploadHelp": "Choisissez un ou plusieurs fichiers PDF issus du scanner de l'établissement. Scannez chaque pile dans l'ordre, fiches de couverture au-dessus. Le traitement continue en arrière-plan.",
+    "choose": "Choisir des fichiers PDF",
+    "uploading": "Téléversement…",
+    "uploaded": "téléversé, traitement en cours",
+    "file": "Fichier",
+    "uploadedAt": "Téléversé le",
+    "pages": "Pages",
+    "uploadStatus": {
+      "pending": "En attente",
+      "processing": "Traitement…",
+      "processed": "Terminé",
+      "failed": "Échec"
+    },
+    "original": "PDF d'origine",
+    "retry": "Réessayer",
+    "pageOf": "Page {{number}} de {{file}}",
+    "trayTitle": "Pages non attribuées : {{count}}",
+    "trayHelp": "Ces pages n'ont pas pu être placées automatiquement. Vérifiez chacune, puis attribuez-la à un élève ou écartez-la. Sélectionner une fiche de couverture sélectionne aussi les pages qui la suivent.",
+    "assignTo": "Attribuer à l'élève…",
+    "assign": "Attribuer la sélection ({{count}})",
+    "discard": "Écarter la sélection",
+    "discarded": "Écartée",
+    "restore": "Rétablir",
+    "scriptsTitle": "Copies reçues : {{count}} sur {{total}}",
+    "pageCount": "pages : {{count}}",
+    "position": "Page {{number}}",
+    "returnToTray": "Remettre dans les pages non attribuées",
+    "missingTitle": "Pas encore de copie ({{count}})",
+    "reason": {
+      "before_first_cover": "Se trouve avant la première fiche de couverture du fichier.",
+      "follows_unassigned_cover": "Suit une fiche de couverture qui n'a pas pu être placée.",
+      "qr_damaged": "Fiche de couverture dont le code QR est abîmé.",
+      "qr_unreadable": "Ressemble à une fiche de couverture, mais aucun code QR n'a pu être lu.",
+      "qr_conflict": "Deux codes QR différents sur la même page.",
+      "qr_not_ours": "Fiche de couverture avec un code QR qui ne provient pas de ce système.",
+      "qr_bad_checksum": "Code QR mal lu (contrôle échoué).",
+      "unknown_sheet": "Fiche de couverture inconnue de cette installation.",
+      "other_exam": "Fiche de couverture d'un autre examen",
+      "duplicate_in_upload": "La même fiche de couverture apparaît deux fois dans ce fichier.",
+      "already_uploaded": "Cet élève a déjà des pages issues d'un téléversement précédent.",
+      "returned_by_teacher": "Remise dans les pages non attribuées par un enseignant."
     }
   }
 }

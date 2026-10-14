@@ -7,9 +7,11 @@ import { Layout } from "./components/Layout";
 import Classes from "./routes/admin/Classes";
 import ClassStudents from "./routes/admin/ClassStudents";
 import Users from "./routes/admin/Users";
+import CoverSheets from "./routes/CoverSheets";
 import ExamSetup from "./routes/ExamSetup";
 import Home from "./routes/Home";
 import NewExam from "./routes/NewExam";
+import Scans from "./routes/Scans";
 import SignIn from "./routes/SignIn";
 
 export default function App() {
@@ -45,6 +47,22 @@ export default function App() {
           element={
             <RequireAuth>
               <ExamSetup />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/exams/:examId/sheets"
+          element={
+            <RequireAuth>
+              <CoverSheets />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/exams/:examId/scans"
+          element={
+            <RequireAuth>
+              <Scans />
             </RequireAuth>
           }
         />

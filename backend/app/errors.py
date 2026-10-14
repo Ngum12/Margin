@@ -63,3 +63,8 @@ class ConflictError(DomainError):
 class ValidationFailedError(DomainError):
     status_code = 422
     default_code = "validation_failed"
+
+
+class PayloadTooLargeError(DomainError):
+    status_code = 413
+    default_code = "upload.too_large"

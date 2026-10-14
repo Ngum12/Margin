@@ -5,9 +5,10 @@ import { useNavigate, useParams } from "react-router";
 
 import { api } from "../api/endpoints";
 import type { ExamDetail } from "../api/types";
-import { ErrorMessage, Field, IssueList, Loading, StatusBadge } from "../components/ui";
+import { ErrorMessage, Field, IssueList, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
 import { CsvImport } from "../exam/CsvImport";
+import { ExamHeader } from "../exam/ExamHeader";
 import { MarkSchemeEditor } from "../exam/MarkSchemeEditor";
 import { fromExam, fromScheme, toScheme, totalMarks, validateDraft } from "../exam/markScheme";
 import type { DraftQuestion } from "../exam/markScheme";
@@ -68,10 +69,7 @@ function ExamSetupLoaded({
 
   return (
     <section className="exam-setup">
-      <div className="section-header">
-        <h1>{exam.title}</h1>
-        <StatusBadge status={exam.status} />
-      </div>
+      <ExamHeader exam={exam} />
 
       <ExamDetailsForm exam={exam} onSaved={onSaved} />
 

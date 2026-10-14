@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Request
+from sqlalchemy.orm import object_session
 
 from app.api.deps import CurrentUser, DbSession
-from app.db.models import Exam
+from app.db.models import Exam, ScriptStatus
 from app.errors import Issue, ValidationFailedError
 from app.marks import from_half_marks
 from app.schemas.common import IssueOut
@@ -22,6 +23,7 @@ from app.schemas.mark_scheme import MarkSchemeIn
 from app.services import exams as exam_service
 from app.services.mark_scheme import MarkSchemeReport, validate_mark_scheme
 from app.services.mark_scheme_import import MAX_CSV_BYTES, decode_csv, parse_mark_scheme_csv
+from app.services.uploads import script_status_counts
 from app.subjects.registry import get_registry
 
 router = APIRouter(tags=["exams"])
@@ -36,7 +38,20 @@ def _report_out(report: MarkSchemeReport) -> ValidationReportOut:
     )
 
 
-def _summary_out(exam: Exam) -> ExamSummaryOut:
+def _script_counts(by_status: dict[ScriptStatus, int]) -> ScriptCounts:
+    return ScriptCounts(
+        waiting=by_status.get(ScriptStatus.WAITING, 0) + by_status.get(ScriptStatus.TRANSCRIBED, 0),
+        ai_marked=by_status.get(ScriptStatus.AI_MARKED, 0)
+        + by_status.get(ScriptStatus.IN_REVIEW, 0),
+        confirmed=by_status.get(ScriptStatus.CONFIRMED, 0),
+    )
+
+
+def _summary_out(exam: Exam, counts: ScriptCounts | None = None) -> ExamSummaryOut:
+    if counts is None:
+        db = object_session(exam)
+        by_status = script_status_counts(db, [exam.id])[exam.id] if db else {}
+        counts = _script_counts(by_status)
     return ExamSummaryOut(
         id=exam.id,
         class_id=exam.class_id,
@@ -47,8 +62,7 @@ def _summary_out(exam: Exam) -> ExamSummaryOut:
         status=exam.status,
         question_count=len(exam.questions),
         total_marks=from_half_marks(exam_service.total_half_marks(exam)),
-        # Scripts arrive in Phase 2; counts are zero until then.
-        scripts=ScriptCounts(),
+        scripts=counts,
         updated_at=exam.updated_at,
     )
 
@@ -88,7 +102,9 @@ def list_subjects(user: CurrentUser) -> list[SubjectOut]:
 
 @router.get("/exams")
 def list_exams(db: DbSession, user: CurrentUser) -> list[ExamSummaryOut]:
-    return [_summary_out(e) for e in exam_service.list_exams(db, user)]
+    exams = exam_service.list_exams(db, user)
+    counts = script_status_counts(db, [e.id for e in exams])
+    return [_summary_out(e, _script_counts(counts[e.id])) for e in exams]
 
 
 @router.post("/exams", status_code=201)

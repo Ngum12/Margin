@@ -7,10 +7,15 @@ dependencies = [
     "alembic==1.20.0",
     "argon2-cffi==25.1.0",
     "fastapi==0.143.0",
+    "pillow==12.3.0",
     "pydantic==2.14.1",
     "pydantic-settings==2.15.0",
+    "pypdfium2==5.14.0",
+    "reportlab==5.0.1",
+    "segno==1.6.6",
     "sqlalchemy==2.1.4",
     "uvicorn==0.54.0",
+    "zxing-cpp==3.1.1",
 ]
 
 [dependency-groups]
@@ -41,6 +46,11 @@ python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 files = ["app", "tests"]
+
+# These ship without type information; the typed stub package would be an extra dependency.
+[[tool.mypy.overrides]]
+module = ["reportlab.*", "pypdfium2.*"]
+ignore_missing_imports = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

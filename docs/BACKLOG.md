@@ -26,3 +26,8 @@ Ideas and features deliberately not built yet. Add here instead of expanding sco
   Na^+), subscripts (H_2O), fractions ((a+b)/(c-d)), square roots and reaction arrows, shown as formatted
   text in the review screen while the stored text keeps the agreed plain notation. Must be bundled
   locally (no CDN), and its licence approved like any dependency.
+- Rotate a page in the review UI (answer pages scanned upside down without PDF rotation metadata stay as scanned; cover sheets are turned upright automatically).
+- Show `THIRD_PARTY_NOTICES.md` from an "About" page in the app.
+- Per-student PDF files of the original scans (not needed until marked-PDF export in Phase 5, which builds from page images).
+- Upload progress bar for large PDFs (the browser's `fetch` gives no upload progress; would need XMLHttpRequest).
+- Printable teacher distribution list (code to name) for handing out cover sheets; Phase 2 shows it on screen only.

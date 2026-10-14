@@ -12,6 +12,7 @@ from app.schemas.mark_scheme import MarkSchemeIn, PointIn, QuestionIn
 from app.services import audit
 from app.services.access import get_visible_class, get_visible_exam, visible_exams
 from app.services.mark_scheme import MarkSchemeReport, validate_mark_scheme
+from app.services.uploads import has_uploads
 from app.subjects.registry import get_registry
 
 # Status changes allowed in Phase 1. Later phases add marking/reviewing/completed transitions.
@@ -202,6 +203,11 @@ def set_status(db: Session, actor: User, exam_id: int, target: ExamStatus) -> Ex
     if (exam.status, target) not in _ALLOWED_TRANSITIONS:
         raise ConflictError(
             f"Cannot change exam from {exam.status} to {target}", code="exam.invalid_transition"
+        )
+    if target == ExamStatus.DRAFT and has_uploads(db, exam.id):
+        raise ConflictError(
+            "Scans have been uploaded for this exam; it can no longer return to draft",
+            code="exam.has_scripts",
         )
     if target == ExamStatus.READY:
         report = validation_of(exam)

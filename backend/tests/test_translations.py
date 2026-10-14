@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from app import errors
+from app.db.models import UnassignedReason
 
 REPO = Path(__file__).resolve().parents[2]
 APP_DIR = REPO / "backend" / "app"
@@ -19,6 +20,10 @@ _CODE_PATTERNS = [
     re.compile(r'Issue\(\s*"([a-z_.]+)"'),  # Issue("x.y", ...)
     re.compile(r'_row_issue\(\s*"([a-z_.]+)"'),
 ]
+# Upload failure codes are passed around as plain strings (RenderError, _mark_failed).
+_UPLOAD_ERROR = re.compile(
+    r'(?:RenderError\(|_mark_failed\(factory, upload_id,)\s*"(upload\.[a-z_]+)"'
+)
 
 
 def _source_codes() -> tuple[set[str], set[str]]:
@@ -32,6 +37,7 @@ def _source_codes() -> tuple[set[str], set[str]]:
     for path in APP_DIR.rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         error_codes.update(_CODE_PATTERNS[0].findall(text))
+        error_codes.update(_UPLOAD_ERROR.findall(text))
         for pattern in _CODE_PATTERNS[1:]:
             issue_codes.update(pattern.findall(text))
     error_codes.discard("error")  # base class default, never raised directly
@@ -62,3 +68,16 @@ def test_all_backend_codes_are_translated(language: str) -> None:
     assert missing_errors == []
     assert missing_issues == []
     assert len(issue_codes) > 20  # the scan really found the codes
+
+
+@pytest.mark.parametrize("language", ["en", "fr"])
+def test_every_tray_reason_is_translated(language: str) -> None:
+    locale = json.loads((LOCALES / f"{language}.json").read_text(encoding="utf-8"))
+
+    missing = [
+        r.value
+        for r in UnassignedReason
+        if not isinstance(_lookup(locale, f"scans.reason.{r.value}"), str)
+    ]
+
+    assert missing == []

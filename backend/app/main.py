@@ -11,6 +11,7 @@ from app.config import Settings, get_settings
 from app.db.session import make_engine, make_sessionmaker
 from app.logging_config import configure_logging
 from app.security_headers import SecurityHeadersMiddleware
+from app.services.upload_processor import UploadProcessor
 from app.spa import mount_spa
 from app.startup_checks import check_startup_safety
 
@@ -23,16 +24,23 @@ TELEMETRY_DISABLED: TelemetryConfig = {
 }
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, *, inline_upload_processing: bool = False
+) -> FastAPI:
+    """``inline_upload_processing`` processes uploads in the request (tests only)."""
     settings = settings or get_settings()
     configure_logging(settings)
     check_startup_safety(settings)
 
     engine = make_engine(settings)
+    session_factory = make_sessionmaker(engine)
+    processor = UploadProcessor(session_factory, settings, inline=inline_upload_processing)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        processor.recover()
         yield
+        processor.shutdown()
         engine.dispose()
 
     is_dev = settings.env == "development"
@@ -51,7 +59,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     app.state.engine = engine
-    app.state.sessionmaker = make_sessionmaker(engine)
+    app.state.sessionmaker = session_factory
+    app.state.upload_processor = processor
     register_error_handlers(app)
     app.add_middleware(SecurityHeadersMiddleware)
     app.include_router(api_router, prefix="/api")

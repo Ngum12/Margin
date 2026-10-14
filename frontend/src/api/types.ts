@@ -110,3 +110,70 @@ export interface ImportPreview {
   issues: Issue[];
   validation: ValidationReport | null;
 }
+
+export type UploadStatus = "pending" | "processing" | "processed" | "failed";
+export type PageState = "assigned" | "unassigned" | "discarded";
+export type UnassignedReason =
+  | "before_first_cover"
+  | "follows_unassigned_cover"
+  | "qr_damaged"
+  | "qr_unreadable"
+  | "qr_conflict"
+  | "qr_not_ours"
+  | "qr_bad_checksum"
+  | "unknown_sheet"
+  | "other_exam"
+  | "duplicate_in_upload"
+  | "already_uploaded"
+  | "returned_by_teacher";
+
+export interface CoverSheetRow {
+  student_id: number;
+  code: string;
+  display_name: string | null;
+  has_sheet: boolean;
+}
+
+export interface Upload {
+  id: number;
+  original_filename: string;
+  sha256: string;
+  size_bytes: number;
+  page_count: number | null;
+  status: UploadStatus;
+  error_code: string | null;
+  created_at: string;
+  processed_at: string | null;
+}
+
+export interface ScanPage {
+  id: number;
+  upload_id: number;
+  source_page_index: number;
+  is_cover: boolean;
+  state: PageState;
+  position: number | null;
+  unassigned_reason: UnassignedReason | null;
+  related_page_id: number | null;
+  detected_exam_title: string | null;
+  width: number;
+  height: number;
+}
+
+export interface StudentRef {
+  id: number;
+  code: string;
+  display_name: string | null;
+}
+
+export interface ScriptWithPages {
+  id: number;
+  student: StudentRef;
+  status: string;
+  pages: ScanPage[];
+}
+
+export interface ScriptsOverview {
+  scripts: ScriptWithPages[];
+  missing: StudentRef[];
+}

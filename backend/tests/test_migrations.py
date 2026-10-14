@@ -38,12 +38,23 @@ def test_upgrade_head_matches_models_and_downgrade_works(tmp_path: Path) -> None
 
 
 def test_migration_check_constraints_are_not_duplicated(tmp_path: Path) -> None:
+    """Alembic autogenerate emits each enum CHECK twice; migrations must keep only the named one."""
     engine = create_engine(f"sqlite:///{(tmp_path / 'migrate.db').as_posix()}")
     config = _alembic_config()
     with engine.begin() as connection:
         config.attributes["connection"] = connection
         command.upgrade(config, "head")
 
-    checks = [str(c["name"]) for c in inspect(engine).get_check_constraints("user")]
-    assert sorted(checks) == ["ck_user_preferred_language", "ck_user_role"]
+    inspector = inspect(engine)
+    checks = {
+        table: sorted(str(c["name"]) for c in inspector.get_check_constraints(table))
+        for table in inspector.get_table_names()
+    }
+    assert checks["user"] == ["ck_user_preferred_language", "ck_user_role"]
+    assert checks["page"] == [
+        "ck_page_page_state",
+        "ck_page_unassigned_reason",
+    ]
+    for table, names in checks.items():
+        assert all(name.startswith(f"ck_{table}_") for name in names), (table, names)
     engine.dispose()

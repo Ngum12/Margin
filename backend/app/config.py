@@ -55,6 +55,18 @@ class Settings(BaseSettings):
     login_max_failures: int = Field(default=5, ge=1)
     login_failure_window_minutes: int = Field(default=15, ge=1)
 
+    # Scanned PDF uploads. Rendering runs in a child process that is killed after the timeout.
+    max_upload_mb: int = Field(default=500, ge=1)
+    max_pdf_pages: int = Field(default=1000, ge=1)
+    render_timeout_seconds: int = Field(default=900, ge=1)
+    # Page images: resolution and JPEG quality (D-031).
+    page_dpi: int = Field(default=200, ge=100, le=400)
+    page_jpeg_quality: int = Field(default=90, ge=50, le=100)
+
+    @property
+    def upload_dir(self) -> Path:
+        return self.data_dir / "uploads"
+
     @property
     def log_dir(self) -> Path:
         return self.data_dir / "logs"

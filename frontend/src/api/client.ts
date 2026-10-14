@@ -24,7 +24,9 @@ type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 interface RequestOptions {
   json?: unknown;
   text?: string;
+  file?: Blob;
   contentType?: string;
+  headers?: Record<string, string>;
 }
 
 function isErrorBody(value: unknown): value is { code: string; issues?: Issue[] } {
@@ -40,14 +42,17 @@ export async function request<T>(
   path: `/api/${string}`,
   options: RequestOptions = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
-  let body: string | undefined;
+  const headers: Record<string, string> = { Accept: "application/json", ...options.headers };
+  let body: string | Blob | undefined;
   if (options.json !== undefined) {
     headers["Content-Type"] = "application/json";
     body = JSON.stringify(options.json);
   } else if (options.text !== undefined) {
     headers["Content-Type"] = options.contentType ?? "text/plain";
     body = options.text;
+  } else if (options.file !== undefined) {
+    headers["Content-Type"] = options.contentType ?? "application/octet-stream";
+    body = options.file;
   }
   if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
 

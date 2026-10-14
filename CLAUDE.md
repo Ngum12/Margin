@@ -3,7 +3,7 @@
 On-premise AI marking assistant for secondary schools. Full requirements: `PROJECT_BRIEF.md` (read it). Plan: `docs/PLAN.md`. Decisions: `docs/DECISIONS.md`. Out-of-scope ideas: `docs/BACKLOG.md`. Dependency licences: `docs/DEPENDENCIES.md`.
 
 ## Current phase
-**Phase 0: complete and approved.** **Phase 1: complete and approved (2026-10-14).** **Phase 2 (cover sheets, upload, split): dependency list sent for approval; not started.** Carried-forward Phase 2 requirements are in `docs/PLAN.md`.
+**Phase 0: complete and approved.** **Phase 1: complete and approved (2026-10-14).** **Phase 2 (cover sheets, upload, split): built, awaiting owner review.** Do not start Phase 3 until the owner says so.
 
 Workflow: one phase at a time → plan → build → `python scripts/check.py` passes → commit → stop and report. Never claim something works without running it. Record decisions and deviations in `docs/DECISIONS.md` first. Out-of-scope ideas go to `docs/BACKLOG.md`.
 
@@ -48,6 +48,8 @@ Browser (React/TS, Vite build) --> FastAPI app (backend/app) --> SQLite (WAL) vi
 - **Audit:** every change to users, classes, students, consent and exams goes through `app.services.audit.record` (append-only, guarded in the ORM). Never put names or passwords in audit values.
 - **Marks:** stored as integer half marks (`app/marks.py`, D-018); the API and UI use whole marks.
 - **Schema changes:** edit models, run `cd backend && uv run alembic revision --autogenerate -m "..."`, review the file (delete the duplicate enum CHECK constraints Alembic emits), and keep `tests/test_migrations.py` passing.
+- **Scans (Phase 2):** cover sheets carry `MA1-<token>-<check>` QR codes, never ids (`app/sheets/`). Uploads are streamed raw (`application/pdf`), stored unchanged with SHA-256 (`uploads/<id>/original.pdf`), and rendered by a child process with a timeout (`app/pdf/render_worker.py`, `runner.py`; never import PDFium in the web process). `app/services/splitting.py` is the pure placement logic: never assign by guess; anything uncertain goes to the tray with a reason (`UnassignedReason`, translated under `scans.reason.*`). Processing is idempotent and resumed on start-up (`upload_processor.py`) until Phase 3 moves it to the job table.
+- **Third-party notices:** after any dependency change run `cd backend && uv run python ../scripts/third_party_notices.py`; the check suite verifies it.
 - Request DB transactions commit before the response is sent (`Depends(..., scope="function")`, D-021).
 - Frontend: React + TypeScript strict, plain CSS with tokens (`src/styles.css`), same-origin `fetch` only (`src/api.ts`).
 

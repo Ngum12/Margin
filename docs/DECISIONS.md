@@ -129,3 +129,43 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-026 · 2026-10-14 · Every backend error and issue code must be translated
 - **Decision:** `backend/tests/test_translations.py` scans the backend for error and issue codes and fails if `en.json` or `fr.json` lacks text for any of them. A frontend test asserts the two locales have identical keys.
 - **Reason:** teachers must never see a raw code. It already caught one missing string.
+
+### D-027 · 2026-10-14 · Uploads streamed as a raw PDF body; python-multipart not installed
+- **Decision:** `POST /api/exams/{id}/uploads` takes the PDF as the raw request body (`Content-Type: application/pdf`) with the file name URL-encoded in `X-Filename`. The server streams it straight into `MARGIN_DATA_DIR/uploads/incoming/`, enforcing `MARGIN_MAX_UPLOAD_MB` and computing SHA-256 on the way, then checks for `%PDF-`. One request per file.
+- **Alternatives:** multipart form upload with `python-multipart` (approved 2026-10-14).
+- **Reason:** with multipart, Starlette spools file parts to the system temp folder before our code sees them, with no size limit on file parts; streaming the raw body keeps the size limit, the checksum and the storage location under our control. `python-multipart` is therefore not installed; the approval is unused.
+
+### D-028 · 2026-10-14 · PDF rendering and QR reading in a child process with a timeout
+- **Decision:** `app/pdf/render_worker.py` runs as `python -m app.pdf.render_worker` (started by `app/pdf/runner.py` with `subprocess.run(..., timeout=MARGIN_RENDER_TIMEOUT_SECONDS)`). It opens the PDF with PDFium, renders every page, reads QR codes and detects the cover frame, writes JPEGs and finally `manifest.json` atomically. Exit codes map to `upload.pdf_unreadable`, `upload.too_many_pages`; a missing manifest or other exit code is `upload.render_crashed`; a timeout kills the child and gives `upload.render_timeout`. Renders are capped at 40 megapixels per page.
+- **Reason:** owner requirement. A crash, hang or memory blow-up in native code affects only that file. Tests cover a malformed PDF, a hanging worker, a crashing worker, the page limit and that the worker really runs in another process.
+- **Note:** if one page cannot be rendered the whole upload fails with a clear reason (rescan), rather than silently dropping that page.
+
+### D-029 · 2026-10-14 · Cover sheet QR codes: random token + checksum; never assign by guess
+- **Decision:** payload `MA1-<16 base32>-<4 base32>`: 80 random bits per (exam, student) sheet, stable across reprints, plus a 20-bit SHA-256 checksum. No database ids. Each sheet carries the code twice (level H) and a thick frame. A page is assigned only when it is a valid sheet of this exam for a student with no pages yet, or an answer page following such a sheet. Otherwise the page and the pages after it (until the next good sheet) go to the tray with a reason: `qr_damaged`, `qr_unreadable` (frame but no code), `qr_conflict`, `qr_not_ours` (foreign code on a framed page), `qr_bad_checksum`, `unknown_sheet`, `other_exam`, `duplicate_in_upload`, `already_uploaded`, `before_first_cover`. A foreign QR on an unframed page is treated as part of an answer page.
+- **Reason:** owner requirement; wrong assignment is worse than asking the teacher.
+- **Residual risk:** a cover sheet whose two codes and frame are all unreadable looks like an answer page and would be appended to the previous student. The teacher sees every script's pages, cover first, before marking (Phase 4).
+
+### D-030 · 2026-10-14 · Originals kept byte-for-byte
+- **Decision:** each upload is stored as `uploads/<id>/original.pdf`, unchanged, with SHA-256 and size in the `upload` row; the same file uploaded twice for one exam is refused (`upload.duplicate_file`). Page images and thumbnails live beside it in `uploads/<id>/pages/`. Files are served only through authenticated endpoints that resolve paths from the database and refuse anything outside `MARGIN_DATA_DIR`.
+- **Reason:** owner requirement: the original is the record of what was scanned.
+
+### D-031 · 2026-10-14 · Page image settings: 200 dpi colour JPEG, quality 90
+- **Decision:** defaults `MARGIN_PAGE_DPI=200`, `MARGIN_PAGE_JPEG_QUALITY=90`, colour, plus 400 px-wide thumbnails (quality 80). Pages are rendered as a PDF viewer shows them (the page's `/Rotate` is applied; pypdfium2 does not do this by default, which the acceptance test caught); cover sheets are turned upright from the QR orientation.
+- **Measured (simulated scanner output, 50 students x 5 pages = 250 pages):** original PDF 71 MB, page images 58 MB, thumbnails 8 MB, **about 137 MB per 50-script class**; rendering and QR reading 0.35 s per page (about 1.5 minutes per class) on the development laptop. Real scans may be larger depending on scanner settings (colour, 300 dpi); plan for 150 to 400 MB per class.
+- **Reason:** brief (200 to 300 dpi); 200 dpi keeps handwriting legible for review and vision models while halving storage compared with 300 dpi.
+
+### D-032 · 2026-10-14 · Upload processing in the web process until Phase 3
+- **Decision:** after the upload response, a background task hands the upload to a single-thread processor in the web process, which starts the render child process. Processing is idempotent (one transaction replaces an upload's pages and scripts). On start-up, uploads left `pending`/`processing` are processed again. Tests run processing inline.
+- **Reason:** the job table and worker are Phase 3 in the brief; this keeps restarts and power cuts safe meanwhile. Phase 3 moves upload processing onto the job table.
+
+### D-033 · 2026-10-14 · Untyped native libraries in mypy
+- **Decision:** `reportlab` and `pypdfium2` ship without type information; mypy treats them as untyped (`ignore_missing_imports` for those two only). Their use is confined to `app/sheets/cover_pdf.py`, `app/pdf/render_worker.py` and test helpers.
+- **Alternatives:** `types-reportlab` (an extra dependency, not approved).
+
+### D-034 · 2026-10-14 · Third-party notices generated and checked
+- **Decision:** `scripts/third_party_notices.py` writes `THIRD_PARTY_NOTICES.md` from the licence files installed with every shipped component (Python runtime closure, including the libraries bundled in pypdfium2's PDFium build and in Pillow, plus frontend runtime packages). The check suite runs it with `--check`, which fails if any shipped package or version is missing. Regenerate after any dependency change.
+- **Reason:** owner requirement; bundled native libraries (FreeType, libjpeg-turbo, OpenJPEG, ICU, zlib and others) require their notices to ship.
+
+### D-035 · 2026-10-14 · Exams with uploads cannot return to draft
+- **Decision:** `ready -> draft` is refused with `409 exam.has_scripts` once any upload exists for the exam.
+- **Reason:** owner requirement; the mark scheme must not change under scanned work.

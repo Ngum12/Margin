@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -116,3 +117,24 @@ def complete_scheme() -> dict[str, Any]:
             },
         ]
     }
+
+
+def make_ready_exam(user: ApiUser, class_id: int, title: str = "Mock exam 1") -> dict[str, Any]:
+    """Create an exam with a complete mark scheme and mark it ready."""
+    exam = user.post(
+        "/api/exams", json={"class_id": class_id, "subject_code": "chemistry", "title": title}
+    ).json()
+    user.put(f"/api/exams/{exam['id']}/mark-scheme", json=complete_scheme())
+    response = user.put(f"/api/exams/{exam['id']}/status", json={"status": "ready"})
+    assert response.status_code == 200, response.text
+    body: dict[str, Any] = response.json()
+    return body
+
+
+def upload_pdf(user: ApiUser, exam_id: int, pdf: bytes, filename: str = "scan.pdf") -> Any:
+    return user.post(
+        f"/api/exams/{exam_id}/uploads",
+        content=pdf,
+        # Headers are ASCII-only, so the filename is URL-encoded (as the frontend does).
+        headers={"Content-Type": "application/pdf", "X-Filename": quote(filename)},
+    )

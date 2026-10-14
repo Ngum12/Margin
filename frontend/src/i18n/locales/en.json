@@ -183,7 +183,9 @@
       "locked": "This exam can no longer be changed.",
       "not_draft": "This can only be done while the exam is a draft.",
       "not_ready": "The mark scheme is not complete yet.",
-      "invalid_transition": "The exam cannot move to that status now."
+      "invalid_transition": "The exam cannot move to that status now.",
+      "has_scripts": "Scans have been uploaded for this exam, so it can no longer return to draft.",
+      "sheets_need_ready": "Mark the exam as ready first."
     },
     "mark_scheme": {
       "invalid": "The mark scheme has errors. Fix them and save again."
@@ -194,6 +196,23 @@
     },
     "request": {
       "invalid": "Some information is missing or not valid."
+    },
+    "upload": {
+      "not_pdf": "This file is not a PDF.",
+      "too_large": "The file is too large. Scan in smaller batches.",
+      "duplicate_file": "This exact file was already uploaded for this exam.",
+      "not_failed": "Only failed uploads can be tried again.",
+      "pdf_unreadable": "The PDF could not be opened. It may be damaged or password-protected. Scan it again.",
+      "render_timeout": "The PDF took too long to process. Try scanning in smaller batches.",
+      "render_crashed": "The PDF could not be processed. Try again, or scan it again.",
+      "too_many_pages": "The PDF has too many pages. Scan in smaller batches.",
+      "processing_error": "Something went wrong while processing this file. Try again."
+    },
+    "page": {
+      "already_assigned": "Some pages are already in a script. Return them to the tray first."
+    },
+    "script": {
+      "locked": "This script is already being marked; its pages cannot change."
     }
   },
   "issues": {
@@ -234,6 +253,68 @@
       "question_inconsistent": "Row {{row}}: question {{label}} has a different text or maximum than on row {{first_row}}.",
       "malformed_csv": "The file is not a valid CSV file.",
       "empty": "The file contains no mark scheme rows."
+    }
+  },
+  "examTabs": {
+    "label": "Exam sections",
+    "setup": "Questions and mark scheme",
+    "sheets": "Cover sheets",
+    "scans": "Scans"
+  },
+  "sheets": {
+    "needReady": "Mark the exam as ready (after completing the mark scheme) before printing cover sheets or uploading scans.",
+    "noStudents": "This class has no students yet. Ask your administrator to add them.",
+    "help": "Print one cover sheet per student. Each student puts their sheet on top of their answer pages. After the exam, scan the whole stack in order.",
+    "prepare": "Prepare cover sheets ({{count}} to create)",
+    "download": "Download cover sheets (PDF)",
+    "privacy": "Cover sheets show student codes only, never names. Use this list to hand out the sheets.",
+    "sheet": "Cover sheet",
+    "ready": "Ready",
+    "notYet": "Not prepared"
+  },
+  "scans": {
+    "uploadTitle": "Upload scans",
+    "uploadHelp": "Choose one or more PDF files from the school scanner. Scan each class stack in order, cover sheets on top. Processing continues in the background.",
+    "choose": "Choose PDF files",
+    "uploading": "Uploading…",
+    "uploaded": "uploaded, processing",
+    "file": "File",
+    "uploadedAt": "Uploaded",
+    "pages": "Pages",
+    "uploadStatus": {
+      "pending": "Waiting",
+      "processing": "Processing…",
+      "processed": "Done",
+      "failed": "Failed"
+    },
+    "original": "Original PDF",
+    "retry": "Try again",
+    "pageOf": "Page {{number}} of {{file}}",
+    "trayTitle": "Unassigned pages: {{count}}",
+    "trayHelp": "These pages could not be placed automatically. Check each one, then assign it to a student or discard it. Selecting a cover sheet also selects the pages that follow it.",
+    "assignTo": "Assign to student…",
+    "assign": "Assign selected ({{count}})",
+    "discard": "Discard selected",
+    "discarded": "Discarded",
+    "restore": "Restore",
+    "scriptsTitle": "Scripts received: {{count}} of {{total}}",
+    "pageCount": "pages: {{count}}",
+    "position": "Page {{number}}",
+    "returnToTray": "Return to unassigned",
+    "missingTitle": "No scan yet ({{count}})",
+    "reason": {
+      "before_first_cover": "Comes before the first cover sheet in the file.",
+      "follows_unassigned_cover": "Follows a cover sheet that could not be placed.",
+      "qr_damaged": "Cover sheet with a damaged QR code.",
+      "qr_unreadable": "Looks like a cover sheet, but no QR code could be read.",
+      "qr_conflict": "Two different QR codes on one page.",
+      "qr_not_ours": "Cover sheet with a QR code that was not made by this system.",
+      "qr_bad_checksum": "QR code read incorrectly (failed its check).",
+      "unknown_sheet": "Cover sheet not known to this installation.",
+      "other_exam": "Cover sheet from another exam",
+      "duplicate_in_upload": "The same cover sheet appears twice in this file.",
+      "already_uploaded": "This student already has pages from an earlier upload.",
+      "returned_by_teacher": "Returned to the tray by a teacher."
     }
   }
 }

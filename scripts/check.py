@@ -43,6 +43,10 @@ def backend_steps(fix: bool) -> list[tuple[str, list[str]]]:
         ("backend: lint", [*uv, "ruff", "check", *paths]),
         ("backend: types", [*uv, "mypy", "app", "tests", "../scripts"]),
         ("backend: tests", [*uv, "pytest", "-q"]),
+        (
+            "licences: third-party notices",
+            [*uv, "python", "../scripts/third_party_notices.py", "--check"],
+        ),
     ]
     return steps
 

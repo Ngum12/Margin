@@ -1,5 +1,6 @@
 import { request } from "./client";
 import type {
+  CoverSheetRow,
   ExamDetail,
   ExamStatus,
   ExamSummary,
@@ -9,8 +10,11 @@ import type {
   Me,
   Role,
   SchoolClass,
+  ScanPage,
+  ScriptsOverview,
   Student,
   Subject,
+  Upload,
   User,
 } from "./types";
 
@@ -46,6 +50,41 @@ export const api = {
       text: csv,
       contentType: "text/csv",
     }),
+
+  coverSheets: (examId: number) =>
+    request<CoverSheetRow[]>("GET", `/api/exams/${String(examId)}/cover-sheets`),
+  prepareCoverSheets: (examId: number) =>
+    request<CoverSheetRow[]>("POST", `/api/exams/${String(examId)}/cover-sheets`),
+  coverSheetsPdfUrl: (examId: number) => `/api/exams/${String(examId)}/cover-sheets.pdf`,
+  uploads: (examId: number) => request<Upload[]>("GET", `/api/exams/${String(examId)}/uploads`),
+  uploadScan: (examId: number, file: File) =>
+    request<Upload>("POST", `/api/exams/${String(examId)}/uploads`, {
+      file,
+      contentType: "application/pdf",
+      // Headers are ASCII-only; the server decodes this.
+      headers: { "X-Filename": encodeURIComponent(file.name) },
+    }),
+  retryUpload: (uploadId: number) =>
+    request<Upload>("POST", `/api/uploads/${String(uploadId)}/retry`),
+  originalUrl: (uploadId: number) => `/api/uploads/${String(uploadId)}/original`,
+  scripts: (examId: number) =>
+    request<ScriptsOverview>("GET", `/api/exams/${String(examId)}/scripts`),
+  tray: (examId: number) =>
+    request<ScanPage[]>("GET", `/api/exams/${String(examId)}/unassigned-pages`),
+  assignPages: (examId: number, pageIds: number[], studentId: number) =>
+    request<undefined>("POST", `/api/exams/${String(examId)}/pages/assign`, {
+      json: { page_ids: pageIds, student_id: studentId },
+    }),
+  unassignPages: (examId: number, pageIds: number[]) =>
+    request<undefined>("POST", `/api/exams/${String(examId)}/pages/unassign`, {
+      json: { page_ids: pageIds },
+    }),
+  discardPages: (examId: number, pageIds: number[]) =>
+    request<undefined>("POST", `/api/exams/${String(examId)}/pages/discard`, {
+      json: { page_ids: pageIds },
+    }),
+  pageImageUrl: (pageId: number, size: "thumb" | "full" = "thumb") =>
+    `/api/pages/${String(pageId)}/image?size=${size}`,
 
   classes: () => request<SchoolClass[]>("GET", "/api/classes"),
   createClass: (data: { name: string; academic_year: string; teacher_id: number }) =>
