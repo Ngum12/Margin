@@ -1,0 +1,17 @@
+{
+  "app": {
+    "title": "Marking Assistant",
+    "tagline": "AI-assisted marking that stays inside your school."
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "fr": "Français"
+  },
+  "status": {
+    "heading": "System status",
+    "checking": "Checking the server…",
+    "ok": "Server is running (version {{version}}).",
+    "unavailable": "The server cannot be reached. Check that the Marking Assistant is running on this computer or school network."
+  }
+}

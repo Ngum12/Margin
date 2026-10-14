@@ -1,0 +1,17 @@
+{
+  "app": {
+    "title": "Assistant de correction",
+    "tagline": "Une correction assistée par IA qui reste dans votre établissement."
+  },
+  "language": {
+    "label": "Langue",
+    "en": "English",
+    "fr": "Français"
+  },
+  "status": {
+    "heading": "État du système",
+    "checking": "Vérification du serveur…",
+    "ok": "Le serveur fonctionne (version {{version}}).",
+    "unavailable": "Le serveur est injoignable. Vérifiez que l'Assistant de correction fonctionne sur cet ordinateur ou sur le réseau de l'établissement."
+  }
+}
