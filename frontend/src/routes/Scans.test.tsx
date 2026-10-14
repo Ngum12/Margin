@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import type { ScanPage } from "../api/types";
+import type { AiStatus, ScanPage } from "../api/types";
 import en from "../i18n/locales/en.json";
 import fr from "../i18n/locales/fr.json";
 import { examDetail, fakeApi, me, SUBJECTS } from "../test/fakeApi";
@@ -30,12 +30,33 @@ function trayPage(overrides: Partial<ScanPage>): ScanPage {
   };
 }
 
+function aiStatus(overrides: Partial<AiStatus> = {}): AiStatus {
+  return {
+    scripts: { waiting: 2, transcribed: 0, ai_marked: 0, in_review: 0, confirmed: 0 },
+    flagged: [],
+    jobs_queued: 0,
+    jobs_running: 0,
+    jobs_failed: 0,
+    system: {
+      worker_online: true,
+      ai_backend: "ollama",
+      model_server_reachable: true,
+      reader_model: "qwen3-vl:8b",
+      reader_model_installed: true,
+      marker_model: "qwen3-vl:8b",
+      marker_model_installed: true,
+    },
+    ...overrides,
+  };
+}
+
 function setup(language: "en" | "fr" = "en") {
   const api = fakeApi();
   api.on("GET /api/auth/me", [200, me("teacher", language)]);
   api.on("GET /api/subjects", [200, SUBJECTS]);
   api.on("GET /api/exams/7", [200, examDetail({ status: "ready" })]);
   api.on("GET /api/exams/7/cover-sheets", [200, STUDENTS]);
+  api.on("GET /api/exams/7/ai-status", [200, aiStatus()]);
   api.on("GET /api/exams/7/uploads", [
     200,
     [
@@ -201,6 +222,56 @@ describe("page count check", () => {
       await screen.findByText(
         "Check: more pages than usual (typical: 3). Another student's pages may have been added.",
       ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("AI marking panel", () => {
+  it("starts AI marking with the CSRF token", async () => {
+    const api = setup();
+    api.on("POST /api/exams/7/ai-marking", [202, { scripts_queued: 2 }]);
+    const user = userEvent.setup();
+    renderApp("/exams/7/scans");
+
+    await user.click(await screen.findByRole("button", { name: en.ai.start }));
+
+    await waitFor(() => {
+      expect(api.calls.some((c) => c.path === "/api/exams/7/ai-marking")).toBe(true);
+    });
+    const call = api.calls.find((c) => c.path === "/api/exams/7/ai-marking");
+    expect(call?.headers["X-CSRF-Token"]).toBe("csrf-123");
+  });
+
+  it("explains when the worker or the model is not available", async () => {
+    const api = setup();
+    const status = aiStatus();
+    api.on("GET /api/exams/7/ai-status", [
+      200,
+      aiStatus({
+        system: { ...status.system, worker_online: false, reader_model_installed: false },
+      }),
+    ]);
+    renderApp("/exams/7/scans");
+
+    expect(await screen.findByText(en.ai.workerOffline)).toBeInTheDocument();
+    expect(
+      screen.getByText("The AI model qwen3-vl:8b is not installed on the model server."),
+    ).toBeInTheDocument();
+  });
+
+  it("lists scripts flagged for manual marking, in French", async () => {
+    const api = setup("fr");
+    api.on("GET /api/exams/7/ai-status", [
+      200,
+      aiStatus({
+        flagged: [{ script_id: 1, student_code: "AAAAAA", reason: "ai.reader_invalid_output" }],
+      }),
+    ]);
+    renderApp("/exams/7/scans");
+
+    expect(await screen.findByText(fr.ai.flaggedTitle)).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(fr.ai.manualReason.ai.reader_invalid_output)),
     ).toBeInTheDocument();
   });
 });

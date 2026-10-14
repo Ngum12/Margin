@@ -181,3 +181,22 @@ export interface ScriptsOverview {
   typical_page_count: number | null;
   missing: StudentRef[];
 }
+
+export interface SystemStatus {
+  worker_online: boolean;
+  ai_backend: string;
+  model_server_reachable: boolean;
+  reader_model: string;
+  reader_model_installed: boolean;
+  marker_model: string;
+  marker_model_installed: boolean;
+}
+
+export interface AiStatus {
+  scripts: Record<string, number>;
+  flagged: { script_id: number; student_code: string; reason: string }[];
+  jobs_queued: number;
+  jobs_running: number;
+  jobs_failed: number;
+  system: SystemStatus;
+}

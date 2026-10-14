@@ -8,7 +8,7 @@
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Exam, SchoolClass, Student, User
+from app.db.models import Exam, SchoolClass, Script, Student, User
 from app.errors import NotFoundError, PermissionDeniedError
 
 
@@ -65,3 +65,14 @@ def get_visible_student(db: Session, actor: User, student_id: int) -> Student:
     if student is None:
         raise NotFoundError("Student")
     return student
+
+
+def get_visible_script(db: Session, actor: User, script_id: int) -> Script:
+    script = db.scalar(
+        select(Script)
+        .join(Exam, Script.exam_id == Exam.id)
+        .where(Script.id == script_id, Exam.id.in_(visible_exams(actor).with_only_columns(Exam.id)))
+    )
+    if script is None:
+        raise NotFoundError("Script")
+    return script

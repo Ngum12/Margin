@@ -31,3 +31,7 @@ Ideas and features deliberately not built yet. Add here instead of expanding sco
 - Per-student PDF files of the original scans (not needed until marked-PDF export in Phase 5, which builds from page images).
 - Upload progress bar for large PDFs (the browser's `fetch` gives no upload progress; would need XMLHttpRequest).
 - Printable teacher distribution list (code to name) for handing out cover sheets; Phase 2 shows it on screen only.
+- Re-run AI marking for selected scripts with a new model or prompt version (results are versioned already; needs a UI and a deliberate "replace proposals" rule).
+- Per-question marking when the model's context is too small for a whole script; send only the relevant pages per question (needs question regions).
+- Show model output invalid rates and timings to admins (from the job table and evaluation reports).
+- A real evaluation set: teacher-typed transcriptions of real (consented) scripts per subject. The Phase 3 sample set is synthetic.

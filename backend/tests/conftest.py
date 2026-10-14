@@ -49,7 +49,7 @@ def settings(tmp_path: Path, frontend_dist: Path) -> Settings:
 
 @pytest.fixture
 def app(settings: Settings) -> Iterator[FastAPI]:
-    application = create_app(settings, inline_upload_processing=True)
+    application = create_app(settings)
     Base.metadata.create_all(application.state.engine)
     yield application
     application.state.engine.dispose()

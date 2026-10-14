@@ -3,6 +3,7 @@
     uv run python -m app.cli migrate
     uv run python -m app.cli init-school --name "GBHS Example" --country Cameroon
     uv run python -m app.cli create-user --username admin --display-name "Head Teacher" --role admin
+    uv run python -m app.cli evaluate --data eval/ --backend ollama --report report.json
 
 Passwords are prompted for (never passed on the command line). For automation, the password can
 be read from an environment variable named with --password-env.
@@ -10,6 +11,7 @@ be read from an environment variable named with --password-env.
 
 import argparse
 import getpass
+import json
 import os
 import sys
 from pathlib import Path
@@ -90,6 +92,89 @@ def create_user(
     return 0
 
 
+def evaluate(
+    data: Path, subject: str | None, backend: str | None, curriculum: str, report: Path | None
+) -> int:
+    """Measure the configured Reader against typed ground truth (see app.ai.evaluation)."""
+    from app.ai.evaluation import evaluate as run_evaluation
+    from app.ai.evaluation import find_pages
+    from app.ai.factory import build_reader
+    from app.subjects.registry import SubjectConfig, get_registry
+
+    settings = get_settings()
+    if backend:
+        settings = settings.model_copy(update={"ai_backend": backend})
+    pages = find_pages(data, subject)
+    if not pages:
+        print(f"No image + .txt pairs found under {data}", file=sys.stderr)
+        return 1
+    registry = get_registry()
+
+    def subject_config(code: str) -> SubjectConfig:
+        config = registry.get(curriculum, code)
+        if config is None:
+            raise SystemExit(f"Unknown subject '{code}' for curriculum {curriculum}")
+        return config
+
+    for code in pages:
+        subject_config(code)  # fail fast on unknown folders
+    reader = build_reader(settings)
+    print(f"Reader: {reader.model.name} ({reader.model.version}), prompt {reader.prompt_version}")
+    results = run_evaluation(reader, pages, subject_config, progress=print)
+
+    print()
+    print(
+        f"{'subject':<14}{'pages':>6}{'CER':>8}{'WER':>8}"
+        f"{'key recall':>12}{'invalid':>9}{'s/page':>9}"
+    )
+    for r in results:
+        t = r.total
+        print(
+            f"{r.subject:<14}{len(r.pages):>6}{t.cer:>8.1%}{t.wer:>8.1%}"
+            f"{t.key_token_recall:>12.1%}{r.invalid_outputs:>9}{r.seconds_per_page:>9.1f}"
+        )
+    if report:
+        report.write_text(
+            json.dumps(
+                {
+                    "reader": {
+                        "model": reader.model.name,
+                        "version": reader.model.version,
+                        "prompt_version": reader.prompt_version,
+                        "max_image_px": settings.reader_max_image_px,
+                    },
+                    "subjects": [
+                        {
+                            "subject": r.subject,
+                            "pages": len(r.pages),
+                            "cer": r.total.cer,
+                            "wer": r.total.wer,
+                            "key_token_recall": r.total.key_token_recall,
+                            "invalid_outputs": r.invalid_outputs,
+                            "seconds_per_page": r.seconds_per_page,
+                            "page_results": [
+                                {
+                                    "name": p.name,
+                                    "seconds": p.seconds,
+                                    "valid_output": p.valid_output,
+                                    "cer": p.score.cer,
+                                    "wer": p.score.wer,
+                                    "key_token_recall": p.score.key_token_recall,
+                                }
+                                for p in r.pages
+                            ],
+                        }
+                        for r in results
+                    ],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        print(f"Report written to {report}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
@@ -112,7 +197,18 @@ def main(argv: list[str] | None = None) -> int:
     user.add_argument("--language", choices=[lang.value for lang in Language], default="en")
     user.add_argument("--password-env", help="read the password from this environment variable")
 
+    ev = sub.add_parser("evaluate", help="measure the Reader against typed ground truth")
+    ev.add_argument(
+        "--data", type=Path, required=True, help="folder of <subject>/<page>.jpg + .txt"
+    )
+    ev.add_argument("--subject", help="only this subject folder")
+    ev.add_argument("--backend", choices=["mock", "ollama"], help="override MARGIN_AI_BACKEND")
+    ev.add_argument("--curriculum", default="cm_gce_ol")
+    ev.add_argument("--report", type=Path, help="write a JSON report here")
+
     args = parser.parse_args(argv)
+    if args.command == "evaluate":
+        return evaluate(args.data, args.subject, args.backend, args.curriculum, args.report)
     if args.command == "migrate":
         migrate()
         return 0

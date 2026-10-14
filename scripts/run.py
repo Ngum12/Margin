@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Start the Marking Assistant with one command. Standard library only.
 
-    python scripts/run.py           # production mode: build frontend if needed, serve it
+    python scripts/run.py           # production mode: build frontend if needed, serve it,
+                                    # and run the background worker
     python scripts/run.py --dev     # development: FastAPI with reload + Vite dev server
     python scripts/run.py --rebuild # force a fresh frontend build first
 
@@ -80,22 +81,32 @@ def main() -> int:
     migrate = [_tool("uv"), "run", "--frozen", "python", "-m", "app.cli", "migrate"]
     subprocess.run(migrate, cwd=BACKEND, env=env, check=True)  # noqa: S603
 
+    worker_cmd = [_tool("uv"), "run", "--frozen", "python", "-m", "app.worker"]
+
     if args.dev:
         env.setdefault("MARGIN_ENV", "development")
         env["MARGIN_BACKEND_URL"] = f"http://{host}:{port}"
         vite = subprocess.Popen([npm, "run", "dev"], cwd=FRONTEND, env=env)  # noqa: S603
+        worker = subprocess.Popen(worker_cmd, cwd=BACKEND, env=env)  # noqa: S603
         try:
             dev = subprocess.run([*uvicorn, "--reload"], cwd=BACKEND, env=env, check=False)  # noqa: S603
             return dev.returncode
         finally:
+            worker.terminate()
             vite.terminate()
 
     if args.rebuild or _frontend_is_stale():
         print("Building frontend...", flush=True)
         subprocess.run([npm, "run", "build"], cwd=FRONTEND, check=True)  # noqa: S603
 
+    # The background worker (uploads, AI marking) runs next to the web app.
+    worker = subprocess.Popen(worker_cmd, cwd=BACKEND, env=env)  # noqa: S603
     print(f"Marking Assistant: http://{host}:{port}", flush=True)
-    return subprocess.run(uvicorn, cwd=BACKEND, env=env, check=False).returncode  # noqa: S603
+    try:
+        return subprocess.run(uvicorn, cwd=BACKEND, env=env, check=False).returncode  # noqa: S603
+    finally:
+        worker.terminate()
+        worker.wait(timeout=30)
 
 
 if __name__ == "__main__":

@@ -70,6 +70,9 @@ class Script(IdMixin, TimestampMixin, Base):
     )
     confirmed_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
     confirmed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    # Set when the AI could not produce valid output: the teacher marks this script by hand.
+    manual_reason: Mapped[str | None] = mapped_column(String(64))
+    ai_started_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
     student: Mapped[Student] = relationship()
     pages: Mapped[list["Page"]] = relationship(

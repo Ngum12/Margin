@@ -7,6 +7,7 @@ import type { CoverSheetRow, ExamDetail, ScanPage, ScriptsOverview, Upload } fro
 import { errorMessage } from "../components/errors";
 import { ErrorMessage, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
+import { AiPanel } from "../exam/AiPanel";
 import { ExamHeader } from "../exam/ExamHeader";
 
 const POLL_MS = 3000;
@@ -66,6 +67,7 @@ export default function Scans() {
             students={data.students}
             onChange={refresh}
           />
+          <AiPanel examId={examId} onProgress={refresh} />
           <ScriptList
             examId={examId}
             overview={data.overview}

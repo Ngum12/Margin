@@ -14,7 +14,7 @@ from app.config import Settings
 from app.db.models import Page, Upload
 from app.pdf import runner
 from tests.conftest import World
-from tests.factories import ApiUser, Factory, make_ready_exam, upload_pdf
+from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, upload_pdf
 from tests.scan_builder import ScanBuilder, answer_page
 
 
@@ -195,8 +195,7 @@ def test_hanging_worker_is_killed_after_timeout(
     settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    fast = settings.model_copy(update={"render_timeout_seconds": 1})
-    app.state.upload_processor._settings = fast
+    app.state.settings = settings.model_copy(update={"render_timeout_seconds": 1})
     monkeypatch.setattr(
         runner,
         "worker_command",
@@ -231,7 +230,7 @@ def test_crashing_worker_fails_the_upload_not_the_server(
 def test_too_many_pages_is_reported(
     app: FastAPI, alice: ApiUser, exam: dict[str, Any], small_pdf: bytes, settings: Settings
 ) -> None:
-    app.state.upload_processor._settings = settings.model_copy(update={"max_pdf_pages": 1})
+    app.state.settings = settings.model_copy(update={"max_pdf_pages": 1})
 
     upload_pdf(alice, exam["id"], small_pdf)
 
@@ -242,6 +241,7 @@ def test_too_many_pages_is_reported(
 
 
 def test_failed_upload_can_be_retried(
+    app: FastAPI,
     alice: ApiUser,
     exam: dict[str, Any],
     small_pdf: bytes,
@@ -255,6 +255,7 @@ def test_failed_upload_can_be_retried(
     monkeypatch.setattr(runner, "worker_command", original)
 
     response = alice.post(f"/api/uploads/{upload['id']}/retry")
+    run_jobs(app)
 
     assert response.status_code == 202
     assert alice.get(f"/api/exams/{exam['id']}/uploads").json()[0]["status"] == "processed"

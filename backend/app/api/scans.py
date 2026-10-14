@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import unquote
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, Response
 
 from app.api.deps import AppSettings, CurrentUser, DbSession
@@ -27,7 +27,6 @@ from app.services import cover_sheets
 from app.services import uploads as upload_service
 from app.services.access import visible_exams
 from app.services.page_counts import page_count_flag, typical_page_count
-from app.services.upload_processor import UploadProcessor
 
 router = APIRouter(tags=["scans"])
 
@@ -86,13 +85,12 @@ def _safe_filename(raw: str | None) -> str:
 async def upload_scan(
     exam_id: int,
     request: Request,
-    background: BackgroundTasks,
     db: DbSession,
     user: CurrentUser,
     settings: AppSettings,
 ) -> UploadOut:
     """Receive one scanned PDF as a raw ``application/pdf`` body (D-027). The file is streamed to
-    disk with a size limit and hashed on the way; processing starts after the response."""
+    disk with a size limit and hashed on the way; the worker processes it (a queued job)."""
     upload_service.check_can_upload(db, user, exam_id)
     content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if content_type != "application/pdf":
@@ -134,8 +132,6 @@ async def upload_scan(
         filename=_safe_filename(request.headers.get("x-filename")),
         settings=settings,
     )
-    processor: UploadProcessor = request.app.state.upload_processor
-    background.add_task(processor.submit, upload.id)
     return UploadOut.model_validate(upload)
 
 
@@ -146,16 +142,9 @@ def list_uploads(exam_id: int, db: DbSession, user: CurrentUser) -> list[UploadO
 
 @router.post("/uploads/{upload_id}/retry", status_code=202)
 def retry_upload(
-    upload_id: int,
-    request: Request,
-    background: BackgroundTasks,
-    db: DbSession,
-    user: CurrentUser,
+    upload_id: int, db: DbSession, user: CurrentUser, settings: AppSettings
 ) -> UploadOut:
-    upload = upload_service.retry_upload(db, user, upload_id)
-    processor: UploadProcessor = request.app.state.upload_processor
-    background.add_task(processor.submit, upload.id)
-    return UploadOut.model_validate(upload)
+    return UploadOut.model_validate(upload_service.retry_upload(db, user, upload_id, settings))
 
 
 def _data_file(settings_dir: Path, relative: str) -> Path:

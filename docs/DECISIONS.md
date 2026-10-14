@@ -157,6 +157,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-032 · 2026-10-14 · Upload processing in the web process until Phase 3
 - **Decision:** after the upload response, a background task hands the upload to a single-thread processor in the web process, which starts the render child process. Processing is idempotent (one transaction replaces an upload's pages and scripts). On start-up, uploads left `pending`/`processing` are processed again. Tests run processing inline.
 - **Reason:** the job table and worker are Phase 3 in the brief; this keeps restarts and power cuts safe meanwhile. Phase 3 moves upload processing onto the job table.
+- **Superseded (Phase 3):** upload processing is now a `process_upload` job run by the worker (D-038).
 
 ### D-033 · 2026-10-14 · Untyped native libraries in mypy
 - **Decision:** `reportlab` and `pypdfium2` ship without type information; mypy treats them as untyped (`ignore_missing_imports` for those two only). Their use is confined to `app/sheets/cover_pdf.py`, `app/pdf/render_worker.py` and test helpers.
@@ -173,3 +174,38 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-036 · 2026-10-14 · Unreadable covers and unusual page counts (owner fix after Phase 2)
 - **Decision:** a page with the cover frame but no readable QR goes to the tray with its following pages, reason "Cover sheet found but code unreadable" (`qr_unreadable`; this was already the behaviour, now worded as the owner asked and covered by a dedicated real-image test). In addition, every script gets a page-count check: typical = median pages per script (cover included) once the exam has at least 3 scripts; a script is flagged when it has only a cover sheet, or its count is at least `max(2, round(typical / 2))` pages above or below typical. The Scans screen shows a "check this script" note; nothing is changed automatically.
 - **Reason:** owner requirement. Catches the residual risk in D-029 (cover with codes *and* frame unreadable, merged into the previous script), tested end to end.
+
+### D-037 · 2026-10-14 · Ollama client on the standard library; httpx stays dev-only
+- **Decision:** `app/ai/ollama_client.py` uses `http.client` (standard library). `httpx` remains a development dependency (test client only).
+- **Alternatives:** `httpx` as a runtime dependency (approved 2026-10-14).
+- **Reason:** making `httpx` a runtime dependency also ships `certifi` (MPL-2.0, weak copyleft) whose CA bundle is useless for plain HTTP to a local Ollama. The standard library does everything needed (one JSON POST, timeouts) with no new shipped code. The `httpx` runtime approval is unused.
+
+### D-038 · 2026-10-14 · Job queue and worker
+- **Decision:** `job` table with a unique idempotency key per step (`upload:<id>`, `transcribe:<script>`, `mark:<script>`). Claiming is a conditional `UPDATE ... WHERE status='queued'`, committed immediately, so two workers can never take the same job. Failed attempts back off exponentially (30 s doubling, capped at 15 min) up to `MARGIN_JOB_MAX_ATTEMPTS` (default 6), then the job is `failed` with a code (never content). The worker heartbeats every `MARGIN_JOB_STALE_SECONDS / 3`; jobs whose heartbeat is older than `MARGIN_JOB_STALE_SECONDS` (default 120) are re-queued, at worker start **and whenever the worker is idle** (the kill-and-restart test found that start-up alone missed a job abandoned moments before a restart). `scripts/run.py` starts the worker next to the web app; `python -m app.worker` runs it alone.
+- **Handlers are idempotent:** transcription commits page by page and skips pages already transcribed with the same model, version and prompt; marking writes all of a script's decisions in one transaction and skips if they exist. Unique constraints back this up.
+- **Reason:** brief section 3 (database job table, survives restarts, no duplicated work).
+
+### D-039 · 2026-10-14 · What counts as valid model output
+- **Decision:** Reader: exactly `{"text": string}`. Marker, per question: exactly one entry per mark scheme point; whole marks from 0 to the point's marks (a string or 2.0 is rejected); confidence 0 to 1; category from the brief's list; evidence required when marks are awarded and it must be a verbatim quote of the transcription (whitespace and letter case aside; a "corrected" quote is rejected). Invalid output is requested again up to `MARGIN_MODEL_OUTPUT_RETRIES` (default 2) times. If the Reader still fails, the script is flagged `ai.reader_invalid_output` and nothing is stored. If the Marker fails on some questions, the valid questions' proposals are kept, nothing is stored for the failed ones, and the script is flagged `ai.marker_invalid_output`. A script with no answer pages is flagged `ai.no_answer_pages`.
+- **Reason:** brief section 3: never silently drop or invent data. The verbatim-evidence rule makes the "evidence from the student's own words" promise checkable.
+
+### D-040 · 2026-10-14 · Start-up refuses a model host outside the school network
+- **Decision:** the app and worker refuse to start unless `MARGIN_MODEL_BASE_URL` points at a loopback, private (RFC 1918) or link-local address, `localhost`, a single-label name (Docker's `ollama`) or a `.local`/`.lan` name. `MARGIN_ALLOW_PUBLIC_MODEL_HOST=true` overrides deliberately.
+- **Reason:** a configuration typo must not send student work to a cloud endpoint (non-negotiable: data never leaves the school).
+
+### D-041 · 2026-10-14 · Prompt versions include a content hash
+- **Decision:** prompts live in `app/ai/prompts/*.md` with a `version:` first line; the stored prompt version is `<declared>#<8 hex of SHA-256 of the file>`.
+- **Reason:** brief: every output stores the prompt version. With the hash, an edit is always distinguishable in the data even if nobody bumps the declared version.
+
+### D-042 · 2026-10-14 · AI marking is started explicitly, then runs automatically
+- **Decision:** after uploading and clearing the unassigned tray, the teacher presses "Start AI marking" (Phase 3 shows it on the Scans screen; Phase 4 builds the full queue screen). That queues transcription for every waiting script; transcription then queues marking automatically, and the exam moves `ready -> marking -> reviewing` on its own. Uploads are processed automatically on arrival.
+- **Alternatives:** start AI marking automatically after each upload.
+- **Reason:** brief screen 6 ("button to start AI marking"). Marking locks a script's pages, so starting before the tray is cleared would stop the teacher from adding stray pages to it. The brief's Phase 3 test ("a full exam goes from upload to ai_marked automatically") is met from the moment marking starts: no further human step is needed.
+
+### D-043 · 2026-10-14 · Evaluation metrics
+- **Decision:** `python -m app.cli evaluate` runs the configured Reader on `<subject>/<page>.jpg|png` with `<page>.txt` ground truth and reports, per subject, CER and WER (Levenshtein over characters and whitespace-separated words, micro-averaged over pages), key-token recall (numbers, formulae such as `H_2O`/`x^2`/`Na^+`, and operators, as multisets), invalid outputs and seconds per page, plus a JSON report naming the model, its version and the prompt version. Case, spelling and punctuation are compared as written; only line endings and trailing spaces are normalised. The ground truth is never given to the Reader.
+- **Reason:** owner requirement: every model change must be measurable.
+
+### D-044 · 2026-10-14 · Network guard test design
+- **Decision:** the guard records every `socket.connect` in the test process while the full pipeline runs with the Ollama implementations against a fake model server, and requires the set of destinations to equal exactly the model host and port. Connects made inside `socket.socketpair()` are ignored (on Windows the event loop's internal socket pair is emulated with a loopback connect). A static test allows networking imports only in `app/ai/ollama_client.py` (plus `socket.gethostname` in the worker). The render worker child process does no networking and is covered by the static test.
+- **Reason:** brief section 3.

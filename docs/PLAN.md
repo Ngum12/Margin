@@ -1,6 +1,6 @@
 # Plan: Phase 0 and Phase 1
 
-Status: Phases 0 and 1 complete and approved (2026-10-14). Phase 2 built (2026-10-14), awaiting owner review. Refinements made while building are recorded in DECISIONS (D-021 to D-026).
+Status: Phases 0 and 1 complete and approved (2026-10-14). Phase 2 complete and approved (2026-10-14). Phase 3 built with Mock models (2026-10-14); real-model check pending the qwen3-vl:8b download. Refinements made while building are recorded in DECISIONS (D-021 to D-026).
 Source of truth for requirements: `PROJECT_BRIEF.md`. Decisions referenced here are recorded in `docs/DECISIONS.md`.
 
 ---
@@ -307,3 +307,82 @@ The acceptance test passes; `python scripts/check.py` passes and its output has 
 - A cover sheet with both QR codes destroyed **and** its frame unreadable would look like an answer page and be appended to the previous student. Two QR codes plus the frame make this unlikely; the teacher still sees every script's pages in Phase 4 review. Recorded in D-029.
 - Rendering speed on real scanned PDFs (large embedded images) is unmeasured until real scans exist; synthetic scans are measured and reported.
 - Upside-down answer pages without PDF rotation metadata stay as scanned (no OCR-based orientation in this phase); page rotation in the UI is in the backlog.
+
+## Phase 3: AI pipeline
+
+Status: built 2026-10-14 (Mock path proven; real model pending). Refinements: D-036 to D-044.
+
+### Goal
+A background worker process runs all long work from a database job table: upload processing, then per script transcription (Reader) and marking (Marker). Jobs survive restarts and power cuts and never duplicate results. Models sit behind two interfaces with Ollama and Mock implementations; their output is validated against strict schemas, retried a bounded number of times, and otherwise the script is flagged for manual marking. Nothing is ever invented or silently dropped. A CLI evaluates any Reader against typed ground truth.
+
+### Dependencies
+`httpx` moves from dev to runtime (approved 2026-10-14) for the Ollama client. No other new packages.
+
+### Owner requirements for this phase
+1. **Evaluation CLI** (`python -m app.cli evaluate`): given a folder of page images with typed ground-truth transcriptions, run the configured Reader and report character error rate (CER), word error rate (WER) and key-token recall (numbers, formulae, operators), per subject, plus model name, model version, prompt version and seconds per page. JSON report for comparing model changes.
+2. **Report the real model's time per page and the hardware** (CPU, RAM, GPU) once `qwen3-vl:8b` is pulled.
+3. Brief: done when, with Mock models, a full exam goes from upload to `ai_marked`; killing the worker mid-run and restarting completes the run with no duplicated results; with Ollama, one real script is transcribed and marked (reported honestly).
+
+### Design
+
+**Job table and worker** (`app/services/jobs.py`, `app/worker/`):
+- `job`: type (`process_upload`, `transcribe_script`, `mark_script`), payload (ids only, never student content), status (`queued`/`running`/`succeeded`/`failed`), attempts, max_attempts, run_after, idempotency_key (unique), locked_by, heartbeat_at, last_error (code and exception type only), timestamps.
+- Enqueue is idempotent: the key (`upload:<id>`, `transcribe:<script id>`, `mark:<script id>`) is unique; enqueuing an existing key returns the existing job (or re-queues it when explicitly retried).
+- Claiming is one atomic `UPDATE ... WHERE status='queued'` so two workers can never take the same job.
+- The worker (`python -m app.worker`) polls, heartbeats every 15 s, and on start-up re-queues jobs left `running` by a dead worker (stale heartbeat). `scripts/run.py` starts the web app and the worker together; Docker gets a separate `worker` service in Phase 6.
+- Model server unavailable → the job is retried with exponential backoff (capped) up to `MARGIN_JOB_MAX_ATTEMPTS`, then marked failed with a clear reason; the teacher can retry.
+- Upload processing moves from the Phase 2 in-process thread to a `process_upload` job (D-032 superseded).
+- The worker writes a heartbeat row so the UI can say "worker not running" instead of spinning.
+
+**Idempotent handlers** (each step commits its own results; re-running skips what exists):
+- `transcribe_script`: one Reader call per answer page (cover sheets are not transcribed). Each page's transcription is committed as soon as it is validated, so a restart resumes at the next page. Then the script becomes `transcribed` and a `mark_script` job is queued.
+- `mark_script`: one Marker call per question, all decisions for the script written in one transaction. Then the script becomes `ai_marked`. When every script of the exam is done (marked or flagged), the exam moves to `reviewing`.
+- Unique constraints back this up: one model transcription per (page, model, model version, prompt version); one model proposal per (script, mark scheme point, model, model version, prompt version).
+
+**Model layer** (`app/ai/`):
+- `Reader.transcribe(pages: list[PageImage], subject: SubjectConfig) -> Transcription` and `Marker.mark(transcription: Transcription, exam: ExamSpec) -> MarkingProposal`, as in the brief. Every result carries model name, model version (Ollama digest), prompt version and timestamp.
+- What a model sees: page images and the subject's notation hints (Reader); the transcription text and the exam's questions and mark scheme (Marker). Never student names or codes.
+- `OllamaReader` / `OllamaMarker`: Ollama `/api/chat`, temperature 0, JSON output constrained by a JSON schema (`format`), images sent as base64 JPEG resized to at most `MARGIN_READER_MAX_IMAGE_PX` on the long side.
+- `MockReader` / `MockMarker`: deterministic. MockReader returns a ground-truth sidecar text file when one exists (demos and evaluation tests), otherwise fixed text. MockMarker awards a point when its key words appear in the transcription and quotes them as evidence.
+- **Prompts** are files in `app/ai/prompts/` (`reader.md`, `marker.md`) with a declared version line; the stored prompt version is `<declared>#<first 8 hex of SHA-256 of the file>`, so any edit is distinguishable even if someone forgets to bump the version.
+- **Validation** (Pydantic, strict): Reader → `{"text": str}`. Marker → exactly one entry per mark scheme point of the question, awarded marks a whole number from 0 to the point's marks, confidence 0 to 1, error category from the brief's list, and evidence that is an exact quote from the transcription (whitespace-normalised) whenever marks are awarded. Invalid output is re-requested up to `MARGIN_MODEL_OUTPUT_RETRIES` times; then the script is flagged for manual marking with a reason (`ai.reader_invalid_output` / `ai.marker_invalid_output`) and the job completes. Nothing partial is stored for a failed question.
+- `model_version` table: registered on first use (name, role, digest, source, installed_at).
+
+**Network guard**:
+- A test runs the full pipeline with the Ollama implementations against a fake Ollama server on 127.0.0.1 and records every outbound socket connection made by application code; it fails if any goes anywhere but the configured model host. A second test proves the guard catches a connection to another host.
+- A static test: only `app/ai/ollama_client.py` may import an HTTP client or `socket`.
+- Start-up check: the model host must be loopback, a private (RFC 1918 / link-local) address, or a single-label or `.local`/`.lan` hostname (e.g. Docker's `ollama`). Otherwise the app and worker refuse to start, unless `MARGIN_ALLOW_PUBLIC_MODEL_HOST=true` is set deliberately. Keeps student work from being sent to a cloud endpoint by a configuration mistake.
+
+**API and screens (minimal; the full queue and review screens are Phase 4)**:
+- `POST /api/exams/{id}/ai-marking`: queue transcription for every `waiting` script and re-queue failed AI jobs; exam moves to `marking`.
+- `GET /api/exams/{id}/ai-status`: counts by script status, flagged scripts with reasons, failed jobs, worker online, model server reachable.
+- `GET /api/scripts/{id}/ai-results`: transcriptions and proposed marks (read-only, for checking).
+- Scans screen: "Start AI marking" button, progress counts, worker and model status, flagged scripts.
+
+**Evaluation** (`app/ai/evaluation.py`, pure, tested):
+- Folder layout: `<root>/<subject_code>/<name>.jpg|png` with `<name>.txt` holding the exact typed transcription in the agreed notation.
+- CER and WER: Levenshtein distance over characters / whitespace-separated words, summed over pages, divided by reference length (micro-average). Line breaks normalised; case and spelling preserved (errors must be kept, not corrected).
+- Key-token recall: tokens in the reference that are numbers (`12`, `3.5`, `1/2`), formulae (`H_2O`, `x^2`, `Na^+`, `CO_2`) or operators (`=`, `+`, `-`, `×`, `÷`, `->`, `<=>`, `^`, `/`, `√`, `<`, `>`); recall = matched / total (multiset).
+- `python -m app.cli evaluate --data <folder> [--subject <code>] [--backend mock|ollama] [--report report.json]`.
+
+### Data model changes (migration 0003)
+`job`, `worker_heartbeat`, `transcription`, `mark_decision`, `model_version`; `script` gains `manual_reason` (nullable code) and `ai_started_at`.
+
+### Tests
+- Jobs: idempotent enqueue, atomic claim, retry with backoff, failure after max attempts, stale job re-queue.
+- Pipeline with Mock models: upload → processed → transcribed → `ai_marked`, exam `reviewing`; every output stores model, version, prompt version, timestamp.
+- **Kill and restart**: the worker runs as a real subprocess with a slowed Mock model, is killed mid-run, restarted, and the run completes with no duplicate transcriptions or decisions.
+- Validation: malformed JSON, missing points, marks out of range, invented evidence → retried, then flagged for manual marking; nothing stored for the failed question.
+- Ollama client against a fake Ollama server (request shape: schema, temperature, base64 images; digest lookup; connection refused → retryable error).
+- Network guard (dynamic and static) and model-host start-up check.
+- Model server down: web app still answers; AI status reports it; jobs back off.
+- Evaluation metrics on known strings; CLI end to end with MockReader sidecars.
+- Frontend: start button, progress, worker/model status, flagged scripts.
+
+### Done when
+Mock pipeline and kill/restart tests pass; full check suite passes and is read; with `qwen3-vl:8b` pulled, one real script transcribed and marked, evaluation run on a sample set, time per page and hardware reported (or, if the model is not available yet, reported honestly and kept covered by the Mock path).
+
+### Risks
+- **This machine's GPU (NVIDIA T550, 4 GB) cannot hold an 8B vision model**; Ollama will split it between GPU and CPU, so pages may take tens of seconds or more. Measured and reported; overnight runs are the intended use.
+- No real handwriting ground truth exists yet; the sample evaluation set will be synthetic and clearly labelled so. Real teacher-typed transcriptions are needed for meaningful numbers.
+- Qwen3-VL's adherence to the JSON schema at temperature 0 is unknown until measured; invalid-output rates are reported by the evaluation and the job logs.

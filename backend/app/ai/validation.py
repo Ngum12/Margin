@@ -1,0 +1,132 @@
+"""Strict validation of model output. Anything that does not pass is rejected, never repaired.
+
+The JSON schemas here are also sent to Ollama as the ``format`` constraint, so the model is asked
+for exactly the shape we accept.
+"""
+
+import json
+import re
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, ValidationError
+
+from app.ai.types import ModelOutputInvalidError, PointProposal, QuestionSpec
+from app.db.models import ErrorCategory
+
+READER_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"text": {"type": "string"}},
+    "required": ["text"],
+    "additionalProperties": False,
+}
+
+MARKER_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "points": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "point_id": {"type": "integer"},
+                    "awarded_marks": {"type": "integer", "minimum": 0},
+                    "evidence": {"type": "string"},
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "error_category": {"type": "string", "enum": [c.value for c in ErrorCategory]},
+                },
+                "required": [
+                    "point_id",
+                    "awarded_marks",
+                    "evidence",
+                    "confidence",
+                    "error_category",
+                ],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["points"],
+    "additionalProperties": False,
+}
+
+
+class _Closed(BaseModel):
+    # No extra keys; numbers and text must arrive as such ("2" or 2.0 is not a whole number).
+    model_config = ConfigDict(extra="forbid")
+
+
+class _ReaderOut(_Closed):
+    text: StrictStr
+
+
+class _PointOut(_Closed):
+    point_id: StrictInt
+    awarded_marks: StrictInt = Field(ge=0)
+    evidence: StrictStr
+    confidence: float = Field(ge=0, le=1)
+    error_category: ErrorCategory
+
+
+class _MarkerOut(_Closed):
+    points: list[_PointOut]
+
+
+def _load_json(raw: str) -> Any:
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ModelOutputInvalidError("not_json") from exc
+
+
+def parse_reader_output(raw: str) -> str:
+    try:
+        return _ReaderOut.model_validate(_load_json(raw)).text
+    except ValidationError as exc:
+        raise ModelOutputInvalidError("reader_schema") from exc
+
+
+_SPACES = re.compile(r"\s+")
+
+
+def _normalise(text: str) -> str:
+    return _SPACES.sub(" ", text).strip().casefold()
+
+
+def evidence_is_quoted(evidence: str, answer: str) -> bool:
+    """Evidence must be a verbatim quote (whitespace and letter case aside)."""
+    return _normalise(evidence) in _normalise(answer)
+
+
+def parse_marker_output(raw: str, question: QuestionSpec, answer: str) -> tuple[PointProposal, ...]:
+    """Validate the marker's output for one question against its mark scheme and the answer."""
+    try:
+        parsed = _MarkerOut.model_validate(_load_json(raw))
+    except ValidationError as exc:
+        raise ModelOutputInvalidError("marker_schema") from exc
+
+    expected = {p.id: p for p in question.points}
+    seen = [p.point_id for p in parsed.points]
+    if sorted(seen) != sorted(expected):
+        raise ModelOutputInvalidError("marker_points_mismatch")
+
+    proposals = []
+    for point in parsed.points:
+        spec = expected[point.point_id]
+        if point.awarded_marks > spec.marks:
+            raise ModelOutputInvalidError("marker_marks_out_of_range")
+        evidence = point.evidence.strip()
+        if point.awarded_marks > 0 and not evidence:
+            raise ModelOutputInvalidError("marker_missing_evidence")
+        if evidence and not evidence_is_quoted(evidence, answer):
+            raise ModelOutputInvalidError("marker_invented_evidence")
+        proposals.append(
+            PointProposal(
+                point_id=point.point_id,
+                awarded_marks=point.awarded_marks,
+                evidence=evidence,
+                confidence=point.confidence,
+                error_category=point.error_category,
+            )
+        )
+    order = {p.id: i for i, p in enumerate(question.points)}
+    return tuple(sorted(proposals, key=lambda p: order[p.point_id]))

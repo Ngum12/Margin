@@ -1,5 +1,6 @@
 """The unassigned tray (assign, return, discard) and resuming interrupted uploads."""
 
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -7,9 +8,19 @@ from fastapi import FastAPI
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import Settings
-from app.db.models import AuditEvent, Page, PageState, Script, Upload, UploadStatus
-from app.services.upload_processor import UploadProcessor
+from app.clock import utcnow
+from app.db.models import (
+    AuditEvent,
+    Job,
+    JobStatus,
+    JobType,
+    Page,
+    PageState,
+    Script,
+    Upload,
+    UploadStatus,
+)
+from app.worker.runner import Worker
 from tests.conftest import World
 from tests.factories import ApiUser, Factory, make_ready_exam, upload_pdf
 from tests.scan_builder import ScanBuilder, answer_page, erase_qr, render_pdf_pages
@@ -148,19 +159,25 @@ def test_tray_actions_are_scoped_to_the_exam_and_class(
 
 
 def test_interrupted_upload_is_resumed_without_duplicates(
-    app: FastAPI, alice: ApiUser, setup: dict[str, Any], db: Session, settings: Settings
+    app: FastAPI, alice: ApiUser, setup: dict[str, Any], db: Session
 ) -> None:
     exam_id = setup["exam"]["id"]
     upload = upload_pdf(
         alice, exam_id, ScanBuilder().add(setup["covers"][0]).add(answer_page(1)).build()
     ).json()
-    # Simulate a power cut after processing had started: status is still "processing".
+    # Simulate a power cut while the job was running: upload "processing", job "running" with
+    # a heartbeat from long ago.
     row = db.get(Upload, upload["id"])
+    job = db.scalars(select(Job).where(Job.type == JobType.PROCESS_UPLOAD)).one()
     assert row is not None
     row.status = UploadStatus.PROCESSING
+    job.status = JobStatus.RUNNING
+    job.heartbeat_at = utcnow() - timedelta(hours=1)
     db.commit()
 
-    UploadProcessor(app.state.sessionmaker, settings, inline=True).recover()
+    worker = Worker(app.state.sessionmaker, app.state.settings)
+    worker.recover()
+    worker.run_until_idle()
 
     db.expire_all()
     assert db.get(Upload, upload["id"]).status == UploadStatus.PROCESSED  # type: ignore[union-attr]

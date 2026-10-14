@@ -34,6 +34,28 @@ class Settings(BaseSettings):
 
     # The only host the application may contact over the network (local model server).
     model_base_url: str = "http://127.0.0.1:11434"
+    # Refuse to start with a public model host unless explicitly allowed (D-040).
+    allow_public_model_host: bool = False
+
+    # AI backend: "mock" (deterministic, no model server) or "ollama".
+    ai_backend: Literal["mock", "ollama"] = "mock"
+    reader_model: str = "qwen3-vl:8b"
+    marker_model: str = "qwen3-vl:8b"
+    # Seconds to wait for one model reply; slow machines may need a lot (see the Phase 3 report).
+    model_timeout_seconds: int = Field(default=900, ge=5)
+    # Extra attempts when the model replies with output that fails validation.
+    model_output_retries: int = Field(default=2, ge=0, le=5)
+    # Page images are shrunk to at most this many pixels on the long side before sending.
+    reader_max_image_px: int = Field(default=1600, ge=512, le=4000)
+    # Mock models only: artificial delay per call in seconds (demos and tests).
+    mock_delay_seconds: float = Field(default=0.0, ge=0)
+
+    # Background jobs.
+    job_max_attempts: int = Field(default=6, ge=1)
+    worker_poll_seconds: float = Field(default=2.0, gt=0)
+    # A running job whose worker has not sent a heartbeat for this long is treated as abandoned
+    # (crash, power cut) and run again. The worker heartbeats at a third of this interval.
+    job_stale_seconds: float = Field(default=120.0, ge=1)
 
     # Session cookies carry the `Secure` flag (sent over HTTPS only). Unset means: on in
     # production, off in development and test. See docs/DECISIONS.md D-016.

@@ -1,5 +1,6 @@
 import { request } from "./client";
 import type {
+  AiStatus,
   CoverSheetRow,
   ExamDetail,
   ExamStatus,
@@ -83,6 +84,9 @@ export const api = {
     request<undefined>("POST", `/api/exams/${String(examId)}/pages/discard`, {
       json: { page_ids: pageIds },
     }),
+  aiStatus: (examId: number) => request<AiStatus>("GET", `/api/exams/${String(examId)}/ai-status`),
+  startAiMarking: (examId: number) =>
+    request<{ scripts_queued: number }>("POST", `/api/exams/${String(examId)}/ai-marking`),
   pageImageUrl: (pageId: number, size: "thumb" | "full" = "thumb") =>
     `/api/pages/${String(pageId)}/image?size=${size}`,
 

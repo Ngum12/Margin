@@ -19,6 +19,7 @@ from app.db.models import (
     CoverSheet,
     Exam,
     ExamStatus,
+    JobType,
     Page,
     PageState,
     Script,
@@ -31,7 +32,7 @@ from app.db.models import (
 )
 from app.errors import ConflictError, NotFoundError
 from app.pdf.runner import RenderError, render_pdf
-from app.services import audit
+from app.services import audit, jobs
 from app.services.access import get_visible_exam, visible_exams
 from app.services.splitting import SheetOwner, place_pages
 
@@ -98,6 +99,13 @@ def create_upload(
     target.parent.mkdir(parents=True, exist_ok=True)
     temp_file.replace(target)
     upload.stored_path = relative.as_posix()
+    jobs.enqueue(
+        db,
+        JobType.PROCESS_UPLOAD,
+        {"upload_id": upload.id},
+        f"upload:{upload.id}",
+        max_attempts=settings.job_max_attempts,
+    )
     audit.record(
         db,
         actor=actor,
@@ -274,28 +282,22 @@ def _mark_failed(factory: sessionmaker[Session], upload_id: int, code: str) -> N
         db.commit()
 
 
-def mark_failed_unexpectedly(factory: sessionmaker[Session], upload_id: int) -> None:
-    _mark_failed(factory, upload_id, "upload.processing_error")
-
-
-def retry_upload(db: Session, actor: User, upload_id: int) -> Upload:
+def retry_upload(db: Session, actor: User, upload_id: int, settings: Settings) -> Upload:
     upload = get_visible_upload(db, actor, upload_id)
     if upload.status != UploadStatus.FAILED:
         raise ConflictError("Only failed uploads can be retried", code="upload.not_failed")
     upload.status = UploadStatus.PENDING
     upload.error_code = None
+    jobs.enqueue(
+        db,
+        JobType.PROCESS_UPLOAD,
+        {"upload_id": upload.id},
+        f"upload:{upload.id}",
+        max_attempts=settings.job_max_attempts,
+        requeue=True,
+    )
     audit.record(db, actor=actor, entity_type="upload", entity_id=upload.id, action="retry")
     return upload
-
-
-def unfinished_upload_ids(db: Session) -> list[int]:
-    return list(
-        db.scalars(
-            select(Upload.id)
-            .where(Upload.status.in_([UploadStatus.PENDING, UploadStatus.PROCESSING]))
-            .order_by(Upload.id)
-        )
-    )
 
 
 # --- reading ----------------------------------------------------------------------------------

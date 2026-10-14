@@ -213,6 +213,9 @@
     },
     "script": {
       "locked": "Cette copie est déjà en cours de correction ; ses pages ne peuvent plus changer."
+    },
+    "ai": {
+      "no_scripts": "Aucune copie n'a encore été téléversée pour cet examen."
     }
   },
   "issues": {
@@ -320,6 +323,26 @@
       "no_answer_pages": "À vérifier : seulement une fiche de couverture, aucune page de réponse.",
       "more_than_usual": "À vérifier : plus de pages que d'habitude (habituel : {{typical}}). Les pages d'un autre élève ont peut-être été ajoutées.",
       "fewer_than_usual": "À vérifier : moins de pages que d'habitude (habituel : {{typical}}). Des pages manquent peut-être."
+    }
+  },
+  "ai": {
+    "title": "Correction par l'IA",
+    "help": "L'IA transcrit chaque page de réponse et propose des notes avec des justifications. Elle travaille en arrière-plan (souvent la nuit). Rien n'est définitif avant la validation d'un enseignant.",
+    "start": "Lancer la correction par l'IA",
+    "progress": "En attente : {{waiting}} · Corrigées par l'IA : {{marked}} · À corriger à la main : {{flagged}}",
+    "running": "En cours… ({{count}} tâches restantes)",
+    "failedJobs": "{{count}} tâches ont échoué après plusieurs tentatives. Vérifiez les avertissements ci-dessus, puis relancez la correction par l'IA.",
+    "workerOffline": "Le programme de traitement en arrière-plan ne fonctionne pas ; rien ne sera traité. Redémarrez l'Assistant de correction.",
+    "modelServerDown": "Le serveur du modèle d'IA (Ollama) est injoignable. La correction démarrera à son retour.",
+    "modelMissing": "Le modèle d'IA {{model}} n'est pas installé sur le serveur.",
+    "flaggedTitle": "Copies à corriger à la main",
+    "manualReason": {
+      "unknown": "L'IA n'a pas pu traiter cette copie.",
+      "ai": {
+        "reader_invalid_output": "L'IA n'a pas pu produire une transcription valide.",
+        "marker_invalid_output": "L'IA n'a pas pu proposer de notes valides pour certaines questions.",
+        "no_answer_pages": "Cette copie n'a aucune page de réponse."
+      }
     }
   }
 }

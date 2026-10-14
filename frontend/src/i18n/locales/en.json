@@ -213,6 +213,9 @@
     },
     "script": {
       "locked": "This script is already being marked; its pages cannot change."
+    },
+    "ai": {
+      "no_scripts": "No scripts have been uploaded for this exam yet."
     }
   },
   "issues": {
@@ -320,6 +323,26 @@
       "no_answer_pages": "Check: only a cover sheet, no answer pages.",
       "more_than_usual": "Check: more pages than usual (typical: {{typical}}). Another student's pages may have been added.",
       "fewer_than_usual": "Check: fewer pages than usual (typical: {{typical}}). Some pages may be missing."
+    }
+  },
+  "ai": {
+    "title": "AI marking",
+    "help": "The AI transcribes each answer page and proposes marks with evidence. It runs in the background (often overnight). Nothing is final until a teacher confirms it.",
+    "start": "Start AI marking",
+    "progress": "Waiting: {{waiting}} · AI marked: {{marked}} · Need manual marking: {{flagged}}",
+    "running": "Working… ({{count}} tasks left)",
+    "failedJobs": "{{count}} tasks failed after several attempts. Check the warnings above, then start AI marking again to retry.",
+    "workerOffline": "The background worker is not running, so nothing will be processed. Restart the Marking Assistant.",
+    "modelServerDown": "The AI model server (Ollama) cannot be reached. Marking will start when it is back.",
+    "modelMissing": "The AI model {{model}} is not installed on the model server.",
+    "flaggedTitle": "Scripts to mark by hand",
+    "manualReason": {
+      "unknown": "The AI could not process this script.",
+      "ai": {
+        "reader_invalid_output": "The AI could not produce a valid transcription.",
+        "marker_invalid_output": "The AI could not propose valid marks for some questions.",
+        "no_answer_pages": "This script has no answer pages."
+      }
     }
   }
 }

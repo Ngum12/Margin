@@ -89,3 +89,19 @@ def test_every_page_count_flag_is_translated(language: str) -> None:
     locale = json.loads((LOCALES / f"{language}.json").read_text(encoding="utf-8"))
 
     assert all(isinstance(_lookup(locale, f"scans.pageFlag.{f.value}"), str) for f in PageCountFlag)
+
+
+_MANUAL_REASON = re.compile(r'_flag_manual\(db, script, "([a-z_.]+)"\)')
+
+
+@pytest.mark.parametrize("language", ["en", "fr"])
+def test_every_manual_marking_reason_is_translated(language: str) -> None:
+    locale = json.loads((LOCALES / f"{language}.json").read_text(encoding="utf-8"))
+    reasons = {
+        m for path in APP_DIR.rglob("*.py") for m in _MANUAL_REASON.findall(path.read_text("utf-8"))
+    }
+
+    assert len(reasons) >= 3
+    assert [
+        r for r in reasons if not isinstance(_lookup(locale, f"ai.manualReason.{r}"), str)
+    ] == []

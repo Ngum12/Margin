@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.passwords import hash_password
 from app.db.models import Role, School, SchoolClass, Student, User
+from app.worker.runner import Worker
 
 PASSWORD = "correct-horse-battery"
 # Hashing is deliberately slow; hash the shared test password once.
@@ -65,6 +66,7 @@ class ApiUser:
     """A signed-in browser: its own TestClient (cookie jar) plus the CSRF token."""
 
     def __init__(self, app: FastAPI, username: str, password: str = PASSWORD) -> None:
+        self.app = app
         self.client = TestClient(app)
         response = self.client.post(
             "/api/auth/login", json={"username": username, "password": password}
@@ -131,10 +133,18 @@ def make_ready_exam(user: ApiUser, class_id: int, title: str = "Mock exam 1") ->
     return body
 
 
+def run_jobs(app: FastAPI) -> int:
+    """Run queued background jobs to completion with the real worker loop (no subprocess)."""
+    return Worker(app.state.sessionmaker, app.state.settings).run_until_idle()
+
+
 def upload_pdf(user: ApiUser, exam_id: int, pdf: bytes, filename: str = "scan.pdf") -> Any:
-    return user.post(
+    """Upload, then let the worker process the queued job (as the background worker would)."""
+    response = user.post(
         f"/api/exams/{exam_id}/uploads",
         content=pdf,
         # Headers are ASCII-only, so the filename is URL-encoded (as the frontend does).
         headers={"Content-Type": "application/pdf", "X-Filename": quote(filename)},
     )
+    run_jobs(user.app)
+    return response
