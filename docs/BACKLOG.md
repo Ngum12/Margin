@@ -11,9 +11,8 @@ Ideas and features deliberately not built yet. Add here instead of expanding sco
 - Analytics beyond the class results table
 
 ## Candidates
-- Half marks in mark schemes (v1 uses whole marks only).
-- Structured-text mark scheme import format in addition to CSV.
-- Switch test client to `httpx2` when approved (see D-010).
+- Half marks in the UI and API (storage already supports them, D-018).
+- Structured-text mark scheme import format in addition to CSV (owner chose CSV only for v1).
 - Native-speaker review of French translations; track draft strings in `docs/TRANSLATIONS.md`.
 - Install `make` on Windows dev machines, or document `winget install GnuWin32.Make` (optional; `python scripts/check.py` is equivalent).
 - Licence audit script that fails `check` if a new dependency has a non-permissive licence.

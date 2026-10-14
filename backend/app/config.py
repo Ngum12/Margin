@@ -35,9 +35,23 @@ class Settings(BaseSettings):
     # The only host the application may contact over the network (local model server).
     model_base_url: str = "http://127.0.0.1:11434"
 
+    # Session cookies carry the `Secure` flag (sent over HTTPS only). Unset means: on in
+    # production, off in development and test. See docs/DECISIONS.md D-016.
+    cookie_secure: bool | None = None
+
+    # Production refuses to start with insecure cookies unless this is explicitly true.
+    # Only for a deliberate, temporary plain-HTTP deployment on a trusted network.
+    allow_insecure_cookies_in_production: bool = False
+
     @property
     def log_dir(self) -> Path:
         return self.data_dir / "logs"
+
+    @property
+    def session_cookie_secure(self) -> bool:
+        if self.cookie_secure is None:
+            return self.env == "production"
+        return self.cookie_secure
 
 
 @lru_cache

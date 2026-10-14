@@ -1,6 +1,6 @@
 # Plan: Phase 0 and Phase 1
 
-Status: Phase 0 built. Phase 1 planned, awaiting owner go-ahead.
+Status: Phase 0 complete and approved (2026-10-14). Phase 1 approved; waiting on dependency approval (D-019).
 Source of truth for requirements: `PROJECT_BRIEF.md`. Decisions referenced here are recorded in `docs/DECISIONS.md`.
 
 ---
@@ -83,7 +83,6 @@ A teacher can sign in, switch language, see their exams, and create a complete e
 ### New backend dependencies (licences checked before adding)
 - `sqlalchemy` 2.x (MIT), `alembic` (MIT): ORM and migrations.
 - `argon2-cffi` (MIT): password hashing.
-- `python-multipart` (Apache-2.0): form and file parsing, needed for the CSV import.
 
 ### New frontend dependencies
 - `react-router` (MIT): client routing.
@@ -161,8 +160,8 @@ All tables: integer primary key `id`, `created_at`, `updated_at` (UTC). Foreign 
 | `school_class` | school_id, name, academic_year, teacher_id (user) | Named `school_class` because `class` is a reserved word in Python. Unique (school, name, academic_year). |
 | `student` | school_id, class_id, code (unique per school), display_name (nullable, local only), training_consent (bool), consent_recorded_at, consent_recorded_by_id | `code` is generated (e.g. `S-7K3QX`, unambiguous alphabet). Display names never leave the DB; enforced in Phase 3 by the model layer taking only codes. |
 | `exam` | class_id, subject_code, title, exam_date, status (`draft`/`ready`/`marking`/`reviewing`/`completed`), created_by_id | `subject_code` references a subject config file, not a table (D-017). |
-| `question` | exam_id, label (e.g. `1(a)`), prompt_text, max_marks, position | Unique (exam, position) and (exam, label). |
-| `mark_scheme_point` | question_id, description, marks, alternatives (JSON list of strings), position | |
+| `question` | exam_id, label (e.g. `1(a)`), prompt_text, max_half_marks, position | Unique (exam, position) and (exam, label). Marks stored in half-mark units (D-018). |
+| `mark_scheme_point` | question_id, description, half_marks, alternatives (JSON list of strings), position | Half-mark units (D-018). |
 | `audit_event` | actor_id (nullable for system), entity_type, entity_id, action, old_value (JSON), new_value (JSON), reason, created_at | Append-only. No update or delete path in code; a test asserts the service exposes none. Phase 1 writes events for user, class, student and consent changes and exam edits. |
 
 Later phases add, each by migration: `upload`, `script`, `page`, `transcription`, `mark_decision`, `job`, `model_version` (as in brief section 6).
@@ -171,7 +170,7 @@ Later phases add, each by migration: `upload`, `script`, `page`, `transcription`
 
 Mark scheme validation (D-014):
 - Every question has `max_marks` ≥ 1 and at least one point.
-- Every point has `marks` ≥ 1 (whole marks in v1; half marks to backlog).
+- Every point has `marks` ≥ 1. Whole marks only in v1 API/UI; stored as half-mark units so half marks need no migration (D-018).
 - Sum of a question's point marks must be ≥ `max_marks` (otherwise full marks are unreachable). A sum greater than max is allowed ("any 3 of 5 points"); awarded marks are capped at `max_marks`. The UI shows this as an informational note.
 - Labels unique within an exam.
 - Exam total = sum of question `max_marks`.
@@ -191,6 +190,7 @@ Auth (D-015, D-016):
 
 CSV import (exam setup):
 - Columns: `question_label, question_prompt, question_max_marks, point_description, point_marks, point_alternatives` (alternatives separated by `|`). One row per point; question columns repeated.
+- Sent as raw `text/csv` body read in the browser (D-020).
 - Parsed into the same Pydantic structure as the editor, validated with the same rules, previewed in the UI before saving. Errors reported per row as translated messages.
 - Treated as untrusted: size limit, UTF-8 (with BOM tolerated), row limit.
 

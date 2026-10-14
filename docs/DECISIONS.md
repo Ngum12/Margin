@@ -49,7 +49,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Alternatives:** FormatJS/react-intl; Lingui; waiting until Phase 1.
 - **Reason:** widely used, MIT, simple JSON catalogues that non-developers can translate. Even the Phase 0 placeholder has user-facing text, so the non-negotiable applies now.
 
-### D-010 · 2026-10-14 · Keep `httpx` for the test client (pending owner decision)
+### D-010 · 2026-10-14 · Keep `httpx` for the test client (owner confirmed 2026-10-14: keep httpx, do not add httpx2)
 - **Decision:** Starlette 1.8 emits a deprecation warning recommending `httpx2` for `TestClient`. We keep `httpx` 0.28.1 (dev-only) and filter that one warning; all other warnings are errors in pytest.
 - **Alternatives:** switch to `httpx2`.
 - **Reason:** adding a new package was blocked by the session's permission policy pending owner review. `httpx` works; revisit when the owner approves `httpx2` or Starlette drops `httpx` support.
@@ -71,4 +71,35 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 
 ---
 
-Proposed for Phase 1 (detailed in `docs/PLAN.md`, confirmed when built): D-014 mark scheme validation rules, D-015 DB-backed sessions with per-session CSRF token, D-016 `Secure` cookie flag configurable and HTTPS on the LAN in Phase 6, D-017 subjects as TOML config files rather than a DB table.
+### D-014 · 2026-10-14 · Mark scheme validation rules
+- **Decision:** as in `docs/PLAN.md` Phase 1: every question has max ≥ 1 and at least one point; every point ≥ 1 mark; a question's point marks must sum to at least its max (more is allowed, "any N of M", with awards capped at max); labels unique per exam; `draft` → `ready` only when valid; structural edits only in `draft`.
+- **Alternatives:** require points to sum exactly to max (cannot express "any 3 of 5").
+- **Reason:** matches how GCE mark schemes are written. Approved by owner with the plan.
+
+### D-015 · 2026-10-14 · DB-backed sessions with per-session CSRF token
+- **Decision:** random 32-byte session token in an httpOnly, SameSite=Lax cookie; only its SHA-256 hash is stored (`user_session`). Idle and absolute expiry. A per-session CSRF token is returned by `GET /api/auth/me` and required in `X-CSRF-Token` for unsafe methods; login is guarded by a same-origin Origin/Referer check.
+- **Alternatives:** signed stateless cookies (cannot revoke), JWT (same, plus no benefit here).
+- **Reason:** revocable (sign-out, deactivated users), no server secret to manage, works offline.
+
+### D-016 · 2026-10-14 · Secure cookies configurable; production refuses to start insecure
+- **Decision:** `MARGIN_COOKIE_SECURE` (unset → true in production, false in development/test). In production the app **refuses to start** if secure cookies are off, unless `MARGIN_ALLOW_INSECURE_COOKIES_IN_PRODUCTION=true`, in which case it starts and logs a warning. Implemented in `app/startup_checks.py`, tested in `tests/test_startup_checks.py`. Local HTTPS (locally generated certificate) ships in Phase 6.
+- **Alternatives:** always Secure (breaks plain-HTTP LAN installs); silently allow insecure in production.
+- **Reason:** owner decision 2026-10-14. Safe by default, with an explicit, logged escape hatch.
+
+### D-017 · 2026-10-14 · Subjects as config files; CSV-only mark scheme import
+- **Decision:** subjects (code, names in en/fr, curriculum, reader notation hints) are TOML files in `backend/app/subjects/configs/`, validated with Pydantic at startup (TOML read with stdlib `tomllib`, no new dependency). Exams reference `subject_code`. Mark scheme import is CSV only in v1.
+- **Alternatives:** subjects table edited in the admin UI; YAML (needs a dependency); structured-text import.
+- **Reason:** adding a subject or curriculum is a configuration change, not code. Owner approved 2026-10-14.
+
+### D-018 · 2026-10-14 · Marks stored as integer half-mark units
+- **Decision:** every stored mark (question maximum, mark scheme point marks, and later proposed and final marks) is an integer count of **half marks** (`*_half_marks` columns; 1 mark = 2 units). Conversion lives in one module (`app/marks.py`). The API and UI use whole marks for now: inputs must be whole numbers and are converted on the way in and out. Enabling half marks later is a validation and UI change, with no data migration.
+- **Alternatives:** integer whole marks (needs a migration later); floats or decimals (rounding issues, awkward in SQLite).
+- **Reason:** owner decision 2026-10-14. Integers keep totals exact and portable to PostgreSQL.
+
+### D-019 · 2026-10-14 · Dependency approval rule
+- **Decision:** no new or upgraded dependency is installed without the owner's approval of a list showing each package, version, licence, purpose and new transitive packages. No unvetted tools are run (`npx --yes`, `uvx`, ad hoc downloads). Recorded permanently in `CLAUDE.md`.
+- **Reason:** owner decision 2026-10-14, after an `npx --yes license-checker-rseidelsohn` run in Phase 0 (its npx cache entry was deleted the same day).
+
+### D-020 · 2026-10-14 · CSV import sent as a raw request body
+- **Decision:** the frontend reads the CSV file locally and POSTs its text (`Content-Type: text/csv`, size-limited) instead of a multipart upload, so Phase 1 does not need `python-multipart`.
+- **Reason:** one less dependency now. Phase 2 (PDF uploads) will request `python-multipart` (Apache-2.0) for approval.

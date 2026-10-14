@@ -3,9 +3,14 @@
 On-premise AI marking assistant for secondary schools. Full requirements: `PROJECT_BRIEF.md` (read it). Plan: `docs/PLAN.md`. Decisions: `docs/DECISIONS.md`. Out-of-scope ideas: `docs/BACKLOG.md`. Dependency licences: `docs/DEPENDENCIES.md`.
 
 ## Current phase
-**Phase 0 (Foundation): complete.** Phase 1 (accounts, classes, exams, mark schemes) planned in `docs/PLAN.md`; do not start it until the owner says so.
+**Phase 0 (Foundation): complete and approved.** **Phase 1 (accounts, classes, exams, mark schemes): approved, in progress** per `docs/PLAN.md`. Marks are stored as integer half-mark units (D-018).
 
 Workflow: one phase at a time → plan → build → `python scripts/check.py` passes → commit → stop and report. Never claim something works without running it. Record decisions and deviations in `docs/DECISIONS.md` first. Out-of-scope ideas go to `docs/BACKLOG.md`.
+
+## Dependency and package rules (permanent, set by the owner)
+- **Never run unvetted packages.** No `npx --yes`, no `npx <pkg>` for packages not already in the lockfile, no `pip install`/`uv tool run`/`uvx` of ad hoc tools, no curl/wget downloads of scripts or binaries.
+- **Never add a new dependency (runtime or dev, backend or frontend) without owner approval.** First list each package with version, licence, purpose, and its new transitive packages and their licences; then wait for explicit approval. Only then install, pin exactly, and record it in `docs/DEPENDENCIES.md`.
+- Upgrades of existing dependencies follow the same rule.
 
 ## Non-negotiables (breaking any is a critical bug)
 - **Data stays in the school.** The only outbound network calls go to the configured model server (`MARGIN_MODEL_BASE_URL`, default local Ollama). No telemetry, analytics, external fonts, CDNs or third-party scripts; all assets bundled locally. A test must fail on any other outbound connection (Phase 3).

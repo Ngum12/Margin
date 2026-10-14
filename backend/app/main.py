@@ -7,6 +7,7 @@ from app.config import Settings, get_settings
 from app.logging_config import configure_logging
 from app.security_headers import SecurityHeadersMiddleware
 from app.spa import mount_spa
+from app.startup_checks import check_startup_safety
 
 TELEMETRY_DISABLED: TelemetryConfig = {
     "tracing": False,
@@ -20,6 +21,7 @@ TELEMETRY_DISABLED: TelemetryConfig = {
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings)
+    check_startup_safety(settings)
 
     is_dev = settings.env == "development"
     app = FastAPI(
