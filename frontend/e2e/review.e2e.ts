@@ -156,6 +156,28 @@ test("the review screen in French", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Confirm script" })).toBeVisible();
 });
 
+test("check pages, start AI marking and follow its progress", async ({ page }) => {
+  await signIn(page, "alice");
+  await page.goto("/exams/2/queue");
+  const start = page.getByRole("button", { name: "Start AI marking" });
+  await expect(page.getByText(/Check page orientation first/)).toBeVisible();
+  await expect(start).toBeDisabled();
+
+  const thumb = page.getByAltText("AAAAAA, page 2");
+  await expect(thumb).toHaveAttribute("data-rotation", "0");
+  await page.getByRole("button", { name: "Turn AAAAAA page 2 right" }).click();
+  await expect(thumb).toHaveAttribute("data-rotation", "90");
+  await page.getByRole("button", { name: "Turn AAAAAA page 2 left" }).click();
+  await expect(thumb).toHaveAttribute("data-rotation", "0");
+  await page.getByRole("button", { name: "All pages are upright: pages checked" }).click();
+
+  await expect(start).toBeEnabled();
+  await start.click();
+  // The Mock model is quick: the run may finish before a poll sees it running.
+  await expect(page.getByText("AI marking finished.")).toBeVisible({ timeout: 30_000 });
+  await expect(page).toHaveTitle("✓ 1 ready · Margin");
+});
+
 test("another teacher cannot open the script", async ({ page }) => {
   await signIn(page, "bruno");
   await page.goto("/exams/1/review/1");

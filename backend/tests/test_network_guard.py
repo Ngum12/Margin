@@ -20,7 +20,7 @@ from fastapi import FastAPI
 from app.config import Settings
 from app.startup_checks import UnsafeConfigurationError, check_startup_safety, model_host_is_local
 from tests.conftest import World
-from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, upload_pdf
+from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, start_ai, upload_pdf
 from tests.fake_ollama import FakeOllama
 from tests.scan_builder import ScanBuilder, answer_page, render_pdf_pages
 
@@ -100,7 +100,7 @@ def test_full_pipeline_only_contacts_the_model_host(
         alice.post(f"/api/exams/{exam['id']}/cover-sheets")
         cover = render_pdf_pages(alice.get(f"/api/exams/{exam['id']}/cover-sheets.pdf").content)[0]
         upload_pdf(alice, exam["id"], ScanBuilder().add(cover).add(answer_page(1)).build())
-        alice.post(f"/api/exams/{exam['id']}/ai-marking")
+        start_ai(alice, exam["id"])
         connections.clear()  # only what the pipeline does from here on
         # Reader replies come first (default), marker replies after.
         original_default = fake.default_reply

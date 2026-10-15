@@ -21,7 +21,7 @@ from app.db.models import (
 )
 from app.errors import ConflictError
 from app.marks import from_half_marks
-from app.services import audit, jobs
+from app.services import audit, jobs, page_check
 from app.services.access import get_visible_exam, get_visible_script
 from app.subjects.registry import get_registry
 
@@ -119,6 +119,7 @@ def rerun_script(db: Session, actor: User | None, script: Script, settings: Sett
     exam = db.get(Exam, script.exam_id)
     if exam is None:  # pragma: no cover
         raise ConflictError("Exam missing", code="conflict")
+    page_check.require_checked(exam)
     _rerun(db, actor, script, settings)
     _back_to_marking(exam)
 
@@ -130,6 +131,7 @@ def rerun_visible_script(db: Session, actor: User, script_id: int, settings: Set
 def rerun_exam(db: Session, actor: User | None, exam: Exam, settings: Settings) -> int:
     """Re-run AI marking for every unconfirmed script of an exam that the AI is not already
     working on. Confirmed scripts are never touched. Returns the number of scripts re-run."""
+    page_check.require_checked(exam)
     scripts = [
         s
         for s in db.scalars(select(Script).where(Script.exam_id == exam.id).order_by(Script.id))
@@ -164,6 +166,7 @@ def start_ai_marking(db: Session, actor: User, exam_id: int, settings: Settings)
     scripts = db.scalars(select(Script).where(Script.exam_id == exam.id)).all()
     if not scripts:
         raise ConflictError("No scripts have been uploaded yet", code="ai.no_scripts")
+    page_check.require_checked(exam)
     queued = 0
     for script in scripts:
         if script.manual_reason is not None:

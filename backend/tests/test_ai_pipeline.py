@@ -22,7 +22,7 @@ from app.db.models import (
     Transcription,
 )
 from tests.conftest import World
-from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, upload_pdf
+from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, start_ai, upload_pdf
 from tests.scan_builder import ScanBuilder, answer_page, render_pdf_pages
 
 
@@ -49,7 +49,7 @@ def scanned(alice: ApiUser, world: World, factory: Factory) -> dict[str, Any]:
 def test_full_exam_goes_from_upload_to_ai_marked(
     app: FastAPI, alice: ApiUser, scanned: dict[str, Any], db: Session
 ) -> None:
-    response = alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    response = start_ai(alice, scanned["id"])
     assert response.status_code == 202
     assert response.json() == {"scripts_queued": 2}
     assert alice.get(f"/api/exams/{scanned['id']}").json()["status"] == "marking"
@@ -66,7 +66,7 @@ def test_full_exam_goes_from_upload_to_ai_marked(
 def test_cover_sheets_are_not_transcribed_and_outputs_carry_versions(
     app: FastAPI, alice: ApiUser, scanned: dict[str, Any], db: Session
 ) -> None:
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    start_ai(alice, scanned["id"])
     run_jobs(app)
 
     transcriptions = db.scalars(select(Transcription)).all()
@@ -94,7 +94,7 @@ def test_cover_sheets_are_not_transcribed_and_outputs_carry_versions(
 def test_mock_marker_quotes_evidence_from_the_transcription(
     app: FastAPI, alice: ApiUser, scanned: dict[str, Any], db: Session
 ) -> None:
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    start_ai(alice, scanned["id"])
     run_jobs(app)
     script = db.scalars(select(Script)).first()
     assert script is not None
@@ -111,9 +111,9 @@ def test_mock_marker_quotes_evidence_from_the_transcription(
 def test_running_again_does_not_duplicate_results(
     app: FastAPI, alice: ApiUser, scanned: dict[str, Any], db: Session
 ) -> None:
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    start_ai(alice, scanned["id"])
     run_jobs(app)
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")  # nothing left to queue
+    start_ai(alice, scanned["id"])  # nothing left to queue
     run_jobs(app)
 
     assert len(db.scalars(select(Transcription)).all()) == 4
@@ -132,7 +132,7 @@ def test_reader_invalid_output_flags_script_for_manual_marking(
             raise ModelOutputInvalidError("reader_schema")
 
     monkeypatch.setattr("app.worker.handlers.build_reader", lambda _s: BrokenReader())
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    start_ai(alice, scanned["id"])
     run_jobs(app)
 
     scripts = db.scalars(select(Script)).all()
@@ -164,7 +164,7 @@ def test_marker_failure_on_one_question_keeps_the_others_and_flags(
             )
 
     monkeypatch.setattr("app.worker.handlers.build_marker", lambda _s: HalfMarker())
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    start_ai(alice, scanned["id"])
     run_jobs(app)
 
     scripts = db.scalars(select(Script)).all()
@@ -185,7 +185,7 @@ def test_model_server_down_retries_with_backoff(
         raise ModelUnavailableError("ConnectionRefusedError")
 
     monkeypatch.setattr("app.worker.handlers.build_reader", unavailable)
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    start_ai(alice, scanned["id"])
     run_jobs(app)
 
     jobs = db.scalars(select(Job).where(Job.type == "transcribe_script")).all()
@@ -223,7 +223,7 @@ def test_tray_pages_cannot_join_a_script_once_marking_started(
     app: FastAPI, alice: ApiUser, scanned: dict[str, Any], db: Session
 ) -> None:
     upload_pdf(alice, scanned["id"], ScanBuilder().add(answer_page(99)).build())
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    start_ai(alice, scanned["id"])
     run_jobs(app)
     page = alice.get(f"/api/exams/{scanned['id']}/unassigned-pages").json()[0]
     script = db.scalars(select(Script)).first()
@@ -267,7 +267,7 @@ def test_reader_time_out_flags_the_script_with_its_own_reason(
             raise ModelCallTimeoutError
 
     monkeypatch.setattr("app.worker.handlers.build_reader", lambda _s: SlowReader())
-    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    start_ai(alice, scanned["id"])
     run_jobs(app)
 
     scripts = db.scalars(select(Script)).all()

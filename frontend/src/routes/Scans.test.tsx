@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { AiStatus, ScanPage } from "../api/types";
 import en from "../i18n/locales/en.json";
 import fr from "../i18n/locales/fr.json";
-import { examDetail, fakeApi, me, SUBJECTS } from "../test/fakeApi";
+import { examDetail, fakeApi, me, quietQueueExtras, SUBJECTS } from "../test/fakeApi";
 import { renderApp } from "../test/render";
 
 const STUDENTS = [
@@ -57,6 +57,7 @@ function setup(language: "en" | "fr" = "en") {
   api.on("GET /api/exams/7", [200, examDetail({ status: "ready" })]);
   api.on("GET /api/exams/7/cover-sheets", [200, STUDENTS]);
   api.on("GET /api/exams/7/ai-status", [200, aiStatus()]);
+  quietQueueExtras(api);
   api.on("GET /api/exams/7/queue", [
     200,
     {

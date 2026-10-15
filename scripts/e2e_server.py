@@ -9,6 +9,8 @@ three scripts uploaded and marked by the Mock models:
 - BBBBBB "Bih Ndi": its answer page was turned 180 degrees automatically, and the AI deducted a
   mark on one point (rotation, undo and French scenarios);
 - CCCCCC: flagged for manual marking, no AI proposals.
+A second exam ("Mock exam 2") has AAAAAA's script uploaded but its pages not yet checked and no
+AI marking started: for the page-check and live-progress scenario.
 Everything stays in a temporary folder on this computer; nothing is sent anywhere.
 """
 
@@ -63,8 +65,14 @@ def seed(settings: Settings) -> None:
     for index, cover in enumerate(covers):
         scan.add(cover).add(answer_page(index))
     upload_pdf(teacher, exam["id"], scan.build())
+    teacher.post(f"/api/exams/{exam['id']}/page-check")  # pages are upright in the seed
     teacher.post(f"/api/exams/{exam['id']}/ai-marking")
     run_jobs(app)
+
+    second = make_ready_exam(teacher, class_id, "Mock exam 2")
+    teacher.post(f"/api/exams/{second['id']}/cover-sheets")
+    covers2 = render_pdf_pages(teacher.get(f"/api/exams/{second['id']}/cover-sheets.pdf").content)
+    upload_pdf(teacher, second["id"], ScanBuilder().add(covers2[0]).add(answer_page(7)).build())
 
     with app.state.sessionmaker() as db:
         scripts = {

@@ -32,7 +32,7 @@ from app.db.models import (
 )
 from app.errors import ConflictError, NotFoundError
 from app.pdf.runner import RenderError, render_pdf
-from app.services import audit, jobs
+from app.services import audit, jobs, page_check
 from app.services.access import get_visible_exam, visible_exams
 from app.services.splitting import SheetOwner, place_pages
 
@@ -241,6 +241,10 @@ def process_upload(factory: sessionmaker[Session], settings: Settings, upload_id
             rows[placement.index] = page
 
         assigned = sum(1 for p in placements if p.student_id is not None)
+        if assigned:
+            exam = db.get(Exam, exam_id)
+            if exam is not None:
+                page_check.clear_check(exam)  # the new pages have not been looked at yet
         upload.page_count = result.page_count
         upload.status = UploadStatus.PROCESSED
         upload.error_code = None
@@ -450,6 +454,7 @@ def assign_pages(
         page.unassigned_reason = None
         page.related_page_id = None
         position += 1
+    page_check.clear_check(found.exam)
     audit.record(
         db,
         actor=actor,

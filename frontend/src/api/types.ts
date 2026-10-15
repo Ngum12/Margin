@@ -418,3 +418,48 @@ export interface ModelConfig {
   model_output_retries: number;
   orientation_check: string;
 }
+
+// --- page check and live AI progress (owner, 2026-10-15) ------------------------------------
+
+export interface PageCheck {
+  exam_id: number;
+  checked_at: string | null;
+  scripts: {
+    script_id: number;
+    student_code: string;
+    student_name: string | null;
+    status: string;
+    pages: {
+      id: number;
+      position: number | null;
+      is_cover: boolean;
+      width: number;
+      height: number;
+      rotation: number;
+      rotation_teacher: number | null;
+    }[];
+  }[];
+}
+
+export type ScriptProgressState = "queued" | "working" | "ready" | "manual" | "confirmed" | "idle";
+
+export interface AiProgress {
+  running: boolean;
+  percent: number;
+  done_units: number;
+  total_units: number;
+  eta_seconds: number | null;
+  ready: number;
+  manual: number;
+  current_student: string | null;
+  current_page_id: number | null;
+  latest_read: { page_id: number; student_code: string; text: string; at: string } | null;
+  scripts: {
+    script_id: number;
+    student_code: string;
+    state: ScriptProgressState;
+    step: "reading" | "marking" | null;
+    index: number | null;
+    total: number | null;
+  }[];
+}

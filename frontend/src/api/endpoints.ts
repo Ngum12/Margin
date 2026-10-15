@@ -1,5 +1,6 @@
 import { request } from "./client";
 import type {
+  AiProgress,
   AiStatus,
   CoverSheetRow,
   ExamDetail,
@@ -12,6 +13,7 @@ import type {
   MarkSchemeInput,
   Me,
   ModelConfig,
+  PageCheck,
   Queue,
   Results,
   Rotation,
@@ -94,6 +96,12 @@ export const api = {
       json: { page_ids: pageIds },
     }),
   aiStatus: (examId: number) => request<AiStatus>("GET", `/api/exams/${String(examId)}/ai-status`),
+  aiProgress: (examId: number) =>
+    request<AiProgress>("GET", `/api/exams/${String(examId)}/ai-progress`),
+  pageCheck: (examId: number) =>
+    request<PageCheck>("GET", `/api/exams/${String(examId)}/page-check`),
+  confirmPageCheck: (examId: number) =>
+    request<PageCheck>("POST", `/api/exams/${String(examId)}/page-check`),
   startAiMarking: (examId: number) =>
     request<{ scripts_queued: number }>("POST", `/api/exams/${String(examId)}/ai-marking`),
   pageImageUrl: (pageId: number, size: "thumb" | "full" = "thumb") =>

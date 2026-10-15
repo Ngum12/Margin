@@ -78,3 +78,15 @@ Dev transitive licences (from `package-lock.json`): MIT 203, Apache-2.0 18, ISC 
 - **Phase 2:** installed as approved. python-multipart was approved but not needed (D-027) and has been removed from the approved list (owner, 2026-10-14); adding it later needs a new approval.
 - **Phase 3:** `httpx` stays dev-only (D-037); the runtime approval was dropped by the owner (2026-10-14). No new packages.
 - **Phase 4** (approved 2026-10-14): `@playwright/test` 1.64.1, dev only, Apache-2.0; transitive `playwright` and `playwright-core` 1.64.1 (Apache-2.0); no install scripts. Tests drive the installed Microsoft Edge (`channel: "msedge"`), so no browser download. The lockfile also lists `fsevents` 2.3.3 (MIT) as an optional, macOS-only dependency of `playwright`; it is never installed on Windows or Linux. Approved by the owner on 2026-10-15.
+
+## Bundled font files (Phase 5, approved by the owner 2026-10-15)
+
+| Font | Version | Licence | Files | Source | Purpose |
+|---|---|---|---|---|---|
+| Noto Sans | 2.013 | SIL Open Font License 1.1 | `NotoSans-Regular.ttf`, `NotoSans-Bold.ttf` | github.com/notofonts/latin-greek-cyrillic, release `NotoSans-v2.013` (hinted TTF) | Text in marked PDFs, all French characters |
+| Noto Sans Symbols 2 | 2.008 | SIL Open Font License 1.1 | `NotoSansSymbols2-Regular.ttf` | github.com/notofonts/symbols, release `NotoSansSymbols2-v2.008` (hinted TTF) | ✓ and ✗ in marked PDFs |
+
+- Stored in `backend/app/exports/fonts/` with their licence texts and SHA-256 checksums (`fonts.json`). A test checks the files against the checksums.
+- Before use, both ✓ (U+2713) and ✗ (U+2717) were checked to render. Noto Sans does not contain them; Noto Sans Symbols 2 does.
+- Embedded through ReportLab's built-in TrueType support: no new Python package.
+- Listed in `THIRD_PARTY_NOTICES.md` by `scripts/third_party_notices.py`.

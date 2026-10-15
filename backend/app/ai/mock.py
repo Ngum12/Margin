@@ -7,6 +7,7 @@ output, so the whole pipeline is exercised.
 import json
 import re
 import time
+from collections.abc import Callable
 from typing import Literal
 
 from app.ai.prompts import load_prompt
@@ -75,11 +76,15 @@ class MockMarker:
             "marker_lines" if evidence == "lines" else "marker"
         ).version
 
+    on_question: Callable[[int, int], None] | None = None
+
     def mark(self, transcription: Transcription, exam: ExamSpec) -> MarkingProposal:
         answer = transcription.full_text
         lowered = answer.casefold()
         questions = []
-        for question in exam.questions:
+        for number, question in enumerate(exam.questions, start=1):
+            if self.on_question is not None:
+                self.on_question(number, len(exam.questions))
             if self._delay:
                 time.sleep(self._delay)
             points = []

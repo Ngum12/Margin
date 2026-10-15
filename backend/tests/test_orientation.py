@@ -23,7 +23,7 @@ from app.config import Settings
 from app.db.models import AuditEvent, Page, Script, ScriptStatus, Transcription
 from app.subjects.registry import SubjectConfig, get_registry
 from tests.conftest import World
-from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, upload_pdf
+from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, start_ai, upload_pdf
 from tests.fake_ollama import FakeOllama
 from tests.scan_builder import ScanBuilder, answer_page, render_pdf_pages
 
@@ -126,7 +126,7 @@ def _run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr("app.worker.handlers.build_reader", lambda _s: reader)
-    assert alice.post(f"/api/exams/{exam['id']}/ai-marking").status_code == 202
+    assert start_ai(alice, exam["id"]).status_code == 202
     run_jobs(app)
 
 

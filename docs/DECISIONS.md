@@ -322,3 +322,20 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Runs:** every script has a run number (`script.ai_run`), and every mark decision records its run (`mark_decision.ai_run`; part of its uniqueness key). A re-run increments the number and queues the script from the start. Only the current run's decisions are shown, used in results and exported. Earlier runs, including the teacher's decisions on them, stay in the database as history. Teacher comments are kept.
 - **Reading:** pages are read again only when the reading model or prompt has changed, so a re-run with the same reader marks the teacher's edited text. A new reader's reads become the current transcription.
 - **Audit:** one `rerun_ai` event per script (old and new run, status), and one per exam with the number of scripts.
+
+### D-058 · 2026-10-15 · Check pages before AI marking; live AI progress
+- **Finding (owner's review):** one upside-down answer page cost a weak-English student 3 marks (11 instead of 14). After the page was turned and the script re-marked, the AI gave exactly 14. The model cannot detect orientation (D-049).
+- **Page check (owner):**
+  - **Screen:** a "Check pages" step on the Marking tab shows a thumbnail of every page at its current orientation, with one-click rotate (teacher rotation, layer a; audited, stored images unchanged).
+  - **Rule:** AI marking and re-runs are refused until a teacher confirms the pages are checked (`exam.pages_checked_at`; error `exam.pages_not_checked`). The AI panel says "Check page orientation first".
+  - **New pages:** an upload or a tray assignment that adds pages clears the check.
+- **Live progress (owner, all four parts):**
+  1. **Progress bar:** counted in work units (answer pages plus questions), with the time left estimated from the average of the last 20 measured calls of each kind on this machine. No estimate is shown until those calls exist.
+  2. **Each script's live step** in its queue row.
+  3. **"Watch it read":** the page being read now and the latest transcription.
+  4. **Finished signal:** in the tab title and a message.
+- **How progress is recorded:**
+  - **Worker steps:** the worker records its current step on the script (`ai_step`, number, total, page, start time), committed apart from the results.
+  - **Timings:** each call's duration goes into `model_call` (role, model, seconds; no content).
+  - **Marker hook:** the Marker interface gains an optional `on_question` callback.
+- **Polling:** the queue polls `GET /api/exams/{id}/ai-progress` every 3 s while work runs and every 10 s otherwise. Starting a run from the screen makes it look at once, so a quick run is never missed.

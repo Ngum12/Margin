@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Noto Sans",
+    "version": "2.013",
+    "licence": "OFL-1.1",
+    "licence_file": "OFL-NotoSans.txt",
+    "source": "https://github.com/notofonts/latin-greek-cyrillic/releases/tag/NotoSans-v2.013 (NotoSans/hinted/ttf)",
+    "files": {
+      "NotoSans-Regular.ttf": "61b72eacd39533f0e5916cbb458abd7b3cf870667f63f3069dac2a75aa0317a2",
+      "NotoSans-Bold.ttf": "8e6da60154ae06e5e860777c4ccf8c7338d9b96ba34c1222db40a367d79b35dc"
+    }
+  },
+  {
+    "name": "Noto Sans Symbols 2",
+    "version": "2.008",
+    "licence": "OFL-1.1",
+    "licence_file": "OFL-NotoSansSymbols2.txt",
+    "source": "https://github.com/notofonts/symbols/releases/tag/NotoSansSymbols2-v2.008 (NotoSansSymbols2/hinted/ttf)",
+    "files": {
+      "NotoSansSymbols2-Regular.ttf": "c4a0a80f0041ce4be81e2478faad22776d23edb98ae3f0d19bd37044820ecf9d"
+    }
+  }
+]

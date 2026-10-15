@@ -6,7 +6,7 @@ import type { Queue, ReviewPoint, ScriptReview } from "../api/types";
 import en from "../i18n/locales/en.json";
 import fr from "../i18n/locales/fr.json";
 import { at } from "../test/at";
-import { fakeApi, me } from "../test/fakeApi";
+import { fakeApi, me, quietQueueExtras } from "../test/fakeApi";
 import { renderApp } from "../test/render";
 
 function point(overrides: Partial<ReviewPoint>): ReviewPoint {
@@ -436,6 +436,7 @@ describe("marking queue screen", () => {
   it("lists scripts with what to check and the class's average review time", async () => {
     const api = fakeApi();
     api.on("GET /api/auth/me", [200, me()]);
+    quietQueueExtras(api);
     api.on("GET /api/exams/7/queue", [200, queue()]);
     api.on("GET /api/exams/7/ai-status", [
       200,
@@ -545,6 +546,7 @@ describe("test-model output and re-running AI marking (owner, 2026-10-15)", () =
     data.items = data.items.map((item, index) =>
       index === 0 ? { ...item, test_model: true } : item,
     );
+    quietQueueExtras(api);
     api.on("GET /api/exams/7/queue", [200, data]);
     api.on("GET /api/exams/7/ai-status", [
       200,

@@ -8,7 +8,7 @@ from app.api.deps import AppSettings, CurrentUser, DbSession
 from app.db.models import ErrorCategory, TranscriptionSource
 from app.marks import from_half_marks
 from app.schemas.common import ApiModel
-from app.services import ai_marking, system_status
+from app.services import ai_marking, ai_progress, page_check, system_status
 
 router = APIRouter(tags=["ai"])
 
@@ -137,5 +137,142 @@ def results(script_id: int, db: DbSession, user: CurrentUser) -> AiResultsOut:
                 proposed_at=d.proposed_at,
             )
             for d in found.decisions
+        ],
+    )
+
+
+# --- page check before AI marking (owner, 2026-10-15) -----------------------------------------
+
+
+class CheckPageOut(ApiModel):
+    id: int
+    position: int | None
+    is_cover: bool
+    width: int
+    height: int
+    rotation: int
+    rotation_teacher: int | None
+
+
+class CheckScriptOut(ApiModel):
+    script_id: int
+    student_code: str
+    student_name: str | None
+    status: str
+    pages: list[CheckPageOut]
+
+
+class PageCheckOut(ApiModel):
+    exam_id: int
+    checked_at: datetime | None
+    scripts: list[CheckScriptOut]
+
+
+def _page_check_out(check: page_check.PageCheck) -> PageCheckOut:
+    return PageCheckOut(
+        exam_id=check.exam.id,
+        checked_at=check.exam.pages_checked_at,
+        scripts=[
+            CheckScriptOut(
+                script_id=item.script.id,
+                student_code=item.script.student.code,
+                student_name=item.script.student.display_name,
+                status=item.script.status.value,
+                pages=[
+                    CheckPageOut(
+                        id=p.id,
+                        position=p.position,
+                        is_cover=p.is_cover,
+                        width=p.width,
+                        height=p.height,
+                        rotation=p.effective_rotation,
+                        rotation_teacher=p.rotation_teacher,
+                    )
+                    for p in item.pages
+                ],
+            )
+            for item in check.scripts
+        ],
+    )
+
+
+@router.get("/exams/{exam_id}/page-check")
+def get_page_check(exam_id: int, db: DbSession, user: CurrentUser) -> PageCheckOut:
+    return _page_check_out(page_check.page_check(db, user, exam_id))
+
+
+@router.post("/exams/{exam_id}/page-check")
+def confirm_page_check(exam_id: int, db: DbSession, user: CurrentUser) -> PageCheckOut:
+    page_check.mark_checked(db, user, exam_id)
+    return _page_check_out(page_check.page_check(db, user, exam_id))
+
+
+# --- live AI progress (owner, 2026-10-15) -----------------------------------------------------
+
+
+class ScriptProgressOut(ApiModel):
+    script_id: int
+    student_code: str
+    state: str
+    step: str | None
+    index: int | None
+    total: int | None
+
+
+class LatestReadOut(ApiModel):
+    page_id: int
+    student_code: str
+    text: str
+    at: datetime
+
+
+class AiProgressOut(ApiModel):
+    running: bool
+    percent: int
+    done_units: int
+    total_units: int
+    eta_seconds: float | None
+    ready: int
+    manual: int
+    current_student: str | None
+    current_page_id: int | None
+    latest_read: LatestReadOut | None
+    scripts: list[ScriptProgressOut]
+
+
+@router.get("/exams/{exam_id}/ai-progress")
+def ai_progress_view(exam_id: int, db: DbSession, user: CurrentUser) -> AiProgressOut:
+    progress = ai_progress.exam_progress(db, user, exam_id)
+    latest = progress.latest_read
+    return AiProgressOut(
+        running=progress.running,
+        percent=progress.percent,
+        done_units=progress.done_units,
+        total_units=progress.total_units,
+        eta_seconds=None if progress.eta_seconds is None else round(progress.eta_seconds),
+        ready=progress.count("ready"),
+        manual=progress.count("manual"),
+        current_student=progress.current_student,
+        current_page_id=progress.current_page_id,
+        latest_read=(
+            LatestReadOut(
+                page_id=latest.page_id,
+                student_code=latest.student_code,
+                text=latest.text,
+                at=latest.at,
+            )
+            if latest
+            else None
+        ),
+        scripts=[
+            ScriptProgressOut(
+                script_id=p.script.id,
+                student_code=p.script.student.code,
+                state=p.state,
+                step=p.step,
+                index=p.index,
+                total=p.total,
+            )
+            for p in progress.scripts
         ],
     )

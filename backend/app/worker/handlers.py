@@ -9,6 +9,7 @@ Errors:
 """
 
 import logging
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -35,6 +36,7 @@ from app.db.models import (
     ExportStatus,
     JobType,
     MarkDecision,
+    ModelCall,
     ModelRole,
     ModelVersion,
     Page,
@@ -132,7 +134,7 @@ def transcribe_script(
             db.commit()
             return
 
-        for page in pages:
+        for number, page in enumerate(pages, start=1):
             done = db.scalar(
                 select(Transcription.id).where(
                     Transcription.page_id == page.id,
@@ -144,9 +146,12 @@ def transcribe_script(
             )
             if done is not None:
                 continue  # resumed after a restart
+            _set_step(db, script, "reading", number, len(pages), page.id)
+            started = time.monotonic()
             try:
                 result = _read_page(db, reader, settings, page, subject)
             except ModelOutputInvalidError as exc:
+                _set_step(db, script, None)
                 # Literal reasons: tests check every one is translated.
                 if isinstance(exc, ModelCallTimeoutError):
                     _flag_manual(db, script, "ai.reader_timeout")
@@ -169,11 +174,13 @@ def transcribe_script(
                     rotation=page.effective_rotation,
                 )
             )
+            _record_call(db, ModelRole.READER, reader.model.name, time.monotonic() - started)
             try:
                 db.commit()  # each page is kept as soon as it is done
             except IntegrityError:  # pragma: no cover - another worker stored it first
                 db.rollback()
 
+        _set_step(db, script, None)
         script.status = ScriptStatus.TRANSCRIBED
         jobs.enqueue(
             db,
@@ -238,6 +245,50 @@ def _read_page(
     )
     # The second read's own judgement is kept in the logs only: never a further rotation.
     return read()
+
+
+def _set_step(
+    db: Session,
+    script: Script,
+    step: str | None,
+    index: int | None = None,
+    total: int | None = None,
+    page_id: int | None = None,
+) -> None:
+    """Record what the worker is doing now, for the live progress view. Committed at once and
+    kept apart from the results (no AI output is pending when this is called)."""
+    script.ai_step = step
+    script.ai_step_index = index
+    script.ai_step_total = total
+    script.ai_step_page_id = page_id
+    script.ai_step_started_at = utcnow() if step else None
+    db.commit()
+
+
+def _record_call(db: Session, role: ModelRole, model: str, seconds: float) -> None:
+    db.add(ModelCall(role=role, model_name=model, seconds=round(seconds, 2)))
+
+
+class _QuestionTimer:
+    """Marks each question's start in the progress view and times the previous question."""
+
+    def __init__(self, db: Session, script: Script, model: str) -> None:
+        self._db, self._script, self._model = db, script, model
+        self._started: float | None = None
+
+    def _close_previous(self) -> None:
+        if self._started is not None:
+            _record_call(self._db, ModelRole.MARKER, self._model, time.monotonic() - self._started)
+
+    def next_question(self, number: int, total: int) -> None:
+        self._close_previous()
+        self._started = time.monotonic()
+        _set_step(self._db, self._script, "marking", number, total)
+
+    def finish(self) -> None:
+        self._close_previous()
+        self._started = None
+        _set_step(self._db, self._script, None)
 
 
 def _latest_texts(db: Session, pages: list[Page]) -> list[PageText]:
@@ -340,7 +391,13 @@ def mark_script(
         if already is None:
             texts = _latest_texts(db, _answer_pages(db, script))
             transcription = AiTranscription(texts, marker.model, marker.prompt_version, utcnow())
-            proposal = marker.mark(transcription, exam_spec(exam, _curriculum(db, exam)))
+            timer = _QuestionTimer(db, script, marker.model.name)
+            marker.on_question = timer.next_question
+            try:
+                proposal = marker.mark(transcription, exam_spec(exam, _curriculum(db, exam)))
+            finally:
+                marker.on_question = None
+                timer.finish()
             for question in proposal.questions:
                 for point in question.points:
                     db.add(

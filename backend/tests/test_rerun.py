@@ -20,7 +20,7 @@ from app.ai.types import ModelInfo
 from app.config import get_settings
 from app.db.models import AuditEvent, Exam, ExamStatus, MarkDecision, Script, ScriptStatus
 from tests.conftest import World
-from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, upload_pdf
+from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, start_ai, upload_pdf
 from tests.scan_builder import ScanBuilder, answer_page, render_pdf_pages
 
 
@@ -60,7 +60,7 @@ def marked(app: FastAPI, alice: ApiUser, world: World, factory: Factory) -> dict
     for i, cover in enumerate(covers):
         scan.add(cover).add(answer_page(i))
     upload_pdf(alice, exam["id"], scan.build())
-    alice.post(f"/api/exams/{exam['id']}/ai-marking")
+    start_ai(alice, exam["id"])
     run_jobs(app)
     items = alice.get(f"/api/exams/{exam['id']}/queue").json()["items"]
     return {"exam_id": exam["id"], "a": items[0]["script_id"], "b": items[1]["script_id"]}

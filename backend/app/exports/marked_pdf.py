@@ -4,8 +4,11 @@
 - Each answer page lists the marks of the questions whose evidence is on that page. Where on the
   page an answer sits is not known (no question regions), so marks go in the margin rather than
   next to the words.
+- Next to each question, one sign per mark scheme point, as teachers mark: ✓ full marks,
+  ✗ no marks, the marks as a fraction when partly earned (owner, 2026-10-15).
 - Students appear by code only: names are never printed on paper (non-negotiable).
 - The stored page images are read, never changed.
+- Text uses the bundled Noto fonts (app.exports.fonts).
 """
 
 from collections.abc import Iterable
@@ -18,28 +21,34 @@ from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfgen.canvas import Canvas
 
+from app.exports import fonts
 from app.exports.labels import labels
 from app.marks import from_half_marks
-from app.services.results import QuestionResult, ScriptResult
+from app.services.results import PointResult, QuestionResult, ScriptResult
 
 PAGE_W, PAGE_H = A4
 MARGIN = 10 * mm
 HEADER = 10 * mm
 COLUMN = 52 * mm
 GAP = 4 * mm
-FONT = "Helvetica"
-BOLD = "Helvetica-Bold"
+FONT = fonts.REGULAR
+BOLD = fonts.BOLD
 
 
-def _text(value: str) -> str:
-    """The built-in PDF fonts cover Windows-1252 (French included). Other characters (emoji,
-    ticks) are left out: a "?" in their place would read like part of the comment."""
-    return value.encode("cp1252", errors="ignore").decode("cp1252")
+def _point_sign(point: PointResult) -> str:
+    if point.final_half is None:
+        return "-"
+    if point.final_half >= point.max_half:
+        return fonts.TICK
+    if point.final_half == 0:
+        return fonts.CROSS
+    return f"({from_half_marks(point.final_half)}/{from_half_marks(point.max_half)})"
 
 
 def _marks(question: QuestionResult) -> str:
     final = "-" if question.final_half is None else str(from_half_marks(question.final_half))
-    return f"{final} / {from_half_marks(question.question.max_half_marks)}"
+    signs = " ".join(_point_sign(p) for p in question.points)
+    return f"{final} / {from_half_marks(question.question.max_half_marks)}   {signs}"
 
 
 def _draw_image(
@@ -71,11 +80,10 @@ class _Column:
 
     def line(self, text: str, *, size: float = 10, bold: bool = False, gap: float = 1.4) -> None:
         font = BOLD if bold else FONT
-        for part in simpleSplit(_text(text), font, size, COLUMN - 2 * mm) or [""]:
+        for part in simpleSplit(fonts.printable(text), font, size, COLUMN - 2 * mm) or [""]:
             if self.y < MARGIN + size:
                 return  # column full: the results box on the cover is the complete record
-            self.canvas.setFont(font, size)
-            self.canvas.drawString(self.x + 1 * mm, self.y, part)
+            fonts.draw(self.canvas, self.x + 1 * mm, self.y, part, font, size)
             self.y -= size * gap
 
     def space(self, amount: float = 3 * mm) -> None:
@@ -102,17 +110,21 @@ def draw_script(
     image_box = (MARGIN, MARGIN, PAGE_W - 2 * MARGIN - COLUMN - GAP, PAGE_H - 2 * MARGIN - HEADER)
     for number, result_page in enumerate(pages, 1):
         page = result_page.page
-        canvas.setFont(FONT, 9)
-        canvas.drawString(
+        fonts.draw(
+            canvas,
             MARGIN,
             PAGE_H - MARGIN - 5 * mm,
-            _text(f"{exam_title} · {code} · {words['page']} {number}/{len(pages)}"),
+            f"{exam_title} · {code} · {words['page']} {number}/{len(pages)}",
+            FONT,
+            9,
         )
         if result.test_model:
             canvas.setFillColorRGB(0.75, 0.1, 0.1)
             canvas.setFont(BOLD, 11)
             canvas.drawRightString(
-                PAGE_W - MARGIN, PAGE_H - MARGIN - 5 * mm, _text(words["test_model"].upper())
+                PAGE_W - MARGIN,
+                PAGE_H - MARGIN - 5 * mm,
+                fonts.printable(words["test_model"].upper()),
             )
             canvas.setFillColorRGB(0, 0, 0)
         _draw_image(canvas, data_dir / page.image_path, page.effective_rotation, image_box)
@@ -160,8 +172,9 @@ def write_marked_pdf(
     language: str,
 ) -> int:
     """Write one PDF with every script in ``results``; returns the number of pages."""
+    fonts.register()
     canvas = Canvas(out, pagesize=A4, pageCompression=1)
-    canvas.setTitle(_text(exam_title))
+    canvas.setTitle(exam_title)
     canvas.setAuthor("Margin")
     pages = 0
     for result in results:

@@ -28,7 +28,7 @@ from app.schemas.review import QueueItemOut
 from app.services import exports
 from app.services.review import _queue_order
 from tests.conftest import World
-from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, upload_pdf
+from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, start_ai, upload_pdf
 from tests.scan_builder import ScanBuilder, answer_page, render_pdf_pages
 
 
@@ -59,7 +59,7 @@ def _scan_exam(alice: ApiUser, world: World, factory: Factory, codes: tuple[str,
 def marked(app: FastAPI, alice: ApiUser, world: World, factory: Factory) -> dict[str, Any]:
     """Two scripts marked by the Mock models (every point proposed at full marks)."""
     exam_id = _scan_exam(alice, world, factory, ("AAAAAA", "BBBBBB"))
-    alice.post(f"/api/exams/{exam_id}/ai-marking")
+    start_ai(alice, exam_id)
     run_jobs(app)
     queue = alice.get(f"/api/exams/{exam_id}/queue").json()
     return {"exam_id": exam_id, "script_ids": [i["script_id"] for i in queue["items"]]}
@@ -492,7 +492,7 @@ def test_manual_marking_script_is_marked_entirely_by_the_teacher(
 
     monkeypatch.setattr("app.worker.handlers.build_reader", lambda _s: BrokenReader())
     exam_id = _scan_exam(alice, world, factory, ("AAAAAA",))
-    alice.post(f"/api/exams/{exam_id}/ai-marking")
+    start_ai(alice, exam_id)
     run_jobs(app)
     item = alice.get(f"/api/exams/{exam_id}/queue").json()["items"][0]
     assert item["manual_reason"] == "ai.reader_invalid_output"

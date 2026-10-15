@@ -133,6 +133,13 @@ def make_ready_exam(user: ApiUser, class_id: int, title: str = "Mock exam 1") ->
     return body
 
 
+def start_ai(user: ApiUser, exam_id: int) -> Any:
+    """Check the pages (required before AI marking, owner 2026-10-15), then start AI marking."""
+    checked = user.post(f"/api/exams/{exam_id}/page-check")
+    assert checked.status_code == 200, checked.text
+    return user.post(f"/api/exams/{exam_id}/ai-marking")
+
+
 def run_jobs(app: FastAPI) -> int:
     """Run queued background jobs to completion with the real worker loop (no subprocess)."""
     return Worker(app.state.sessionmaker, app.state.settings).run_until_idle()

@@ -8,7 +8,17 @@ import { useLoad } from "../components/useLoad";
 const POLL_MS = 5000;
 
 /** Start AI marking and follow its progress (on the marking queue, screen 6). */
-export function AiPanel({ examId, onProgress }: { examId: number; onProgress: () => void }) {
+export function AiPanel({
+  examId,
+  onProgress,
+  pagesChecked,
+  onStarted,
+}: {
+  examId: number;
+  onProgress: () => void;
+  pagesChecked: boolean;
+  onStarted?: () => void;
+}) {
   const { t } = useTranslation();
   const { state, reload } = useLoad(() => api.aiStatus(examId), [examId]);
   const [error, setError] = useState<unknown>(null);
@@ -51,6 +61,7 @@ export function AiPanel({ examId, onProgress }: { examId: number; onProgress: ()
     try {
       await api.startAiMarking(examId);
       reload();
+      onStarted?.();
     } catch (err) {
       setError(err);
     } finally {
@@ -82,11 +93,16 @@ export function AiPanel({ examId, onProgress }: { examId: number; onProgress: ()
       {status.jobs_failed > 0 && (
         <p className="error">{t("ai.failedJobs", { count: status.jobs_failed })}</p>
       )}
+      {!pagesChecked && (
+        <p className="notice notice-warning" role="status">
+          {t("pageCheck.firstNotice")} <a href="#page-check">{t("pageCheck.goTo")}</a>
+        </p>
+      )}
       <ErrorMessage error={error} />
       <div className="actions">
         <button
           type="button"
-          disabled={busy || active || (waiting === 0 && status.jobs_failed === 0)}
+          disabled={!pagesChecked || busy || active || (waiting === 0 && status.jobs_failed === 0)}
           onClick={() => void start()}
         >
           {t("ai.start")}

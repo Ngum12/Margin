@@ -16,7 +16,7 @@ from sqlalchemy import func, select
 from app.config import Settings
 from app.db.models import MarkDecision, Script, ScriptStatus, Transcription
 from tests.conftest import World
-from tests.factories import ApiUser, Factory, make_ready_exam, upload_pdf
+from tests.factories import ApiUser, Factory, make_ready_exam, start_ai, upload_pdf
 from tests.scan_builder import ScanBuilder, answer_page, render_pdf_pages
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -77,7 +77,7 @@ def queued_exam(app: FastAPI, world: World, factory: Factory) -> dict[str, Any]:
         for k in range(PAGES_PER_SCRIPT):
             scan.add(answer_page(10 * i + k))
     upload_pdf(alice, exam["id"], scan.build())  # processed in-process
-    assert alice.post(f"/api/exams/{exam['id']}/ai-marking").status_code == 202
+    assert start_ai(alice, exam["id"]).status_code == 202
     return exam
 
 

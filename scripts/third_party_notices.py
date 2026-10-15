@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate THIRD_PARTY_NOTICES.md from the licence files of everything we ship.
 
-Covers the backend runtime dependency closure (from backend/pyproject.toml, read with the
+Covers the font files bundled for marked PDFs (from their manifest), the backend runtime
+dependency closure (from backend/pyproject.toml, read with the
 installed package metadata, including native libraries bundled in wheels such as PDFium and
 Pillow's image libraries) and the frontend runtime packages bundled into frontend/dist.
 
@@ -122,8 +123,33 @@ def _frontend_components() -> list[Component]:
     return components
 
 
+def _font_components() -> list[Component]:
+    """Font files bundled with the app (marked PDFs), listed in their manifest."""
+    folder = ROOT / "backend" / "app" / "exports" / "fonts"
+    families = json.loads((folder / "fonts.json").read_text(encoding="utf-8"))
+    return [
+        Component(
+            "font",
+            family["name"],
+            family["version"],
+            family["licence"],
+            [
+                (
+                    family["licence_file"],
+                    (folder / family["licence_file"]).read_text(encoding="utf-8"),
+                )
+            ],
+        )
+        for family in families
+    ]
+
+
 def collect() -> list[Component]:
-    return [_python_component(n) for n in _python_closure()] + _frontend_components()
+    return (
+        [_python_component(n) for n in _python_closure()]
+        + _frontend_components()
+        + _font_components()
+    )
 
 
 def render(components: list[Component]) -> str:

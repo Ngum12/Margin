@@ -189,7 +189,8 @@
       "not_ready": "The mark scheme is not complete yet.",
       "invalid_transition": "The exam cannot move to that status now.",
       "has_scripts": "Scans have been uploaded for this exam, so it can no longer return to draft.",
-      "sheets_need_ready": "Mark the exam as ready first."
+      "sheets_need_ready": "Mark the exam as ready first.",
+      "pages_not_checked": "Check page orientation first: look at every page and confirm they are upright."
     },
     "mark_scheme": {
       "invalid": "The mark scheme has errors. Fix them and save again."
@@ -595,5 +596,41 @@
     "examQuestion": "Read and mark every unconfirmed script again? Confirmed scripts are not changed. Earlier results are kept as history.",
     "examStarted_one": "AI marking started again for {{count}} script.",
     "examStarted_other": "AI marking started again for {{count}} scripts."
+  },
+  "pageCheck": {
+    "title": "Step 1: check page orientation",
+    "help_one": "Look at the page below and turn it if it is not upright. The AI cannot tell which way up a page is, and an upside-down page can cost the student marks.",
+    "help_other": "Look at all {{count}} pages below and turn any that are not upright. The AI cannot tell which way up a page is, and an upside-down page can cost the student marks.",
+    "show": "Show the pages again",
+    "checkedOn": "Checked {{date}}",
+    "confirm": "All pages are upright: pages checked",
+    "pageAlt": "{{code}}, page {{page}}",
+    "rotateLeft": "Turn {{code}} page {{page}} left",
+    "rotateRight": "Turn {{code}} page {{page}} right",
+    "firstNotice": "Check page orientation first: AI marking can start once every page is upright.",
+    "goTo": "Go to the pages"
+  },
+  "progress": {
+    "title": "AI marking in progress",
+    "step": {
+      "reading": "Reading {{code}}, page {{index}} of {{total}}",
+      "marking": "Marking {{code}}, question {{index}} of {{total}}"
+    },
+    "rowStep": {
+      "reading": "Reading page {{index}} of {{total}}…",
+      "marking": "Marking question {{index}} of {{total}}…"
+    },
+    "queued": "queued",
+    "waiting": "Starting…",
+    "estimating": "estimating the time left…",
+    "underAMinute": "less than a minute left",
+    "minutesLeft_one": "about {{count}} minute left",
+    "minutesLeft_other": "about {{count}} minutes left",
+    "readingNow": "Reading now: {{code}}",
+    "latestRead": "Latest page read ({{code}}):",
+    "finished": "AI marking finished.",
+    "finishedCounts": "Ready to review: {{ready}} · Need manual marking: {{manual}}",
+    "tabTitle_one": "✓ {{count}} ready · Margin",
+    "tabTitle_other": "✓ {{count}} ready · Margin"
   }
 }

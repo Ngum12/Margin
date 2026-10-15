@@ -27,9 +27,9 @@ from app.db.models import (
     Script,
     Student,
 )
-from app.exports.marked_pdf import _text
+from app.exports import fonts
 from tests.conftest import World
-from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, upload_pdf
+from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, start_ai, upload_pdf
 from tests.scan_builder import ScanBuilder, answer_page, render_pdf_pages
 
 NAMES = {"AAAAAA": "Ama Fon", "BBBBBB": "Bih Ndi", "CCCCCC": "=HYPERLINK(1)"}
@@ -80,7 +80,7 @@ def marked(
     for i, cover in enumerate(covers):
         scan.add(cover).add(answer_page(i))
     upload_pdf(alice, exam["id"], scan.build())
-    alice.post(f"/api/exams/{exam['id']}/ai-marking")
+    start_ai(alice, exam["id"])
     run_jobs(app)
 
     a, c = _script_id(db, "AAAAAA"), _script_id(db, "CCCCCC")
@@ -223,6 +223,9 @@ def test_marked_pdf_has_every_page_the_code_the_marks_and_no_name(
     assert "Total: 2 / 3" in text
     assert "1(a)" in text
     assert "1 / 2" in text
+    # One sign per point, as teachers mark: the first point earned, the second not.
+    assert "✓ ✗" in text
+    assert b"NotoSans" in response.content
     assert "Name two properties." in text  # the teacher's comment
     assert "Ama Fon" not in text  # codes only on paper
     after = {
@@ -458,7 +461,20 @@ def test_admin_sees_the_model_configuration(admin: ApiUser, alice: ApiUser) -> N
     assert alice.get("/api/admin/model-config").status_code == 403
 
 
-def test_pdf_text_keeps_french_and_leaves_out_what_the_font_cannot_print() -> None:
-    """Seen in a preview: a tick in a comment printed as "?", which read like a question."""
-    assert _text("Révisez le chapitre 3 ✓ 😀") == "Révisez le chapitre 3  "
-    assert _text("Très bien, élève à l'écoute") == "Très bien, élève à l'écoute"
+def test_pdf_text_keeps_french_and_ticks_and_leaves_out_what_no_font_has() -> None:
+    """Owner, 2026-10-15: ticks print (Noto Sans Symbols 2); emoji are left out, not "?"."""
+    assert fonts.printable("Révisez le chapitre 3 ✓ ✗ 😀") == "Révisez le chapitre 3 ✓ ✗ "
+    assert fonts.printable("Très bien, élève « à l'écoute »") == "Très bien, élève « à l'écoute »"
+
+
+def test_bundled_fonts_match_the_approved_files() -> None:
+    """The files are exactly the approved releases (checksums in fonts.json)."""
+    for family in fonts.manifest():
+        assert family["licence"] == "OFL-1.1"
+        assert (fonts.FONT_DIR / str(family["licence_file"])).is_file()
+        files = family["files"]
+        assert isinstance(files, dict)
+        for name, digest in files.items():
+            assert hashlib.sha256((fonts.FONT_DIR / name).read_bytes()).hexdigest() == digest
+    assert ord(fonts.TICK) in fonts._covered(fonts.SYMBOLS)
+    assert ord(fonts.CROSS) in fonts._covered(fonts.SYMBOLS)

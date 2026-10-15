@@ -182,3 +182,15 @@ class ReviewSession(IdMixin, Base):
     # Seconds the review screen was visible and in use (idle gaps over 5 minutes excluded).
     active_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     last_heartbeat_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+
+
+class ModelCall(IdMixin, Base):
+    """How long one model call took (reading a page, or marking a question). Used only to
+    estimate the time left in the live progress view; no content is stored."""
+
+    __tablename__ = "model_call"
+
+    role: Mapped[ModelRole] = mapped_column(str_enum(ModelRole, "model_call_role"))
+    model_name: Mapped[str] = mapped_column(String(100))
+    seconds: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, index=True)

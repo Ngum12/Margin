@@ -96,3 +96,28 @@ export function examDetail(overrides: Partial<ExamDetail> = {}): ExamDetail {
     ...overrides,
   };
 }
+
+/** The queue screen also asks for the page check and the AI progress: pages already checked,
+ * nothing running. */
+export function quietQueueExtras(api: FakeApi, examId = 7): void {
+  api.on(`GET /api/exams/${String(examId)}/page-check`, [
+    200,
+    { exam_id: examId, checked_at: "2026-10-15T08:00:00Z", scripts: [] },
+  ]);
+  api.on(`GET /api/exams/${String(examId)}/ai-progress`, [
+    200,
+    {
+      running: false,
+      percent: 100,
+      done_units: 0,
+      total_units: 0,
+      eta_seconds: null,
+      ready: 0,
+      manual: 0,
+      current_student: null,
+      current_page_id: null,
+      latest_read: null,
+      scripts: [],
+    },
+  ]);
+}

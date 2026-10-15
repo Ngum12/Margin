@@ -1,6 +1,7 @@
 """The model layer's contract. The rest of the application depends only on these types and on
 the Reader and Marker interfaces, never on a particular model (brief section 5)."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -125,6 +126,10 @@ class Reader(Protocol):
 
 
 class Marker(Protocol):
+    # Called before each question with (question number from 1, number of questions), so the
+    # live progress view can show it. Optional; never affects the marks.
+    on_question: Callable[[int, int], None] | None
+
     @property
     def model(self) -> ModelInfo: ...
 

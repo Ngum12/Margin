@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, IdMixin, TimestampMixin
+from app.db.base import Base, IdMixin, TimestampMixin, UTCDateTime
 from app.db.models.classes import SchoolClass
 from app.db.types import str_enum
 
@@ -38,6 +38,10 @@ class Exam(IdMixin, TimestampMixin, Base):
         str_enum(ExamStatus, "exam_status"), default=ExamStatus.DRAFT
     )
     created_by_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    # A teacher checked page orientation (owner, 2026-10-15). AI marking needs it; an upload
+    # that adds pages clears it.
+    pages_checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    pages_checked_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
 
     school_class: Mapped[SchoolClass] = relationship()
     questions: Mapped[list["Question"]] = relationship(

@@ -602,6 +602,46 @@ All are scoped like the rest (404 outside the teacher's classes).
 
 ---
 
+## Before the demo: page check and live AI progress (owner, 2026-10-15)
+
+Approved by the owner on 2026-10-15 (all five parts). Built after the schema evaluation and the ✓ ✗ PDF change. No new dependencies.
+
+**Why the page check comes first.** In the owner's review, one upside-down answer page cost a weak-English student 3 marks (11 instead of 14). After the page was rotated and re-marked, the AI gave exactly 14. The model cannot detect orientation (D-049), so a teacher checks the pages before any AI time is spent.
+
+### 5. Check pages before AI marking
+- **Screen:** a "Check pages" step on the exam's Marking tab, above the AI panel.
+  - **Thumbnails:** every page of every script, grouped by student, shown with its current orientation. Cover sheets are marked as such.
+  - **Rotate:** one-click left and right buttons on each page, plus reset. This uses the existing teacher rotation (layer a), so it is audited and the stored image is never changed.
+  - **Confirm:** a "Pages checked" button records who checked and when.
+- **Rule:** "Start AI marking" and "Re-run AI marking" are refused until the exam's pages are checked (`exam.pages_not_checked`). The AI panel says "Check page orientation first", with a link to the step.
+- **New uploads:** an upload that adds pages to the exam clears the check, so the new pages are looked at too.
+- **Data:** `exam.pages_checked_at` and `exam.pages_checked_by_id`; the check is audited.
+
+### 1–4. Live AI progress (on the Marking tab)
+1. **Progress bar with time left.**
+   - **Progress:** counted in work units (pages to read plus questions to mark), so it moves every 30–60 seconds.
+   - **Time left:** from the average duration of the recent model calls on this machine (reading and marking measured separately). It is shown only once there is at least one measured call of each kind needed.
+2. **What each script is doing**, in its queue row: "Reading page 1 of 2…", "Marking question 3 of 6…", then "Ready to review" with a link.
+3. **"Watch it read":**
+   - **Current page:** a panel shows a thumbnail of the page being read now.
+   - **Latest result:** beside it, the most recently finished transcription.
+   - **Granularity:** updates page by page and question by question; no word-by-word streaming.
+4. **Finished signal:** the browser tab title changes (for example "✓ 4 ready · Margin") and a message gives the counts (ready, needing manual marking). No sound by default.
+
+**Design.**
+- **Worker progress:** the worker records its current step on the script (`ai_step`, step number, total, start time) and commits it before each page and each question. These fields are saved apart from the results and never affect marks.
+- **Marker hook:** the Marker interface gains an optional progress callback, called before each question.
+- **Timings:** each model call's duration is stored in `model_call` (role, seconds, time).
+- **Endpoint:** `GET /api/exams/{id}/ai-progress`. The queue polls it every few seconds while AI work is running.
+
+### Tests
+- **Page check:** start and re-run are refused until the pages are checked; a new upload clears the check; the check is audited; another teacher gets 404.
+- **Progress:** progress units and the time-left estimate (unit tests); worker steps recorded for reading and marking (Mock).
+- **Frontend:** progress screen behaviour and the finished signal (Vitest).
+- **Browser:** check pages and start marking, then follow the progress until "ready", with the Mock model.
+
+---
+
 ## After Phase 4 (owner, 2026-10-15; in this order, each after Phase 4 is approved)
 1. **Per-question output schemas:** each marking call gets a schema listing exactly that question's point ids (each required once), for both evidence designs. Then re-run the evaluation overnight with both designs.
 2. **Whole-script marking in one call** as a third marker design: all questions in one reply, validated per question, re-asking only the failed questions. Evaluated against the per-question designs on agreement, failures and time.

@@ -3,11 +3,13 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
 import { api } from "../api/endpoints";
-import type { Queue as QueueData, QueueItem } from "../api/types";
+import type { AiProgress, Queue as QueueData, QueueItem } from "../api/types";
 import { ErrorMessage, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
 import { AiPanel } from "../exam/AiPanel";
+import { AiProgressPanel } from "../exam/AiProgressPanel";
 import { ExamHeader } from "../exam/ExamHeader";
+import { PageCheck } from "../exam/PageCheck";
 import { minutesSeconds } from "../review/focus";
 import { ConfirmButton, TestModelBadge, TestModelBanner } from "../review/ModelLabel";
 
@@ -18,6 +20,12 @@ export default function Queue() {
   const { t } = useTranslation();
   const examId = Number(useParams().examId);
   const { state, reload } = useLoad(() => api.queue(examId), [examId]);
+  const check = useLoad(() => api.pageCheck(examId), [examId]);
+  const [progress, setProgress] = useState<AiProgress | null>(null);
+  const [started, setStarted] = useState(0);
+  const runStarted = () => {
+    setStarted((n) => n + 1);
+  };
 
   if (state.status === "error") return <ErrorMessage error={state.error} />;
   if (state.status === "loading") return <Loading />;
@@ -31,12 +39,33 @@ export default function Queue() {
         <p className="card">{t("sheets.needReady")}</p>
       ) : (
         <>
-          <AiPanel examId={examId} onProgress={reload} />
+          {check.state.status === "ready" && (
+            <PageCheck data={check.state.data} onChange={check.set} />
+          )}
+          <AiPanel
+            examId={examId}
+            onProgress={reload}
+            pagesChecked={check.state.status === "ready" && check.state.data.checked_at !== null}
+            onStarted={runStarted}
+          />
+          <AiProgressPanel
+            examId={examId}
+            started={started}
+            onUpdate={setProgress}
+            onFinished={reload}
+          />
           <div className="card">
             <h2>{t("queue.title")}</h2>
             <p className="muted">{t("queue.help")}</p>
             {queue.test_model_count > 0 && <TestModelBanner count={queue.test_model_count} />}
-            <RerunExam examId={examId} queue={queue} onDone={reload} />
+            <RerunExam
+              examId={examId}
+              queue={queue}
+              onDone={() => {
+                reload();
+                runStarted();
+              }}
+            />
             <p>
               {t("queue.confirmedCount", {
                 confirmed: queue.confirmed_count,
@@ -67,7 +96,12 @@ export default function Queue() {
                 </thead>
                 <tbody>
                   {queue.items.map((item) => (
-                    <QueueRow key={item.script_id} examId={examId} item={item} />
+                    <QueueRow
+                      key={item.script_id}
+                      examId={examId}
+                      item={item}
+                      live={progress?.scripts.find((s) => s.script_id === item.script_id)}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -146,7 +180,15 @@ function ReviewTime({
   );
 }
 
-function QueueRow({ examId, item }: { examId: number; item: QueueItem }) {
+function QueueRow({
+  examId,
+  item,
+  live,
+}: {
+  examId: number;
+  item: QueueItem;
+  live: AiProgress["scripts"][number] | undefined;
+}) {
   const { t } = useTranslation();
   const checks = [
     item.manual_reason &&
@@ -177,6 +219,12 @@ function QueueRow({ examId, item }: { examId: number; item: QueueItem }) {
             <TestModelBadge />
           </>
         )}
+        {live?.state === "working" && live.step && live.index && live.total && (
+          <span className="live-step small" role="status">
+            {t(`progress.rowStep.${live.step}`, { index: live.index, total: live.total })}
+          </span>
+        )}
+        {live?.state === "queued" && <span className="muted small"> · {t("progress.queued")}</span>}
       </td>
       <td>
         {checks.length > 0 ? (

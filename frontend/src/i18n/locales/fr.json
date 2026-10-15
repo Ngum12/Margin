@@ -189,7 +189,8 @@
       "not_ready": "Le barème n'est pas encore complet.",
       "invalid_transition": "L'examen ne peut pas passer à ce statut maintenant.",
       "has_scripts": "Des copies ont été téléversées pour cet examen ; il ne peut plus repasser en brouillon.",
-      "sheets_need_ready": "Marquez d'abord l'examen comme prêt."
+      "sheets_need_ready": "Marquez d'abord l'examen comme prêt.",
+      "pages_not_checked": "Vérifiez d'abord l'orientation des pages : regardez chaque page et confirmez qu'elles sont droites."
     },
     "mark_scheme": {
       "invalid": "Le barème contient des erreurs. Corrigez-les puis enregistrez à nouveau."
@@ -595,5 +596,41 @@
     "examQuestion": "Relire et renoter toutes les copies non confirmées ? Les copies confirmées ne changent pas. Les résultats précédents sont conservés dans l'historique.",
     "examStarted_one": "La correction par IA a été relancée pour {{count}} copie.",
     "examStarted_other": "La correction par IA a été relancée pour {{count}} copies."
+  },
+  "pageCheck": {
+    "title": "Étape 1 : vérifier l'orientation des pages",
+    "help_one": "Regardez la page ci-dessous et tournez-la si elle n'est pas droite. L'IA ne sait pas dans quel sens est une page, et une page à l'envers peut faire perdre des points à l'élève.",
+    "help_other": "Regardez les {{count}} pages ci-dessous et tournez celles qui ne sont pas droites. L'IA ne sait pas dans quel sens est une page, et une page à l'envers peut faire perdre des points à l'élève.",
+    "show": "Afficher de nouveau les pages",
+    "checkedOn": "Vérifiées le {{date}}",
+    "confirm": "Toutes les pages sont droites : pages vérifiées",
+    "pageAlt": "{{code}}, page {{page}}",
+    "rotateLeft": "Tourner la page {{page}} de {{code}} à gauche",
+    "rotateRight": "Tourner la page {{page}} de {{code}} à droite",
+    "firstNotice": "Vérifiez d'abord l'orientation des pages : la correction par IA peut commencer quand toutes les pages sont droites.",
+    "goTo": "Aller aux pages"
+  },
+  "progress": {
+    "title": "Correction par IA en cours",
+    "step": {
+      "reading": "Lecture de {{code}}, page {{index}} sur {{total}}",
+      "marking": "Correction de {{code}}, question {{index}} sur {{total}}"
+    },
+    "rowStep": {
+      "reading": "Lecture de la page {{index}} sur {{total}}…",
+      "marking": "Correction de la question {{index}} sur {{total}}…"
+    },
+    "queued": "en attente",
+    "waiting": "Démarrage…",
+    "estimating": "estimation du temps restant…",
+    "underAMinute": "moins d'une minute restante",
+    "minutesLeft_one": "environ {{count}} minute restante",
+    "minutesLeft_other": "environ {{count}} minutes restantes",
+    "readingNow": "Lecture en cours : {{code}}",
+    "latestRead": "Dernière page lue ({{code}}) :",
+    "finished": "Correction par IA terminée.",
+    "finishedCounts": "Prêtes à réviser : {{ready}} · À corriger à la main : {{manual}}",
+    "tabTitle_one": "✓ {{count}} prête · Margin",
+    "tabTitle_other": "✓ {{count}} prêtes · Margin"
   }
 }

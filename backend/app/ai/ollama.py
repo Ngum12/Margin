@@ -150,11 +150,15 @@ class OllamaMarker:
         self._prompt = load_prompt("marker_lines" if evidence == "lines" else "marker")
         self.prompt_version = self._prompt.version
 
+    on_question: Callable[[int, int], None] | None = None
+
     def mark(self, transcription: Transcription, exam: ExamSpec) -> MarkingProposal:
         answer = transcription.full_text
         questions = []
         failed = []
-        for question in exam.questions:
+        for number, question in enumerate(exam.questions, start=1):
+            if self.on_question is not None:
+                self.on_question(number, len(exam.questions))
             try:
                 points = self._mark_question(question, answer, exam.subject.names.en)
                 questions.append(QuestionProposal(question.id, points))
