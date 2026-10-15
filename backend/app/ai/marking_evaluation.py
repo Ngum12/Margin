@@ -196,14 +196,14 @@ def evaluate_marking(
     summary = MarkingSummary()
     for subject, student, answer in scripts:
         key = f"mark|{cache_prefix}|{subject}/{student}|{text_hash(answer)}"
-        cached = cache.get(key) if cache else None
+        cached = cache.get(key) if cache is not None else None
         note = " (cached)"
         if cached is None:
             comparisons, seconds = compare_script(
                 marker, specs[subject], subject, student, answer, expected
             )
             cached = {"comparisons": [_to_json(c) for c in comparisons], "seconds": seconds}
-            if cache:
+            if cache is not None:
                 cache.put(key, cached)
             note = ""
         summary.comparisons.extend(_from_json(c) for c in cached["comparisons"])

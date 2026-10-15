@@ -26,3 +26,6 @@ frontend/dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Model evaluation outputs and resume files (large, machine-specific)
+/eval_runs/

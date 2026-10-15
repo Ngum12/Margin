@@ -22,7 +22,7 @@ from app.ai.types import (
     QuestionSpec,
     Transcription,
 )
-from app.ai.validation import MARKER_SCHEMA, READER_SCHEMA
+from app.ai.validation import MARKER_LINES_SCHEMA, MARKER_SCHEMA, READER_SCHEMA
 from app.clock import utcnow
 from app.subjects.registry import SubjectConfig, get_registry
 from tests.fake_ollama import CUT_OFF, FakeOllama
@@ -56,9 +56,9 @@ def client(fake: FakeOllama) -> OllamaClient:
 
 
 def test_resolve_model_uses_the_installed_digest(fake: FakeOllama) -> None:
-    model = resolve_model(client(fake), "qwen3-vl:8b-instruct")
+    model = resolve_model(client(fake), "qwen3-vl:4b-instruct")
 
-    assert model == ModelInfo("qwen3-vl:8b-instruct", "sha256:ababa", "ollama")
+    assert model == ModelInfo("qwen3-vl:4b-instruct", "sha256:ababa", "ollama")
 
 
 def test_missing_model_is_reported_as_unavailable(fake: FakeOllama) -> None:
@@ -79,7 +79,7 @@ def test_reader_request_is_deterministic_schema_constrained_and_shrinks_images(
     fake.replies.append(json.dumps({"text": "H_2O is a compound"}))
     reader = OllamaReader(
         client(fake),
-        resolve_model(client(fake), "qwen3-vl:8b-instruct"),
+        resolve_model(client(fake), "qwen3-vl:4b-instruct"),
         max_image_px=800,
         output_retries=0,
     )
@@ -103,7 +103,7 @@ def test_reader_retries_invalid_output_then_gives_up(fake: FakeOllama, page: Pag
     fake.replies.extend(["not json", '{"text": 3}', '{"wrong": "x"}'])
     reader = OllamaReader(
         client(fake),
-        ModelInfo("qwen3-vl:8b-instruct", "x", "ollama"),
+        ModelInfo("qwen3-vl:4b-instruct", "x", "ollama"),
         max_image_px=800,
         output_retries=2,
     )
@@ -117,7 +117,7 @@ def test_reader_recovers_when_a_retry_is_valid(fake: FakeOllama, page: PageImage
     fake.replies.extend(["not json", '{"text": "ok"}'])
     reader = OllamaReader(
         client(fake),
-        ModelInfo("qwen3-vl:8b-instruct", "x", "ollama"),
+        ModelInfo("qwen3-vl:4b-instruct", "x", "ollama"),
         max_image_px=800,
         output_retries=2,
     )
@@ -166,7 +166,7 @@ def test_marker_marks_each_question_separately_with_schema(fake: FakeOllama) -> 
         ]
     )
     marker = OllamaMarker(
-        client(fake), ModelInfo("qwen3-vl:8b-instruct", "x", "ollama"), output_retries=0
+        client(fake), ModelInfo("qwen3-vl:4b-instruct", "x", "ollama"), output_retries=0
     )
 
     proposal = marker.mark(
@@ -186,7 +186,7 @@ def test_marker_failure_on_one_question_is_reported_not_invented(fake: FakeOllam
     invented = _points((10, 1, "metals are excellent conductors"), (11, 0, ""))
     fake.replies.extend([invented, invented, _points((20, 1, "hydrogen"))])
     marker = OllamaMarker(
-        client(fake), ModelInfo("qwen3-vl:8b-instruct", "x", "ollama"), output_retries=1
+        client(fake), ModelInfo("qwen3-vl:4b-instruct", "x", "ollama"), output_retries=1
     )
 
     proposal = marker.mark(
@@ -202,7 +202,7 @@ def test_prompts_never_contain_student_identity(fake: FakeOllama, page: PageImag
     fake.replies.extend(
         [json.dumps({"text": "x"}), _points((10, 0, ""), (11, 0, "")), _points((20, 0, ""))]
     )
-    model = ModelInfo("qwen3-vl:8b-instruct", "x", "ollama")
+    model = ModelInfo("qwen3-vl:4b-instruct", "x", "ollama")
     OllamaReader(client(fake), model, max_image_px=800, output_retries=0).transcribe(
         [page], CHEMISTRY
     )
@@ -258,3 +258,60 @@ def test_output_cap_context_and_think_are_sent(fake: FakeOllama, page: PageImage
     request = fake.requests[0]
     assert request["think"] is False
     assert request["options"] == {"temperature": 0, "num_predict": 512, "num_ctx": 8192}
+
+
+def test_line_evidence_marker_numbers_the_answer_and_copies_lines(fake: FakeOllama) -> None:
+    fake.replies.extend(
+        [
+            json.dumps(
+                {
+                    "points": [
+                        {
+                            "point_id": 10,
+                            "awarded_marks": 1,
+                            "evidence_lines": [1],
+                            "confidence": 0.9,
+                            "error_category": "correct",
+                        },
+                        {
+                            "point_id": 11,
+                            "awarded_marks": 0,
+                            "evidence_lines": [],
+                            "confidence": 0.6,
+                            "error_category": "omitted",
+                        },
+                    ]
+                }
+            ),
+            json.dumps(
+                {
+                    "points": [
+                        {
+                            "point_id": 20,
+                            "awarded_marks": 1,
+                            "evidence_lines": [2],
+                            "confidence": 0.9,
+                            "error_category": "correct",
+                        },
+                    ]
+                }
+            ),
+        ]
+    )
+    marker = OllamaMarker(
+        client(fake),
+        ModelInfo("qwen3-vl:4b-instruct", "x", "ollama"),
+        output_retries=0,
+        evidence="lines",
+    )
+
+    proposal = marker.mark(
+        _answer("1(a) it conducts electricity\n1(b) hydrogen"), ExamSpec(CHEMISTRY, QUESTIONS)
+    )
+
+    prompt = fake.requests[0]["messages"][0]["content"]
+    assert "L1: 1(a) it conducts electricity" in prompt
+    assert fake.requests[0]["format"] == MARKER_LINES_SCHEMA
+    assert proposal.prompt_version.startswith("marker-lines-v1#")
+    assert proposal.questions[0].points[0].evidence == "1(a) it conducts electricity"
+    assert proposal.questions[1].points[0].evidence == "1(b) hydrogen"

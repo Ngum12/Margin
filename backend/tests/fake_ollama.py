@@ -15,7 +15,7 @@ CUT_OFF = "<<cut-off>>"
 class FakeOllama:
     def __init__(self, models: dict[str, str] | None = None) -> None:
         self.models = (
-            models if models is not None else {"qwen3-vl:8b-instruct": "sha256:" + "ab" * 32}
+            models if models is not None else {"qwen3-vl:4b-instruct": "sha256:" + "ab" * 32}
         )
         self.requests: list[dict[str, Any]] = []
         self.replies: deque[Reply] = deque()

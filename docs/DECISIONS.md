@@ -220,3 +220,14 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Decision:** (1) default models are the *instruct* variants (`qwen3-vl:8b-instruct` until the evaluation picks the default for this hardware); (2) `MARGIN_MODEL_THINK=false` is sent to models that support switching thinking off; (3) every call carries `num_predict` = `MARGIN_MODEL_MAX_OUTPUT_TOKENS` (2048) and `num_ctx` = `MARGIN_MODEL_CONTEXT_TOKENS` (8192); (4) a reply that stops because of the cap (`done_reason = "length"`) is invalid output: retried, then flagged for manual marking. Tests cover the cut-off path.
 - **Reason:** one misbehaving model must not occupy the school machine for many minutes per page, and a truncated reply must never be used.
 - **Also:** evaluation runs are resumable (`--cache`, default next to the report): each finished call is appended to a JSON-lines file and skipped on rerun; keys include model, version, prompt versions, image size and thinking setting.
+
+### D-047 · 2026-10-14 · Line-number evidence as an alternative marker design (under evaluation)
+- **Decision:** a second marker design, `MARGIN_MARKER_EVIDENCE=lines`: the answer is shown with numbered lines (`L1:`, `L2:` …), the model cites evidence as line numbers (at most 6 per point), and Margin copies those lines itself, so evidence is always the student's own words. Validation rejects unknown line numbers, more than 6 lines, and marks awarded without cited lines. Prompt `marker_lines.md` (`marker-lines-v1`). The quote design (D-039) stays the default until the evaluation decides.
+- **Alternatives:** keep only verbatim quotes (strict, but small models paraphrase and fail validation, using up retries); accept fuzzy quotes (weakens the "evidence from the student's own words" guarantee).
+- **Trade-off:** evidence is whole lines, coarser than an exact phrase; the review screen highlights a line rather than a phrase.
+- **Reason:** the 2B evaluation showed frequent `marker_invented_evidence` failures from paraphrased quotes; the owner asked for the 4B to be evaluated with both designs.
+
+### D-048 · 2026-10-15 · Default model for this hardware
+- **Decision:** default `MARGIN_READER_MODEL` and `MARGIN_MARKER_MODEL` = `qwen3-vl:4b-instruct`, evidence design `quote`, on a machine like the development laptop (i7-1260P, 32 GB, 4 GB GPU). Evidence: `docs/evaluation/2026-10-15-model-comparison.md` (best agreement 81–82 %, 1 failed question of 57, reading CER 0.8 %, one model in memory). Next step before changing the evidence design: per-question output schemas listing exact point ids, then re-evaluate quote and line designs.
+- **Alternatives:** qwen3-vl:2b-instruct (marking fails on paraphrased evidence); qwen2.5:7b as marker (lower agreement, under-marks, second model competing for the GPU); qwen3-vl:8b-instruct (not evaluated; too large for this GPU).
+- **Caveat:** synthetic data only; revisit with real scripts.

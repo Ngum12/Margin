@@ -39,9 +39,10 @@ class Settings(BaseSettings):
 
     # AI backend: "mock" (deterministic, no model server) or "ollama".
     ai_backend: Literal["mock", "ollama"] = "mock"
-    # Instruct variants: the plain qwen3-vl tags are "thinking" models (D-046).
-    reader_model: str = "qwen3-vl:8b-instruct"
-    marker_model: str = "qwen3-vl:8b-instruct"
+    # Instruct variants: the plain qwen3-vl tags are "thinking" models (D-046). 4B chosen for a
+    # laptop-class machine by the evaluation (D-048).
+    reader_model: str = "qwen3-vl:4b-instruct"
+    marker_model: str = "qwen3-vl:4b-instruct"
     # Seconds to wait for one model reply; slow machines may need a lot (see the Phase 3 report).
     model_timeout_seconds: int = Field(default=900, ge=5)
     # Extra attempts when the model replies with output that fails validation.
@@ -49,6 +50,10 @@ class Settings(BaseSettings):
     # Models with a "thinking" mode (e.g. Qwen3-VL) reason before replying when this is true.
     # Off by default: much faster on modest hardware; see docs/DECISIONS.md D-046.
     model_think: bool = False
+    # How the Marker cites evidence (D-047): "quote" = the model copies the student's words and
+    # Margin checks they are verbatim; "lines" = the model gives line numbers and Margin copies
+    # those lines itself, so evidence can never be paraphrased.
+    marker_evidence: Literal["quote", "lines"] = "quote"
     # Hard cap on tokens per model reply: a model that rambles (or reasons at length) is cut off
     # and its reply treated as invalid, instead of occupying the machine for many minutes.
     model_max_output_tokens: int = Field(default=2048, ge=64)

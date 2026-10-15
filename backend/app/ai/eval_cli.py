@@ -40,7 +40,7 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--backend", choices=["mock", "ollama"], help="override MARGIN_AI_BACKEND")
     parser.add_argument(
         "--models",
-        help='comma-separated Ollama models, or "vision" for all installed vision models',
+        help='comma-separated Ollama models, "vision" (all installed vision models) or "none"',
     )
     parser.add_argument("--curriculum", default="cm_gce_ol")
     parser.add_argument(
@@ -55,6 +55,15 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         default="both",
         help="mark the model's transcription, the true transcription, or both",
     )
+    parser.add_argument(
+        "--marking-only-models",
+        help="comma-separated models (e.g. text models) that only mark the true transcriptions",
+    )
+    parser.add_argument(
+        "--evidence",
+        default=None,
+        help='marker evidence designs to compare, e.g. "quote,lines" (default: the setting)',
+    )
     parser.add_argument("--report", type=Path, help="write a JSON report here")
     parser.add_argument(
         "--cache",
@@ -68,8 +77,14 @@ class ModelRun:
     model: str
     reader_version: str
     prompt_version: str
-    reading: list[SubjectReport]
+    reading: list[SubjectReport]  # empty for the second evidence design and marking-only models
     marking: dict[str, MarkingSummary]  # "reader" / "truth" -> summary
+    evidence: str = "quote"
+    marker_prompt_version: str = ""
+
+    @property
+    def label(self) -> str:
+        return f"{self.model} [{self.evidence}]" if self.marking else self.model
 
 
 def _models(settings: Settings, requested: str | None) -> list[str]:
@@ -77,6 +92,8 @@ def _models(settings: Settings, requested: str | None) -> list[str]:
         return ["mock"]
     if not requested:
         return [settings.reader_model]
+    if requested == "none":  # marking-only runs
+        return []
     if requested == "vision":
         found = ollama_client(settings).models_with_capability("vision")
         if not found:
@@ -98,13 +115,21 @@ def _reading_rows(run: ModelRun) -> tuple[int, float, float, float, int, float]:
     return pages, cer, wer, recall, invalid, (sum(seconds) / len(seconds) if seconds else 0.0)
 
 
+def _call_settings(settings: Settings) -> str:
+    """Settings that change model output; part of every cache key."""
+    return (
+        f"px={settings.reader_max_image_px}|think={settings.model_think}"
+        f"|cap={settings.model_max_output_tokens}|ctx={settings.model_context_tokens}"
+    )
+
+
 def _print_tables(runs: list[ModelRun]) -> None:
     print("\nReading (all subjects)")
     print(
         f"{'model':<28}{'pages':>6}{'CER':>8}{'WER':>8}"
         f"{'key recall':>12}{'invalid':>9}{'s/page':>9}"
     )
-    for run in runs:
+    for run in (r for r in runs if r.reading):
         pages, cer, wer, recall, invalid, spp = _reading_rows(run)
         print(
             f"{run.model:<28}{pages:>6}{cer:>8.1%}{wer:>8.1%}{recall:>12.1%}"
@@ -121,13 +146,13 @@ def _print_tables(runs: list[ModelRun]) -> None:
     if any(run.marking for run in runs):
         print("\nMarking vs expected marks (per question)")
         print(
-            f"{'model':<28}{'input':<8}{'qns':>5}{'exact':>8}{'MAD':>7}{'failed':>8}"
+            f"{'model [evidence]':<36}{'input':<8}{'qns':>5}{'exact':>8}{'MAD':>7}{'failed':>8}"
             f"{'lang exact':>12}{'lang MAD':>10}{'lang lost':>11}{'s/script':>10}"
         )
         for run in runs:
             for source, m in run.marking.items():
                 print(
-                    f"{run.model:<28}{source:<8}{m.questions():>5}{m.exact_agreement():>8.0%}"
+                    f"{run.label:<36}{source:<8}{m.questions():>5}{m.exact_agreement():>8.0%}"
                     f"{m.mean_absolute_difference():>7.2f}{m.failed():>8}"
                     f"{m.exact_agreement(True):>12.0%}{m.mean_absolute_difference(True):>10.2f}"
                     f"{m.marks_lost(True):>11}{m.seconds_per_script:>10.1f}"
@@ -163,6 +188,8 @@ def _report(runs: list[ModelRun], settings: Settings) -> dict[str, Any]:
                 "model": run.model,
                 "version": run.reader_version,
                 "prompt_version": run.prompt_version,
+                "evidence": run.evidence,
+                "marker_prompt_version": run.marker_prompt_version,
                 "reading": [
                     {
                         "subject": r.subject,
@@ -230,14 +257,17 @@ def run(args: argparse.Namespace) -> int:
     if cache is not None:
         print(f"Resume file: {cache_path} ({len(cache)} finished calls)", flush=True)
 
+    modes = [m.strip() for m in (args.evidence or settings.marker_evidence).split(",") if m.strip()]
+    if not set(modes) <= {"quote", "lines"}:
+        raise SystemExit("--evidence takes quote, lines or both")
+
     runs = []
     for model in _models(settings, args.models):
         model_settings = settings.model_copy(update={"reader_model": model, "marker_model": model})
         reader = build_reader(model_settings)
-        marker = build_marker(model_settings)
-        prefix = (
-            f"{model}|{reader.model.version}|{reader.prompt_version}|{marker.prompt_version}"
-            f"|px={settings.reader_max_image_px}|think={settings.model_think}"
+        # Reading does not depend on the marker, so both evidence designs share one reading.
+        read_prefix = (
+            f"{model}|{reader.model.version}|{reader.prompt_version}|{_call_settings(settings)}"
         )
         print(f"\n== {model} ({reader.model.version}), prompt {reader.prompt_version}", flush=True)
         reading = evaluate(
@@ -246,33 +276,90 @@ def run(args: argparse.Namespace) -> int:
             subject_config,
             progress=lambda m: print(m, flush=True),
             cache=cache,
-            cache_prefix=prefix,
+            cache_prefix=read_prefix,
         )
-        marking: dict[str, MarkingSummary] = {}
-        if expected is not None:
-            sources = ["reader", "truth"] if args.marking_input == "both" else [args.marking_input]
-            for source in sources:
-                items = [
-                    (
-                        r.subject,
-                        s.script.name,
-                        s.transcription
-                        if source == "reader"
-                        else s.script.truth.read_text("utf-8"),
+        for index, mode in enumerate(modes):
+            marker = build_marker(model_settings.model_copy(update={"marker_evidence": mode}))
+            mark_prefix = (
+                f"{model}|{marker.model.version}|{marker.prompt_version}|{_call_settings(settings)}"
+            )
+            marking: dict[str, MarkingSummary] = {}
+            if expected is not None:
+                print(f"-- marking, evidence design: {mode}", flush=True)
+                sources = (
+                    ["reader", "truth"] if args.marking_input == "both" else [args.marking_input]
+                )
+                for source in sources:
+                    items = [
+                        (
+                            r.subject,
+                            s.script.name,
+                            s.transcription
+                            if source == "reader"
+                            else s.script.truth.read_text("utf-8"),
+                        )
+                        for r in reading
+                        for s in r.scripts
+                    ]
+                    marking[source] = evaluate_marking(
+                        marker,
+                        items,
+                        specs,
+                        expected,
+                        progress=lambda m: print(m, flush=True),
+                        cache=cache,
+                        cache_prefix=f"{mark_prefix}|{source}",
                     )
-                    for r in reading
-                    for s in r.scripts
-                ]
-                marking[source] = evaluate_marking(
+            runs.append(
+                ModelRun(
+                    model,
+                    reader.model.version,
+                    reader.prompt_version,
+                    reading if index == 0 else [],
+                    marking,
+                    evidence=mode,
+                    marker_prompt_version=marker.prompt_version,
+                )
+            )
+
+    if args.marking_only_models:
+        if expected is None:
+            raise SystemExit("--marking-only-models needs --expected-marks and --mark-schemes")
+        truth_items = [
+            (code, script.name, script.truth.read_text("utf-8"))
+            for code, items in scripts.items()
+            for script in items
+        ]
+        for model in [m.strip() for m in args.marking_only_models.split(",") if m.strip()]:
+            for mode in modes:
+                marker = build_marker(
+                    settings.model_copy(update={"marker_model": model, "marker_evidence": mode})
+                )
+                prefix = (
+                    f"{model}|{marker.model.version}|{marker.prompt_version}"
+                    f"|{_call_settings(settings)}"
+                )
+                print(f"\n== {model} ({marker.model.version}), marking only, {mode}", flush=True)
+                summary = evaluate_marking(
                     marker,
-                    items,
+                    truth_items,
                     specs,
                     expected,
                     progress=lambda m: print(m, flush=True),
                     cache=cache,
-                    cache_prefix=f"{prefix}|{source}",
+                    cache_prefix=f"{prefix}|truth",
                 )
-        runs.append(ModelRun(model, reader.model.version, reader.prompt_version, reading, marking))
+                runs.append(
+                    ModelRun(
+                        model,
+                        marker.model.version,
+                        "-",
+                        [],
+                        {"truth": summary},
+                        evidence=mode,
+                        marker_prompt_version=marker.prompt_version,
+                    )
+                )
 
     _print_tables(runs)
     if args.report:

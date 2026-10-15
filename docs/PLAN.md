@@ -1,6 +1,6 @@
 # Plan: Phase 0 and Phase 1
 
-Status: Phases 0 and 1 complete and approved (2026-10-14). Phase 2 complete and approved (2026-10-14). Phase 3 built with Mock models (2026-10-14); real-model check pending the qwen3-vl:8b download. Refinements made while building are recorded in DECISIONS (D-021 to D-026).
+Status: Phases 0 and 1 complete and approved (2026-10-14). Phase 2 complete and approved (2026-10-14). Phase 3 built; model evaluation running. Phase 4 planned, awaiting approval. Refinements made while building are recorded in DECISIONS (D-021 to D-026).
 Source of truth for requirements: `PROJECT_BRIEF.md`. Decisions referenced here are recorded in `docs/DECISIONS.md`.
 
 ---
@@ -389,11 +389,116 @@ Mock pipeline and kill/restart tests pass; full check suite passes and is read; 
 
 ---
 
-## Phase 4: scope additions (owner, 2026-10-14; full plan to be written when Phase 4 starts)
+## Phase 4: Teacher review
 
-**Page orientation** (a physically upside-down answer page with no PDF rotation flag stays upside down today):
-1. **Rotate button per page** in the script view. The rotation is stored on the page (0/90/180/270) and audit-logged; the original image file is never changed (rotation is applied when displaying and before transcription). Test: rotate, check stored value, audit event, original file bytes unchanged, transcription input rotated.
-2. **Stack rotation from the cover sheet**: when a cover sheet's QR orientation shows it was scanned rotated, apply the same correction to the answer pages that follow it (until the next cover). Test: a stack scanned upside down comes out upright, answer pages included.
-3. **Automatic orientation check per answer page before transcription**, recorded as "auto-rotated" with the angle so the teacher can see and undo it. Test: an upside-down answer page is detected and corrected; undo restores the original orientation; pages already upright are left alone.
+Status: approved 2026-10-14 with changes (orientation from the Reader, review time, legacy covers; see "Owner changes" below). `@playwright/test` 1.64.1 approved (dev, installed Edge). Building starts after the evaluation queues finish and the combined report is sent. Phase 4 does not depend on which model wins the evaluation: models are configuration.
 
-Phase 4 does not start until the owner approves the model results (Phase 3).
+### Goal
+A teacher works through a class's scripts in the order that most needs attention, sees each page beside its transcription and the AI's proposed marks with evidence, corrects anything (marks, categories, transcription, page orientation), adds short comments, and confirms the script. Every change is audit-logged. Nothing is final, and nothing can be exported, until a teacher confirms it. The whole review can be done from the keyboard.
+
+### Dependency (for approval)
+
+| Package | Version | Licence | Purpose | Transitive packages |
+|---|---|---|---|---|
+| `@playwright/test` (dev only) | 1.64.1 | Apache-2.0 | Real-browser tests of the review screen | `playwright` 1.64.1 (Apache-2.0), `playwright-core` 1.64.1 (Apache-2.0) |
+
+- No install scripts: installing it downloads nothing else.
+- **No browser download:** the tests drive the Microsoft Edge already installed on this machine (`channel: "msedge"`, Edge 155 found). Downloading Playwright's own Chromium (`npx playwright install`) is not planned and would need separate approval.
+- Phase 6 note: a Linux/Docker test environment has no Edge; browser tests there would need a browser install, to be approved then. On school machines the browser tests never run.
+- No new backend dependencies. Zoom, pan and keyboard handling are plain browser code.
+
+### Owner changes on approval (2026-10-14); these override the design below where they differ
+1. **No separate orientation model call.** The Reader returns an orientation judgement with a confidence in the same call as the transcription. Pages it flags as not upright with confidence of at least 0.8 are rotated and read again (once). Teacher undo and the off switch stay.
+2. **Review time per script**, from opening to confirming, stored locally only and never sent anywhere; the class average is shown on the results screen. It is the impact measure for MIT Solve.
+3. **Legacy covers:** pages uploaded before Phase 4 whose cover images were already turned upright in Phase 2 are recorded so they are never rotated twice. Tested.
+
+### Owner requirements for this phase
+1. Screens 6 (marking queue) and 7 (script review), audit log, confirm flow, uncertainty-first ordering, keyboard shortcuts (brief).
+2. Tests prove every edit is audited and unconfirmed scripts cannot be exported; a teacher can review and confirm a script using only the keyboard (brief).
+3. Page orientation in three layers (owner, 2026-10-14), each tested:
+   a. a rotate control per page, stored and audit-logged, original image unchanged;
+   b. stack rotation: when a cover sheet's QR shows the stack was scanned rotated, the following answer pages are corrected the same way;
+   c. an automatic orientation check per answer page before transcription, marked "auto-rotated" so the teacher can undo it.
+4. Real-browser tests with Playwright (owner).
+
+### Design
+
+**Page orientation (one model for all three layers).** Page image files are never modified after rendering; they stay exactly as rendered from the scanned PDF. Orientation is metadata on the page:
+- `rotation_stack` (layer b): set during splitting from the cover sheet's QR orientation, for the cover and every answer page after it up to the next cover (including tray pages that follow a problem cover).
+- `rotation_auto` (layer c) with `auto_rotation_confidence`: set by the orientation check before transcription.
+- `rotation_teacher` (layer a): set by the rotate control; when present it is the final word.
+- **Effective rotation** = `rotation_teacher` if set, otherwise `(rotation_stack + rotation_auto) mod 360`. The browser displays the image rotated by it (CSS transform); the worker rotates in memory before sending a page to the model.
+- Change from Phase 2: cover sheets are currently stored already turned upright (`rotation_applied` baked into the file). From Phase 4 nothing is baked; the migration turns existing `rotation_applied` into `rotation_stack` and re-renders nothing (on existing data the stored cover images stay as they are and keep their recorded value, so the effective rotation for those is 0; new uploads follow the new rule).
+- Rotate control: rotate left / rotate right / reset (`POST /api/pages/{id}/rotation`), audited with old and new effective rotation. Undo for an auto-rotation sets `rotation_auto` to 0 and is audited. If the script has not been transcribed yet the corrected orientation is used; if it has, the page is marked "rotated after transcription" and the teacher can request a fresh transcription of that page (queued job), never automatic.
+
+**Automatic orientation check (layer c), inside the Reader (owner change 1).** No separate model call:
+- The Reader's output schema gains `orientation` (`upright`, `upside_down`, `rotated_clockwise`, `rotated_counterclockwise`) and `orientation_confidence` (0 to 1), returned with the transcription. Prompt `reader.md` becomes `reader-v2` (the version and hash change, so evaluation results stay comparable by version).
+- If the page is judged not upright with confidence at least `MARGIN_ORIENTATION_MIN_CONFIDENCE` (default 0.8), the worker rotates the page in memory by the matching angle and reads it **once more**; the second transcription is the one kept, and the page records `rotation_auto`, the confidence, model and prompt version. The second read's own orientation judgement is recorded but never triggers a further rotation (no loops). Below the threshold, or with an invalid judgement, nothing is rotated and the first transcription is kept.
+- Pages with a teacher rotation skip the judgement. Cover sheets are not transcribed, so never auto-rotated.
+- `MARGIN_ORIENTATION_CHECK=reader|off` (default `reader`). With `off`, the orientation fields are ignored.
+- Cost: no extra call for upright pages; one extra read only for pages flagged as rotated. The evaluation command gains `--orientation`: each synthetic page also fed rotated 90/180/270 (plus the owner's upside-down test page) to measure how often the judgement is right, wrongly confident, or missed, and the time of the re-read.
+
+**Legacy covers (owner change 3).** In Phase 2, cover images were stored already turned upright and the angle recorded in `rotation_applied`. Migration 0004 copies that angle into a new `rotation_baked` column, sets `rotation_stack` to 0 for those pages, and the effective-rotation rule subtracts nothing further for them: `rotation_baked` means "already applied to the image file, never apply again". Answer pages from those uploads were never rotated and get no retroactive stack rotation. If such an upload is processed again (retry), it is re-rendered under the new rule (nothing baked, `rotation_baked` reset to 0). Test: a pre-Phase-4 page row with `rotation_applied = 180` upgrades to `rotation_baked = 180`, effective rotation 0, displayed and sent to the model without further rotation.
+
+**Review time (owner change 2).**
+- A `review_session` row is opened when a teacher opens a script for review and closed when they confirm it: `script_id`, `user_id`, `opened_at`, `confirmed_at`. Wall time = confirmed minus opened, exactly as specified. Reopening and confirming again starts a new session; a script's review time is the sum of its sessions.
+- **Active time** is recorded next to it, because a script left open overnight would otherwise count as hours of review: while the review screen is visible and the teacher has used it in the last 5 minutes, the page sends a heartbeat every 30 seconds and the server adds the elapsed time (capped at 60 s per heartbeat) to `active_seconds`. Both figures are stored; the report shows both and labels them clearly.
+- Stored in the school database only, like everything else; never sent anywhere; no new network call (heartbeats go to the local app).
+- The class average (wall and active, over confirmed scripts) is shown on the marking queue screen in Phase 4 and on the results screen when Phase 5 builds it.
+
+**Marking queue (screen 6).** Per exam: every script with student code and name, status, page count flag, manual-marking flag, lowest proposed-mark confidence, number of `transcription_uncertain` points, and AI progress. Sorted uncertainty first: needs manual marking → has `transcription_uncertain` points → lowest confidence first → page-count flag → the rest; confirmed scripts last. "Start AI marking" and the worker/model status move here from the Scans screen. Live progress (polling).
+
+**Script review (screen 7).**
+- Left: page images with zoom (buttons, mouse wheel, keyboard) and pan (drag), a page strip, rotate controls and an "auto-rotated" badge with undo.
+- Right: per page, the transcription (editable; saving creates a new teacher version; earlier versions stay and are viewable). Per question: each mark scheme point with proposed marks, evidence (highlighted in the transcription), confidence, error category; the teacher's marks and category; a short comment per question (at most 300 characters); the question total (capped at the maximum).
+- Accept a point (copies the proposal into the final fields), accept all, edit marks (0 to the point's marks, whole marks), change category, comment.
+- Scripts flagged for manual marking show the mark scheme with empty final fields; the teacher enters every mark.
+- Confirm: only when every point of every question has a final mark and category. Confirming sets `confirmed_by` / `confirmed_at` and status `confirmed`. "Reopen" returns a confirmed script to review (audited). Opening a script for editing moves it from `ai_marked` to `in_review`.
+- If the teacher edits a transcription after AI marking, the screen notes that the proposals were made on the earlier text; re-running AI marking for one script is in the backlog, not in this phase.
+- Previous/next script in queue order without leaving the screen.
+
+**Keyboard shortcuts** (shown with `?`; ignored while typing in a text field):
+- `j` / `k` next / previous mark scheme point; `0`–`9` set marks for the focused point; `a` accept the focused point; `Shift+A` accept all; `c` cycle category; `m` focus the comment of the current question.
+- `e` edit the transcription of the visible page; `Esc` leave the text field.
+- `[` / `]` previous / next page; `+` / `-` / `0` zoom in / out / fit; `r` / `Shift+R` rotate right / left.
+- `n` / `p` next / previous script; `Ctrl+Enter` confirm script.
+
+**Audit.** Every change writes one append-only audit event with actor, time, old value and new value (reason optional): final marks, category, accept and accept-all (one event per point), comments, transcription edits (old and new text; the audit log is in the database, never in log files), rotations and auto-rotation undo, confirm, reopen. Model actions (auto-rotation, transcriptions, proposals) are recorded with the system actor.
+
+**Export guard.** `services/exports.py` gains `exportable_scripts(exam)` and `require_confirmed(script)`; Phase 5's CSV and marked-PDF exports must use them. Tested now.
+
+### Data model changes (migration 0004)
+- `page`: `rotation_stack`, `rotation_auto`, `auto_rotation_confidence`, `auto_rotation_model`, `auto_rotation_prompt_version`, `rotation_teacher` (nullable), `rotated_after_transcription` (bool), `rotation_baked` (angle already applied to the stored image by Phase 2; never applied again); `rotation_applied` migrated into `rotation_baked` and dropped.
+- `review_session`: `script_id`, `user_id`, `opened_at`, `confirmed_at` (nullable), `active_seconds`, `last_heartbeat_at`.
+- `mark_decision`: proposal fields nullable, for points the teacher marks without an AI proposal (manual scripts); a check constraint keeps final marks within 0 and the point's marks (enforced in the service, since the point's marks live in another table).
+- `question_comment`: `script_id`, `question_id`, `text`, `updated_by_id`, `updated_at`; unique (script, question).
+- `script`: `reviewed_at` (first teacher edit), keeps `confirmed_by_id` / `confirmed_at`.
+
+### API
+- `GET /api/exams/{id}/queue`: scripts in review order with flags and confidence summary, plus the class's average review time (wall and active).
+- `POST /api/scripts/{id}/review-heartbeat`: adds active review time (local only).
+- `GET /api/scripts/{id}/review`: pages (with effective rotation), latest and earlier transcriptions, questions with points, proposals, finals, comments, totals, navigation (previous/next script ids).
+- `PUT /api/scripts/{id}/decisions/{point_id}` (marks, category), `POST /api/scripts/{id}/accept-all`, `PUT /api/scripts/{id}/questions/{question_id}/comment`, `POST /api/pages/{id}/transcription` (new teacher version), `POST /api/pages/{id}/rotation`, `POST /api/pages/{id}/undo-auto-rotation`, `POST /api/scripts/{id}/confirm`, `POST /api/scripts/{id}/reopen`.
+- All scoped to the teacher's own classes (404 otherwise); edits on confirmed scripts refused (`script.confirmed`) until reopened.
+
+### Tests
+- Reader orientation (owner change 1): a page judged upside down at confidence 0.8 or more is rotated and read again once, the second transcription kept and `rotation_auto` recorded; confidence below 0.8 or an invalid judgement keeps the first read and rotates nothing; the second read never triggers another rotation; `off` ignores the judgement (Mock and fake Ollama).
+- Legacy covers (owner change 3): migration test from a Phase 2 page with `rotation_applied = 180` to `rotation_baked = 180` and effective rotation 0; never rotated again.
+- Review time (owner change 2): a session opens on first view and closes on confirm; reopen starts a new one; heartbeats add capped active time and ignore idle gaps; class averages computed over confirmed scripts; no network call other than to the local app.
+- Orientation (a): rotate stores the value, audit event, image file bytes and SHA-256 unchanged, model receives the rotated page. (b): a stack scanned upside down (covers and answer pages) gets `rotation_stack` 180 throughout; a mixed upload keeps each stack's own rotation. (c): undo of an auto-rotation restores the page and is audited; teacher rotation overrides auto.
+- Review: accept, accept all, edit marks and categories, comments, transcription versions kept, manual-marking scripts, confirm requires every point decided, reopen, question totals capped, confirmed scripts locked.
+- **Every edit audited:** a test performs each review action and asserts exactly the expected audit event with old and new values.
+- **Unconfirmed scripts cannot be exported:** `exportable_scripts` and `require_confirmed` tests.
+- Queue ordering: scripts with each kind of uncertainty sort ahead as specified.
+- Permissions: another teacher gets 404 on every review endpoint.
+- Translations: every new string and code in English and French (existing tests extend automatically).
+- Frontend unit tests (Vitest): keyboard handling (including "ignored while typing"), zoom and rotation state, review state updates.
+- **Browser tests (Playwright, Edge):** `scripts/e2e_seed.py` creates a fresh database with a Mock-marked exam; Playwright starts the real app on a free port against it. Scenarios: (1) a teacher reviews and confirms a script **using only the keyboard**; (2) rotate a page and undo an auto-rotation, image reloads rotated; (3) mark a manual-marking script; (4) the review screen in French; (5) another teacher cannot open the script. Added to the check suite as `frontend: browser tests`.
+
+### Done when
+All of the above pass in `python scripts/check.py` (output read before committing); a teacher can review and confirm a script quickly using only the keyboard (browser test plus a manual run reported); the three orientation layers work on the owner's upside-down test page in a live run; the orientation check's accuracy and time per page on this machine are reported.
+
+### Risks
+- The orientation check adds one model call per page; on this machine that is tens of seconds per page. If the evaluation shows it is too slow or inaccurate with the chosen model, it can be switched off (`MARGIN_ORIENTATION_CHECK=off`) and teachers rely on layers a and b.
+- Small models may be unreliable at orientation judgement; the confidence threshold and teacher undo limit the harm, and the accuracy is measured before relying on it.
+- Browser tests depend on Edge being installed on the development machine.

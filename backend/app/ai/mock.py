@@ -7,6 +7,7 @@ output, so the whole pipeline is exercised.
 import json
 import re
 import time
+from typing import Literal
 
 from app.ai.prompts import load_prompt
 from app.ai.types import (
@@ -18,7 +19,12 @@ from app.ai.types import (
     QuestionProposal,
     Transcription,
 )
-from app.ai.validation import parse_marker_output, parse_reader_output
+from app.ai.validation import (
+    answer_lines,
+    parse_marker_lines_output,
+    parse_marker_output,
+    parse_reader_output,
+)
 from app.clock import utcnow
 from app.db.models import ErrorCategory
 from app.subjects.registry import SubjectConfig
@@ -51,12 +57,18 @@ class MockReader:
 
 
 class MockMarker:
-    """Awards a point when one of its key words appears in the answer and quotes that word."""
+    """Awards a point when one of its key words appears in the answer and quotes that word
+    (or, with line evidence, cites the line it appears on)."""
 
-    def __init__(self, delay_seconds: float = 0.0) -> None:
+    def __init__(
+        self, delay_seconds: float = 0.0, evidence: Literal["quote", "lines"] = "quote"
+    ) -> None:
         self._delay = delay_seconds
+        self._evidence = evidence
         self.model = ModelInfo("mock-marker", MOCK_VERSION, "mock")
-        self.prompt_version = load_prompt("marker").version
+        self.prompt_version = load_prompt(
+            "marker_lines" if evidence == "lines" else "marker"
+        ).version
 
     def mark(self, transcription: Transcription, exam: ExamSpec) -> MarkingProposal:
         answer = transcription.full_text
@@ -95,8 +107,15 @@ class MockMarker:
                             "error_category": ErrorCategory.OMITTED.value,
                         }
                     )
-            raw = json.dumps({"points": points})
-            questions.append(
-                QuestionProposal(question.id, parse_marker_output(raw, question, answer))
-            )
+            if self._evidence == "lines":
+                lines = answer_lines(answer)
+                for item in points:
+                    quote = str(item.pop("evidence"))
+                    item["evidence_lines"] = [
+                        i for i, line in enumerate(lines, start=1) if quote and quote in line
+                    ][:1]
+                parsed = parse_marker_lines_output(json.dumps({"points": points}), question, lines)
+            else:
+                parsed = parse_marker_output(json.dumps({"points": points}), question, answer)
+            questions.append(QuestionProposal(question.id, parsed))
         return MarkingProposal(tuple(questions), self.model, self.prompt_version, utcnow())

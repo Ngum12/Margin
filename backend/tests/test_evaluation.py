@@ -211,3 +211,102 @@ def test_cli_rejects_unknown_subject_folder(tmp_path: Path) -> None:
 
     with pytest.raises(SystemExit, match="Unknown subject"):
         cli.main(["evaluate", "--data", str(tmp_path), "--backend", "mock"])
+
+
+def test_evaluation_resumes_from_its_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A rerun must reuse finished calls (the overnight run is resumable) instead of calling
+    the model again. Regression: an empty cache counted as false and nothing was saved."""
+    data = tmp_path / "data"
+    _image(data / "chemistry" / "student_1" / "page1.jpg")
+    (data / "chemistry" / "student_1" / "truth.txt").write_text(MOCK_TEXT, encoding="utf-8")
+    schemes = tmp_path / "schemes"
+    schemes.mkdir()
+    (schemes / "margin_chemistry_term1.csv").write_text(SCHEME, encoding="utf-8")
+    expected = tmp_path / "expected.csv"
+    expected.write_text(
+        "subject,student,question,expected_marks,category\nchemistry,student_1,1a,2,correct\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MARGIN_DATA_DIR", str(tmp_path / "state"))
+    get_settings.cache_clear()
+    args = [
+        "evaluate",
+        "--data",
+        str(data),
+        "--backend",
+        "mock",
+        "--mark-schemes",
+        str(schemes),
+        "--expected-marks",
+        str(expected),
+        "--report",
+        str(tmp_path / "report.json"),
+    ]
+
+    assert cli.main(args) == 0
+    cache = tmp_path / "report.cache.jsonl"
+    assert len(cache.read_text(encoding="utf-8").splitlines()) == 3  # 1 read + 2 marking passes
+
+    def must_not_be_called(*_args: object) -> object:
+        raise AssertionError("model called although the result was cached")
+
+    monkeypatch.setattr("app.ai.mock.MockReader.transcribe", must_not_be_called)
+    monkeypatch.setattr("app.ai.mock.MockMarker.mark", must_not_be_called)
+    capsys.readouterr()
+    assert cli.main(args) == 0
+    get_settings.cache_clear()
+    out = capsys.readouterr().out
+    assert "(3 finished calls)" in out
+    assert out.count("(cached)") == 3
+
+
+def test_both_evidence_designs_share_one_reading(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    data = tmp_path / "data"
+    _image(data / "chemistry" / "student_1" / "page1.jpg")
+    (data / "chemistry" / "student_1" / "truth.txt").write_text(MOCK_TEXT, encoding="utf-8")
+    schemes = tmp_path / "schemes"
+    schemes.mkdir()
+    (schemes / "margin_chemistry_term1.csv").write_text(SCHEME, encoding="utf-8")
+    expected = tmp_path / "expected.csv"
+    expected.write_text(
+        "subject,student,question,expected_marks,category\nchemistry,student_1,1a,2,correct\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MARGIN_DATA_DIR", str(tmp_path / "state"))
+    get_settings.cache_clear()
+    report = tmp_path / "report.json"
+
+    code = cli.main(
+        [
+            "evaluate",
+            "--data",
+            str(data),
+            "--backend",
+            "mock",
+            "--mark-schemes",
+            str(schemes),
+            "--expected-marks",
+            str(expected),
+            "--evidence",
+            "quote,lines",
+            "--report",
+            str(report),
+        ]
+    )
+    get_settings.cache_clear()
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert out.count("  read chemistry/student_1/page1.jpg") == 1  # read once, marked twice
+    assert "mock [quote]" in out
+    assert "mock [lines]" in out
+    models = json.loads(report.read_text(encoding="utf-8"))["models"]
+    assert [m["evidence"] for m in models] == ["quote", "lines"]
+    assert models[1]["marker_prompt_version"].startswith("marker-lines-v1#")
+    lines_marking = models[1]["marking"]["truth"]
+    assert lines_marking["questions"] == 1
+    assert lines_marking["failed"] == 0

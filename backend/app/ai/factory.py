@@ -31,10 +31,11 @@ def build_reader(settings: Settings) -> Reader:
 
 def build_marker(settings: Settings) -> Marker:
     if settings.ai_backend == "mock":
-        return MockMarker(settings.mock_delay_seconds)
+        return MockMarker(settings.mock_delay_seconds, evidence=settings.marker_evidence)
     client = ollama_client(settings)
     return OllamaMarker(
         client,
         resolve_model(client, settings.marker_model),
         output_retries=settings.model_output_retries,
+        evidence=settings.marker_evidence,
     )

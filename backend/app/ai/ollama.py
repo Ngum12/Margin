@@ -2,6 +2,7 @@
 
 import io
 import logging
+from typing import Literal
 
 from PIL import Image
 
@@ -21,8 +22,12 @@ from app.ai.types import (
     Transcription,
 )
 from app.ai.validation import (
+    MARKER_LINES_SCHEMA,
     MARKER_SCHEMA,
     READER_SCHEMA,
+    answer_lines,
+    numbered_answer,
+    parse_marker_lines_output,
     parse_marker_output,
     parse_reader_output,
 )
@@ -86,11 +91,19 @@ class OllamaReader:
 
 
 class OllamaMarker:
-    def __init__(self, client: OllamaClient, model: ModelInfo, *, output_retries: int) -> None:
+    def __init__(
+        self,
+        client: OllamaClient,
+        model: ModelInfo,
+        *,
+        output_retries: int,
+        evidence: Literal["quote", "lines"] = "quote",
+    ) -> None:
         self._client = client
         self.model = model
         self._retries = output_retries
-        self._prompt = load_prompt("marker")
+        self._evidence = evidence
+        self._prompt = load_prompt("marker_lines" if evidence == "lines" else "marker")
         self.prompt_version = self._prompt.version
 
     def mark(self, transcription: Transcription, exam: ExamSpec) -> MarkingProposal:
@@ -116,18 +129,22 @@ class OllamaMarker:
             + (f" | also accept: {'; '.join(p.alternatives)}" if p.alternatives else "")
             for p in question.points
         )
+        lines = answer_lines(answer)
         prompt = self._prompt.render(
             subject=subject,
             label=question.label,
             max_marks=str(question.max_marks),
             question=question.prompt_text or "(see mark scheme)",
             points=points,
-            answer=answer,
+            answer=numbered_answer(lines) if self._evidence == "lines" else answer,
         )
+        schema = MARKER_LINES_SCHEMA if self._evidence == "lines" else MARKER_SCHEMA
         error = ModelOutputInvalidError("no_attempt")
         for _ in range(self._retries + 1):
             try:
-                raw = self._client.chat_json(self.model.name, prompt, MARKER_SCHEMA)
+                raw = self._client.chat_json(self.model.name, prompt, schema)
+                if self._evidence == "lines":
+                    return parse_marker_lines_output(raw, question, lines)
                 return parse_marker_output(raw, question, answer)
             except ModelOutputInvalidError as exc:
                 error = exc

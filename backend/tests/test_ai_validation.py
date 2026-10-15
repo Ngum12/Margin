@@ -5,7 +5,14 @@ import pytest
 
 from app.ai.prompts import load_prompt
 from app.ai.types import ModelOutputInvalidError, PointSpec, QuestionSpec
-from app.ai.validation import evidence_is_quoted, parse_marker_output, parse_reader_output
+from app.ai.validation import (
+    answer_lines,
+    evidence_is_quoted,
+    numbered_answer,
+    parse_marker_lines_output,
+    parse_marker_output,
+    parse_reader_output,
+)
 from app.db.models import ErrorCategory
 
 QUESTION = QuestionSpec(
@@ -112,3 +119,77 @@ def test_prompt_version_changes_with_content() -> None:
     assert len(reader.version.split("#")[1]) == 8
     assert "{subject_hints}" not in reader.render(subject_hints="")
     assert '{"text"' in reader.render(subject_hints="")  # JSON example braces kept
+
+
+# --- line-number evidence (D-047) ---------------------------------------------------------------
+
+LINES = ["1(a) metals conduct electrisity", "and they are maleable", "1(b) hydrogen"]
+
+
+def lines_marker(*points: dict[str, Any]) -> str:
+    return json.dumps({"points": list(points)})
+
+
+def lpoint(
+    point_id: int, marks: int = 1, lines: list[int] | None = None, **extra: Any
+) -> dict[str, Any]:
+    return {
+        "point_id": point_id,
+        "awarded_marks": marks,
+        "evidence_lines": [1] if lines is None else lines,
+        "confidence": 0.8,
+        "error_category": "language_expression",
+        **extra,
+    }
+
+
+def test_line_evidence_is_copied_verbatim_by_margin() -> None:
+    result = parse_marker_lines_output(
+        lines_marker(lpoint(10, lines=[1]), lpoint(11, lines=[2, 2])), QUESTION, LINES
+    )
+
+    assert result[0].evidence == "1(a) metals conduct electrisity"  # student's spelling kept
+    assert result[1].evidence == "and they are maleable"  # duplicates collapsed
+
+
+@pytest.mark.parametrize(
+    ("raw", "reason"),
+    [
+        (lines_marker(lpoint(10, lines=[0]), lpoint(11)), "marker_line_out_of_range"),
+        (lines_marker(lpoint(10, lines=[4]), lpoint(11)), "marker_line_out_of_range"),
+        (lines_marker(lpoint(10, lines=[]), lpoint(11)), "marker_missing_evidence"),
+        (
+            lines_marker(lpoint(10, lines=[1, 2, 3, 1, 2, 3, 4]), lpoint(11)),
+            "marker_line_out_of_range",
+        ),
+        (lines_marker(lpoint(10)), "marker_points_mismatch"),
+        (lines_marker(lpoint(10, marks=2), lpoint(11)), "marker_marks_out_of_range"),
+        (lines_marker(lpoint(10, evidence="quoted"), lpoint(11)), "marker_schema"),
+    ],
+)
+def test_invalid_line_evidence_is_rejected(raw: str, reason: str) -> None:
+    with pytest.raises(ModelOutputInvalidError, match=reason):
+        parse_marker_lines_output(raw, QUESTION, LINES)
+
+
+def test_too_many_cited_lines_is_rejected() -> None:
+    many = [f"line {i}" for i in range(1, 10)]
+    with pytest.raises(ModelOutputInvalidError, match="marker_too_many_lines"):
+        parse_marker_lines_output(
+            lines_marker(lpoint(10, lines=list(range(1, 8))), lpoint(11)), QUESTION, many
+        )
+
+
+def test_zero_marks_need_no_lines() -> None:
+    result = parse_marker_lines_output(
+        lines_marker(
+            lpoint(10, marks=0, lines=[], error_category="omitted"), lpoint(11, lines=[2])
+        ),
+        QUESTION,
+        LINES,
+    )
+    assert result[0].evidence == ""
+
+
+def test_numbered_answer() -> None:
+    assert numbered_answer(answer_lines("a\r\nb")) == "L1: a\nL2: b"

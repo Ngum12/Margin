@@ -193,7 +193,7 @@ def evaluate(
             invalid = 0
             for index, image in enumerate(script.images):
                 key = f"read|{cache_prefix}|{subject}/{script.name}/{image.name}"
-                cached = cache.get(key) if cache else None
+                cached = cache.get(key) if cache is not None else None
                 note = " (cached)"
                 if cached is None:
                     started = time.monotonic()
@@ -205,7 +205,7 @@ def evaluate(
                     except ModelOutputInvalidError:
                         text = None
                     cached = {"text": text, "seconds": time.monotonic() - started}
-                    if cache:
+                    if cache is not None:
                         cache.put(key, cached)
                     note = ""
                 if cached["text"] is None:
