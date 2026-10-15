@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import type { Queue, ReviewPoint, ScriptReview } from "../api/types";
+import type { Queue, RedPen, ReviewPoint, ScriptReview } from "../api/types";
 import en from "../i18n/locales/en.json";
 import fr from "../i18n/locales/fr.json";
 import { at } from "../test/at";
@@ -155,7 +155,8 @@ describe("script review screen", () => {
 
     expect(await screen.findByRole("heading", { name: /Ama Fon/ })).toBeInTheDocument();
     // The page is shown turned by its effective rotation, with the auto-rotation marked.
-    expect(screen.getByAltText("Scanned page 2")).toHaveStyle({
+    expect(screen.getByAltText("Scanned page 2")).toBeInTheDocument();
+    expect(screen.getByTestId("viewer-sheet")).toHaveStyle({
       transform: "translate(0px, 0px) scale(1) rotate(180deg)",
     });
     expect(screen.getByText(en.review.viewer.autoRotated)).toBeInTheDocument();
@@ -584,5 +585,110 @@ describe("test-model output and re-running AI marking (owner, 2026-10-15)", () =
     );
     await user.click(screen.getByRole("button", { name: en.common.yes }));
     expect(await screen.findByText("AI marking started again for 1 script.")).toBeInTheDocument();
+  });
+});
+
+describe("red pen on screen (owner, 2026-10-15)", () => {
+  function redPen(): RedPen {
+    return {
+      total: "1/2",
+      pages: [
+        {
+          page_id: 32,
+          placed: true,
+          marks: [
+            {
+              kind: "tick",
+              x: 0.5,
+              y: 0.2,
+              size: 0.04,
+              text: "",
+              width: 0,
+              question_id: 11,
+              point_id: 21,
+              pending: false,
+            },
+            {
+              kind: "cross",
+              x: 0.56,
+              y: 0.2,
+              size: 0.04,
+              text: "",
+              width: 0,
+              question_id: 11,
+              point_id: 22,
+              pending: true,
+            },
+            {
+              kind: "score",
+              x: 0.1,
+              y: 0.2,
+              size: 0.03,
+              text: "1/2",
+              width: 0,
+              question_id: 11,
+              point_id: null,
+              pending: false,
+            },
+            {
+              kind: "comment",
+              x: 0.15,
+              y: 0.25,
+              size: 0.025,
+              text: "Name a second property.",
+              width: 0.6,
+              question_id: 11,
+              point_id: null,
+              pending: false,
+            },
+          ],
+          unplaced_comments: [],
+        },
+      ],
+    };
+  }
+
+  it("draws the red pen over the page and red signs beside each point", async () => {
+    const api = setup();
+    api.on("GET /api/scripts/5/red-pen", [200, redPen()]);
+    renderApp("/exams/7/review/5");
+
+    const overlay = await screen.findByTestId("red-pen");
+    expect(overlay.querySelectorAll("[data-kind='tick']")).toHaveLength(1);
+    expect(overlay.querySelectorAll("[data-kind='cross']")).toHaveLength(1);
+    expect(within(overlay).getByText("1/2")).toBeInTheDocument();
+    expect(within(overlay).getByText("Name a second property.")).toBeInTheDocument();
+    // Signs beside the points: full marks and (proposed) no marks.
+    expect(screen.getAllByLabelText(en.redPen.signFull).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(en.redPen.signNone).length).toBeGreaterThan(0);
+  });
+
+  it("can be switched off", async () => {
+    const api = setup();
+    api.on("GET /api/scripts/5/red-pen", [200, redPen()]);
+    const user = userEvent.setup();
+    renderApp("/exams/7/review/5");
+    await screen.findByTestId("red-pen");
+
+    await user.click(screen.getByRole("checkbox", { name: en.redPen.show }));
+
+    expect(screen.queryByTestId("red-pen")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: en.redPen.show }));
+    expect(await screen.findByTestId("red-pen")).toBeInTheDocument();
+  });
+
+  it("suggests a comment from the mark scheme for the points not earned", async () => {
+    const api = setup();
+    api.on("GET /api/scripts/5/red-pen", [200, redPen()]);
+    api.on("PUT /api/scripts/5/questions/11/comment", [200, review()]);
+    const user = userEvent.setup();
+    renderApp("/exams/7/review/5");
+
+    await user.click(await screen.findByRole("button", { name: en.redPen.suggest }));
+
+    await waitFor(() => {
+      const call = api.calls.find((c) => c.path === "/api/scripts/5/questions/11/comment");
+      expect(call?.body).toEqual({ text: "Missing: Malleable" });
+    });
   });
 });

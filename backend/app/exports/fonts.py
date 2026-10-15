@@ -15,6 +15,8 @@ FONT_DIR = Path(__file__).parent / "fonts"
 REGULAR = "NotoSans"
 BOLD = "NotoSans-Bold"
 SYMBOLS = "NotoSansSymbols2"
+# Pen-like handwriting for the red pen: comments, scores and the total (approved 2026-10-15).
+HANDWRITING = "Caveat"
 TICK = "✓"
 CROSS = "✗"
 
@@ -22,6 +24,7 @@ _FILES = {
     REGULAR: "NotoSans-Regular.ttf",
     BOLD: "NotoSans-Bold.ttf",
     SYMBOLS: "NotoSansSymbols2-Regular.ttf",
+    HANDWRITING: "Caveat-Regular.ttf",
 }
 
 

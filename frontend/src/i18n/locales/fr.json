@@ -632,5 +632,14 @@
     "finishedCounts": "Prêtes à réviser : {{ready}} · À corriger à la main : {{manual}}",
     "tabTitle_one": "✓ {{count}} prête · Margin",
     "tabTitle_other": "✓ {{count}} prêtes · Margin"
+  },
+  "redPen": {
+    "show": "Stylo rouge",
+    "suggest": "Suggérer à partir du barème",
+    "suggestPrefix": "Manque :",
+    "signFull": "Tous les points pour ce critère",
+    "signNone": "Aucun point pour ce critère",
+    "signPart": "{{marks}} point(s) sur {{max}} pour ce critère",
+    "notPlaced": "Le stylo rouge n'a pas pu être placé sur cette page : ses notes sont imprimées dans la marge."
   }
 }

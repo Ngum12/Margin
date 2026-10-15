@@ -140,6 +140,9 @@ class MarkDecision(IdMixin, Base):
     # teacher marks without an AI proposal (scripts flagged for manual marking).
     proposed_half_marks: Mapped[int | None] = mapped_column(Integer)
     evidence: Mapped[str] = mapped_column(Text, default="")
+    # Where the evidence is: [[page id, line index in that page's text], ...] for the
+    # transcription the AI marked. Used to place the red pen on the scan; null if unknown.
+    evidence_refs: Mapped[list[list[int]] | None] = mapped_column(JSON)
     confidence: Mapped[float | None] = mapped_column(Float)
     error_category: Mapped[ErrorCategory | None] = mapped_column(
         str_enum(ErrorCategory, "error_category")

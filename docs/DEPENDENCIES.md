@@ -85,6 +85,7 @@ Dev transitive licences (from `package-lock.json`): MIT 203, Apache-2.0 18, ISC 
 |---|---|---|---|---|---|
 | Noto Sans | 2.013 | SIL Open Font License 1.1 | `NotoSans-Regular.ttf`, `NotoSans-Bold.ttf` | github.com/notofonts/latin-greek-cyrillic, release `NotoSans-v2.013` (hinted TTF) | Text in marked PDFs, all French characters |
 | Noto Sans Symbols 2 | 2.008 | SIL Open Font License 1.1 | `NotoSansSymbols2-Regular.ttf` | github.com/notofonts/symbols, release `NotoSansSymbols2-v2.008` (hinted TTF) | ✓ and ✗ in marked PDFs |
+| Caveat | googlefonts/caveat commit 59745e8 | SIL Open Font License 1.1 | `Caveat-Regular.ttf` (backend for PDFs, frontend for the screen) | github.com/googlefonts/caveat, `fonts/ttf` at commit 59745e818ef7973e11e70cb1358d0e902b56c5fc (no packaged releases) | Red pen handwriting: comments, scores, total (approved 2026-10-15) |
 
 - Stored in `backend/app/exports/fonts/` with their licence texts and SHA-256 checksums (`fonts.json`). A test checks the files against the checksums.
 - Before use, both ✓ (U+2713) and ✗ (U+2717) were checked to render. Noto Sans does not contain them; Noto Sans Symbols 2 does.

@@ -5,6 +5,7 @@ Every edit returns the whole updated review, so the screen always shows what is 
 from fastapi import APIRouter
 
 from app.api.deps import AppSettings, CurrentUser, DbSession
+from app.schemas.common import ApiModel
 from app.schemas.review import (
     AcceptAllOut,
     CommentIn,
@@ -17,6 +18,8 @@ from app.schemas.review import (
     TranscriptionIn,
 )
 from app.services import ai_marking, review
+from app.services.access import get_visible_script
+from app.services.red_pen import script_red_pen
 from app.services.uploads import get_visible_page
 
 router = APIRouter(tags=["review"])
@@ -131,3 +134,58 @@ def retranscribe(
 ) -> ScriptReviewOut | None:
     review.request_retranscription(db, user, page_id, settings)
     return _review_of_page(db, user, page_id)
+
+
+# --- red pen (owner, 2026-10-15) ----------------------------------------------------------------
+
+
+class RedPenMarkOut(ApiModel):
+    kind: str
+    x: float
+    y: float
+    size: float
+    text: str
+    width: float
+    question_id: int | None
+    point_id: int | None
+    pending: bool
+
+
+class RedPenCommentOut(ApiModel):
+    question_id: int
+    label: str
+    comment: str
+
+
+class RedPenPageOut(ApiModel):
+    page_id: int
+    placed: bool
+    marks: list[RedPenMarkOut]
+    unplaced_comments: list[RedPenCommentOut]
+
+
+class RedPenOut(ApiModel):
+    total: str
+    pages: list[RedPenPageOut]
+
+
+@router.get("/scripts/{script_id}/red-pen")
+def red_pen(script_id: int, db: DbSession, user: CurrentUser, settings: AppSettings) -> RedPenOut:
+    """Where the red pen marks go on each answer page (fractions of the upright page)."""
+    script = get_visible_script(db, user, script_id)
+    layout = script_red_pen(db, script, settings.data_dir)
+    return RedPenOut(
+        total=layout.total,
+        pages=[
+            RedPenPageOut(
+                page_id=page_id,
+                placed=page.placed,
+                marks=[RedPenMarkOut(**mark.__dict__) for mark in page.marks],
+                unplaced_comments=[
+                    RedPenCommentOut(question_id=q.question_id, label=q.label, comment=q.comment)
+                    for q in page.unplaced_comments
+                ],
+            )
+            for page_id, page in layout.pages.items()
+        ],
+    )

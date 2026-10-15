@@ -35,7 +35,8 @@ from app.exports.results_csv import results_csv
 from app.services import audit, jobs
 from app.services.access import get_visible_exam, get_visible_script, require_admin, visible_exams
 from app.services.decisions import exam_questions
-from app.services.results import script_results
+from app.services.red_pen import script_red_pen
+from app.services.results import ScriptResult, script_results
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,13 @@ def _slug(text: str) -> str:
     """ASCII file-name part: "Mock exam 1 (Form 5A)" -> "mock-exam-1-form-5a"."""
     ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     return re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")[:60] or "exam"
+
+
+def _add_red_pen(db: Session, results: list[ScriptResult], settings: Settings) -> None:
+    for result in results:
+        result.red_pen = script_red_pen(
+            db, result.script, settings.data_dir, question_results=result.questions
+        )
 
 
 def _language(actor: User) -> str:
@@ -120,6 +128,7 @@ def student_pdf(db: Session, actor: User, script_id: int, settings: Settings) ->
     if exam is None:  # pragma: no cover
         raise NotFoundError("Exam")
     result = script_results(db, exam, [script], with_pages=True)
+    _add_red_pen(db, result, settings)
     buffer = io.BytesIO()
     write_marked_pdf(buffer, result, exam.title, settings.data_dir, _language(actor))
     content = buffer.getvalue()
@@ -260,6 +269,7 @@ def build_class_pdf(db: Session, export: Export, settings: Settings) -> None:
     if exam is None or user is None:  # pragma: no cover
         return
     results = script_results(db, exam, exportable_scripts(db, exam), with_pages=True)
+    _add_red_pen(db, results, settings)
     path, relative = _target(export, settings)
     with path.open("wb") as out:
         write_marked_pdf(out, results, exam.title, settings.data_dir, export.language)

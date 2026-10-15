@@ -8,6 +8,7 @@ marks.
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,6 +29,9 @@ from app.services import transcripts
 from app.services.access import get_visible_exam
 from app.services.decisions import current_decisions, exam_questions
 from app.services.provenance import marker_models, test_model_scripts
+
+if TYPE_CHECKING:
+    from app.services.red_pen import ScriptRedPen
 from app.services.review import ReviewTime, review_times
 
 
@@ -67,6 +71,8 @@ class ScriptResult:
     # Output from a test model (Mock): labelled in every export (owner, 2026-10-15).
     test_model: bool = False
     models: list[str] = field(default_factory=list)
+    # Red pen layout for the marked PDF (filled in by the exports service).
+    red_pen: "ScriptRedPen | None" = None
 
     @property
     def confirmed(self) -> bool:

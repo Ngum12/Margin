@@ -97,6 +97,8 @@ class PointProposal:
     evidence: str
     confidence: float
     error_category: ErrorCategory
+    # Numbers (from 1) of the answer lines holding the evidence; used to place the red pen.
+    evidence_lines: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)

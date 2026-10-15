@@ -24,6 +24,7 @@ from reportlab.pdfgen.canvas import Canvas
 from app.exports import fonts
 from app.exports.labels import labels
 from app.marks import from_half_marks
+from app.redpen.draw_pdf import draw_layout
 from app.services.results import PointResult, QuestionResult, ScriptResult
 
 PAGE_W, PAGE_H = A4
@@ -53,7 +54,8 @@ def _marks(question: QuestionResult) -> str:
 
 def _draw_image(
     canvas: Canvas, path: Path, rotation: int, box: tuple[float, float, float, float]
-) -> None:
+) -> tuple[float, float, float, float]:
+    """Draw the page upright, fitted in ``box``; returns where it landed (x, y, width, height)."""
     x, y, width, height = box
     with Image.open(path) as source:
         image = source.convert("RGB")
@@ -61,13 +63,9 @@ def _draw_image(
             image = image.rotate(-(rotation % 360), expand=True)
         scale = min(width / image.width, height / image.height)
         draw_w, draw_h = image.width * scale, image.height * scale
-        canvas.drawImage(
-            ImageReader(image),
-            x + (width - draw_w) / 2,
-            y + height - draw_h,
-            draw_w,
-            draw_h,
-        )
+        left, bottom = x + (width - draw_w) / 2, y + height - draw_h
+        canvas.drawImage(ImageReader(image), left, bottom, draw_w, draw_h)
+        return left, bottom, draw_w, draw_h
 
 
 class _Column:
@@ -132,7 +130,10 @@ def draw_script(
                 fonts.printable(words["test_model"].upper()),
             )
             canvas.setFillColorRGB(0, 0, 0)
-        _draw_image(canvas, data_dir / page.image_path, page.effective_rotation, image_box)
+        drawn = _draw_image(canvas, data_dir / page.image_path, page.effective_rotation, image_box)
+        layout = result.red_pen.pages.get(page.id) if result.red_pen else None
+        if layout is not None:
+            draw_layout(canvas, layout, drawn)
         column = _Column(canvas)
         canvas.setStrokeColorRGB(0.6, 0.6, 0.6)
         canvas.line(column.x - GAP / 2, MARGIN, column.x - GAP / 2, PAGE_H - MARGIN - HEADER)
@@ -166,6 +167,11 @@ def draw_script(
                     )
             else:
                 column.line(words["not_marked"], size=8)
+            if layout is not None:
+                # Comments with no room beside their answer are written here instead.
+                for unplaced in layout.unplaced_comments:
+                    column.space()
+                    column.line(f"{unplaced.label}: {unplaced.comment}", size=9)
         canvas.showPage()
 
 

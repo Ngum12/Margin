@@ -357,3 +357,18 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Evaluation of (a) and (b):** one short overnight check under the owner's evaluation rule: line design only, marking only, cached transcriptions.
 - **Accept all (owner's review):** a point where the teacher had chosen a category but no mark was skipped, so "accept all" seemed to do nothing. It now fills the AI's mark on every point without a mark and keeps the teacher's category. Tested with the owner's sequence.
 - **Upgrades on SQLite with data (restart of the owner's installation):** migration 0007 rebuilds the `exam` table, which SQLite refused while scripts referred to it. The migration runner now switches foreign keys off during upgrades and checks every reference afterwards (`PRAGMA foreign_key_check`); the upgrade fails if any is broken. The new test upgrades a database containing data through the app's own engine; it fails on the old runner and passes now. The owner's database was backed up, the two empty leftover tables were removed, and it was upgraded with everything intact.
+
+### D-060 · 2026-10-15 · The red pen
+- **Decision (owner):** marked scripts look as if a teacher marked them in red, on the page beside the answers:
+  - a long ✓ (pen strokes, not a font character) at the end of the line that earned each point;
+  - a ✗ beside the question for each point missed, and a fraction for a partly earned point;
+  - the question score in the left margin and the total circled at the top of the first answer page;
+  - the teacher's comments handwritten (Caveat, OFL, approved) in the blank space below the answer or beside its last line.
+
+  The same layout is drawn over the page on the review screen (a "Red pen" switch, remembered per browser), where proposals not yet decided are lighter. The screen also shows a red ✓/✗ beside each point and offers "Suggest from the mark scheme" (a comment listing the points missed; the teacher edits it).
+- **No model work:**
+  - **Evidence lines:** the AI's line evidence (default design) gives the lines that earned each point. For quotes, Margin finds the lines containing the quote. They are stored on each decision (`mark_decision.evidence_refs`: page and line, migration 0008).
+  - **Lines of writing:** Pillow finds them by thresholding the page (Otsu) and measuring ink row by row, ignoring printed margin and ruled lines. This takes about 40 ms per page.
+  - **Matching:** a dynamic-programming match pairs transcription lines with lines of ink in order, using text length against ink width. One transcription line may cover up to three lines of ink, because the reader often joins a line the student wrapped.
+- **Safety:** if the match is not confident (mean cost above 0.12 page widths, or more than two skips), the page keeps the marks in the margin column and its comments go there too. Marks are never put in the wrong place. Where a line runs to the edge, its marks go just below its end rather than over the student's words. The stored images are never changed.
+- **Checked on the owner's synthetic pages:** the lines found match the written lines exactly on chemistry, economics and mathematics pages (11, 11 and 15 lines). The AI's joined line "…joined together." is matched to its two lines of ink.

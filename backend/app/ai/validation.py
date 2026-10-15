@@ -103,6 +103,18 @@ def _normalise(text: str) -> str:
     return _SPACES.sub(" ", text).strip().casefold()
 
 
+def quote_lines(lines: list[str], quote: str, max_span: int = 6) -> tuple[int, ...]:
+    """Numbers (from 1) of the fewest consecutive answer lines that contain ``quote``."""
+    wanted = _normalise(quote)
+    if not wanted:
+        return ()
+    for span in range(1, max_span + 1):
+        for start in range(len(lines) - span + 1):
+            if wanted in _normalise(" ".join(lines[start : start + span])):
+                return tuple(range(start + 1, start + span + 1))
+    return ()
+
+
 def evidence_is_quoted(evidence: str, answer: str) -> bool:
     """Evidence must be a verbatim quote (whitespace and letter case aside)."""
     return _normalise(evidence) in _normalise(answer)
@@ -204,6 +216,7 @@ def parse_marker_output(raw: str, question: QuestionSpec, answer: str) -> tuple[
                 evidence=evidence,
                 confidence=point.confidence,
                 error_category=point.error_category,
+                evidence_lines=quote_lines(answer_lines(answer), evidence) if evidence else (),
             )
         )
     order = {p.id: i for i, p in enumerate(question.points)}
@@ -267,6 +280,7 @@ def parse_marker_lines_output(
                 evidence=evidence,
                 confidence=point.confidence,
                 error_category=point.error_category,
+                evidence_lines=tuple(n for n in cited if lines[n - 1].strip()),
             )
         )
     order = {p.id: i for i, p in enumerate(question.points)}

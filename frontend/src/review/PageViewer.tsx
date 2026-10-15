@@ -3,7 +3,8 @@ import type { PointerEvent, WheelEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../api/endpoints";
-import type { ReviewPage } from "../api/types";
+import type { RedPenMark, ReviewPage } from "../api/types";
+import { RedPenOverlay } from "./RedPenOverlay";
 import { isSideways, pan, transformFor, zoomIn, zoomOut, FIT } from "./viewer";
 import type { ViewState } from "./viewer";
 
@@ -20,6 +21,10 @@ interface Props {
   onResetRotation: () => void;
   onUndoAuto: () => void;
   onRetranscribe: () => void;
+  // Red pen marks for this page (owner, 2026-10-15); empty when switched off or not placed.
+  redPen?: RedPenMark[] | undefined;
+  redPenOn: boolean;
+  onRedPen: (on: boolean) => void;
 }
 
 /** One page image with zoom (buttons, wheel, keyboard), pan (drag), rotation and a page strip.
@@ -104,6 +109,16 @@ export function PageViewer(props: Props) {
         >
           ⟳
         </button>
+        <label className="red-pen-switch">
+          <input
+            type="checkbox"
+            checked={props.redPenOn}
+            onChange={(e) => {
+              props.onRedPen(e.target.checked);
+            }}
+          />{" "}
+          {t("redPen.show")}
+        </label>
         {page.rotation_teacher !== null && (
           <button
             type="button"
@@ -150,14 +165,28 @@ export function PageViewer(props: Props) {
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
       >
-        <img
-          className={sideways ? "viewer-image viewer-image-sideways" : "viewer-image"}
-          src={api.pageImageUrl(page.id, "full")}
-          alt={t("review.viewer.imageAlt", { page: props.pageIndex + 1 })}
-          data-rotation={page.rotation}
-          draggable={false}
+        {/* The scan and its red pen move, zoom and turn together. */}
+        <div
+          className="viewer-sheet"
+          data-testid="viewer-sheet"
           style={{ transform: transformFor(view, page.rotation) }}
-        />
+        >
+          <img
+            className={sideways ? "viewer-image viewer-image-sideways" : "viewer-image"}
+            src={api.pageImageUrl(page.id, "full")}
+            alt={t("review.viewer.imageAlt", { page: props.pageIndex + 1 })}
+            data-rotation={page.rotation}
+            draggable={false}
+          />
+          {props.redPen && props.redPen.length > 0 && (
+            <RedPenOverlay
+              marks={props.redPen}
+              width={page.width}
+              height={page.height}
+              rotation={page.rotation}
+            />
+          )}
+        </div>
       </div>
       <ol className="page-strip" aria-label={t("review.viewer.strip")}>
         {props.pages.map((p, index) => (

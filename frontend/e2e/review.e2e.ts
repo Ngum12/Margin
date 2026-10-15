@@ -87,7 +87,7 @@ test("rotate a page and undo an automatic rotation", async ({ page }) => {
   await expect(page.getByText("Auto-rotated")).toBeHidden();
   await page.keyboard.press("r");
   await expect(pageImage(page)).toHaveAttribute("data-rotation", "90");
-  await expect(pageImage(page)).toHaveCSS("transform", /matrix/);
+  await expect(page.getByTestId("viewer-sheet")).toHaveCSS("transform", /matrix/);
 
   await page.reload();
   await expect(pageImage(page)).toHaveAttribute("data-rotation", "90");

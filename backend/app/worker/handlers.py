@@ -291,6 +291,24 @@ class _QuestionTimer:
         _set_step(self._db, self._script, None)
 
 
+def _line_refs(texts: list[PageText], numbers: tuple[int, ...]) -> list[list[int]] | None:
+    """Map line numbers of the combined answer (pages joined by a blank line, as
+    Transcription.full_text) to [page id, line index within that page]."""
+    if not numbers:
+        return None
+    where: list[tuple[int, int] | None] = []
+    for index, page in enumerate(texts):
+        if index:
+            where.append(None)  # the blank line between pages
+        where.extend((page.page_id, n) for n in range(len(page.text.split("\n"))))
+    refs: list[list[int]] = []
+    for n in numbers:
+        ref = where[n - 1] if 0 < n <= len(where) else None
+        if ref is not None:
+            refs.append([ref[0], ref[1]])
+    return refs or None
+
+
 def _latest_texts(db: Session, pages: list[Page]) -> list[PageText]:
     """Per page, the current transcription (see services.transcripts.current)."""
     texts = []
@@ -413,6 +431,7 @@ def mark_script(
                             prompt_version=proposal.prompt_version,
                             proposed_at=proposal.created_at,
                             ai_run=script.ai_run,
+                            evidence_refs=_line_refs(texts, point.evidence_lines),
                         )
                     )
             if proposal.failed_question_ids:

@@ -463,3 +463,27 @@ export interface AiProgress {
     total: number | null;
   }[];
 }
+
+// --- red pen (owner, 2026-10-15) ------------------------------------------------------------
+
+export interface RedPenMark {
+  kind: "tick" | "cross" | "partial" | "score" | "comment" | "total";
+  x: number;
+  y: number;
+  size: number;
+  text: string;
+  width: number;
+  question_id: number | null;
+  point_id: number | null;
+  pending: boolean;
+}
+
+export interface RedPen {
+  total: string;
+  pages: {
+    page_id: number;
+    placed: boolean;
+    marks: RedPenMark[];
+    unplaced_comments: { question_id: number; label: string; comment: string }[];
+  }[];
+}

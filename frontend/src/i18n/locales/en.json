@@ -632,5 +632,14 @@
     "finishedCounts": "Ready to review: {{ready}} · Need manual marking: {{manual}}",
     "tabTitle_one": "✓ {{count}} ready · Margin",
     "tabTitle_other": "✓ {{count}} ready · Margin"
+  },
+  "redPen": {
+    "show": "Red pen",
+    "suggest": "Suggest from the mark scheme",
+    "suggestPrefix": "Missing:",
+    "signFull": "Full marks for this point",
+    "signNone": "No marks for this point",
+    "signPart": "{{marks}} of {{max}} marks for this point",
+    "notPlaced": "The red pen could not be placed on this page: its marks are printed in the margin."
   }
 }

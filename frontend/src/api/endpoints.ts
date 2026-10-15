@@ -15,6 +15,7 @@ import type {
   ModelConfig,
   PageCheck,
   Queue,
+  RedPen,
   Results,
   Rotation,
   Role,
@@ -140,6 +141,7 @@ export const api = {
       `/api/scripts/${String(scriptId)}/questions/${String(questionId)}/comment`,
       { json: { text } },
     ),
+  redPen: (scriptId: number) => request<RedPen>("GET", `/api/scripts/${String(scriptId)}/red-pen`),
   rerunScript: (scriptId: number) =>
     request<ScriptReview>("POST", `/api/scripts/${String(scriptId)}/rerun-ai`),
   rerunExam: (examId: number) =>

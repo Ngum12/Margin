@@ -19,5 +19,15 @@
     "files": {
       "NotoSansSymbols2-Regular.ttf": "c4a0a80f0041ce4be81e2478faad22776d23edb98ae3f0d19bd37044820ecf9d"
     }
+  },
+  {
+    "name": "Caveat",
+    "version": "googlefonts/caveat 59745e8",
+    "licence": "OFL-1.1",
+    "licence_file": "OFL-Caveat.txt",
+    "source": "https://github.com/googlefonts/caveat (fonts/ttf at commit 59745e818ef7973e11e70cb1358d0e902b56c5fc)",
+    "files": {
+      "Caveat-Regular.ttf": "7af58d70e539c9195cc328617a68c9961ed804a4404b0b818989ba7c013e8776"
+    }
   }
 ]

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { api } from "../api/endpoints";
-import type { ErrorCategory, ReviewPage, ScriptReview } from "../api/types";
+import type { ErrorCategory, RedPen, ReviewPage, ScriptReview } from "../api/types";
 import { ERROR_CATEGORIES } from "../api/types";
 import { ErrorMessage, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
@@ -54,6 +54,8 @@ function ReviewScreen({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [help, setHelp] = useState(false);
+  const [redPenOn, setRedPenOn] = useState(readRedPenSetting);
+  const [redPen, setRedPen] = useState<RedPen | null>(null);
   // Saves waiting to finish. Keys are never dropped: every change joins an ordered queue.
   const [pending, setPending] = useState(0);
   const busy = pending > 0;
@@ -93,6 +95,42 @@ function ReviewScreen({
   useEffect(() => {
     if (editing) textarea.current?.focus();
   }, [editing]);
+
+  useEffect(() => {
+    if (!redPenOn) return;
+    let cancelled = false;
+    api
+      .redPen(scriptId)
+      .then((layout) => {
+        if (!cancelled) setRedPen(layout);
+      })
+      .catch(() => {
+        // The red pen is a preview; the review works without it.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [review, redPenOn, scriptId]);
+
+  function switchRedPen(on: boolean) {
+    setRedPenOn(on);
+    try {
+      window.localStorage.setItem(RED_PEN_KEY, on ? "on" : "off");
+    } catch {
+      // Remembering the choice is a convenience only.
+    }
+  }
+
+  function suggestComment(question: ScriptReview["questions"][number]) {
+    const missed = question.points.filter((p) => {
+      const marks = p.final_marks ?? p.proposed_marks;
+      return marks !== null && marks < p.max_marks;
+    });
+    if (missed.length === 0) return;
+    const hint = `${t("redPen.suggestPrefix")} ${missed.map((p) => p.description).join("; ")}`;
+    const text = [question.comment, hint].filter(Boolean).join(" ").slice(0, 300);
+    run(() => api.setComment(scriptId, question.id, text));
+  }
 
   // Changes run one after another, in the order the teacher made them. Each one is worked out
   // from the latest saved review when its turn comes, so quick key presses are never lost or
@@ -477,6 +515,13 @@ function ReviewScreen({
               onRetranscribe={() => {
                 run(() => api.retranscribePage(page.id), t("review.viewer.rereadQueued"));
               }}
+              redPen={
+                redPenOn
+                  ? redPen?.pages.find((p) => p.page_id === page.id && p.placed)?.marks
+                  : undefined
+              }
+              redPenOn={redPenOn}
+              onRedPen={switchRedPen}
             />
           ) : (
             <p className="muted">{t("review.noPages")}</p>
@@ -580,6 +625,24 @@ function ReviewScreen({
                 />
                 <span className="field-hint">{t("review.commentHint")}</span>
               </label>
+              {editable && (
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={
+                    busy ||
+                    !question.points.some((p) => {
+                      const marks = p.final_marks ?? p.proposed_marks;
+                      return marks !== null && marks < p.max_marks;
+                    })
+                  }
+                  onClick={() => {
+                    suggestComment(question);
+                  }}
+                >
+                  {t("redPen.suggest")}
+                </button>
+              )}
             </div>
           ))}
           {editable && (
@@ -686,6 +749,7 @@ function PointRow({
       )}
       <div className="decision">
         <span className="field-label">{t("review.teacherMarks")}</span>
+        <PenSign point={point} />
         <div className="marks-buttons" role="group" aria-label={t("review.teacherMarks")}>
           {options.map((marks) => (
             <button
@@ -734,6 +798,46 @@ function PointRow({
         )}
       </div>
     </li>
+  );
+}
+
+const RED_PEN_KEY = "margin.redPen";
+
+function readRedPenSetting(): boolean {
+  try {
+    return window.localStorage.getItem(RED_PEN_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+/** The red ✓ / ✗ for a point, as the student will see it (owner, 2026-10-15). Lighter while it
+ * is only the AI's proposal. */
+function PenSign({ point }: { point: ScriptReview["questions"][number]["points"][number] }) {
+  const { t } = useTranslation();
+  const marks = point.final_marks ?? point.proposed_marks;
+  if (marks === null) return null;
+  const pending = point.final_marks === null;
+  const sign =
+    marks >= point.max_marks
+      ? "✓"
+      : marks === 0
+        ? "✗"
+        : `${String(marks)}/${String(point.max_marks)}`;
+  const label =
+    marks >= point.max_marks
+      ? t("redPen.signFull")
+      : marks === 0
+        ? t("redPen.signNone")
+        : t("redPen.signPart", { marks, max: point.max_marks });
+  return (
+    <span
+      className={pending ? "pen-sign pen-sign-pending" : "pen-sign"}
+      title={label}
+      aria-label={label}
+    >
+      {sign}
+    </span>
   );
 }
 
