@@ -172,6 +172,7 @@ class ReviewExamOut(ApiModel):
     id: int
     title: str
     subject_code: str
+    show_scheme_to_students: bool
 
 
 class ReviewNavigationOut(ApiModel):

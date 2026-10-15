@@ -63,11 +63,21 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")[:60] or "exam"
 
 
-def _add_red_pen(db: Session, results: list[ScriptResult], settings: Settings) -> None:
+def _add_red_pen(
+    db: Session, results: list[ScriptResult], settings: Settings, language: str
+) -> None:
     for result in results:
         result.red_pen = script_red_pen(
-            db, result.script, settings.data_dir, question_results=result.questions
+            db,
+            result.script,
+            settings.data_dir,
+            question_results=result.questions,
+            language=language,
         )
+        confirmer = (
+            db.get(User, result.script.confirmed_by_id) if result.script.confirmed_by_id else None
+        )
+        result.confirmed_by_name = confirmer.display_name if confirmer else None
 
 
 def _language(actor: User) -> str:
@@ -128,7 +138,7 @@ def student_pdf(db: Session, actor: User, script_id: int, settings: Settings) ->
     if exam is None:  # pragma: no cover
         raise NotFoundError("Exam")
     result = script_results(db, exam, [script], with_pages=True)
-    _add_red_pen(db, result, settings)
+    _add_red_pen(db, result, settings, _language(actor))
     buffer = io.BytesIO()
     write_marked_pdf(buffer, result, exam.title, settings.data_dir, _language(actor))
     content = buffer.getvalue()
@@ -269,7 +279,7 @@ def build_class_pdf(db: Session, export: Export, settings: Settings) -> None:
     if exam is None or user is None:  # pragma: no cover
         return
     results = script_results(db, exam, exportable_scripts(db, exam), with_pages=True)
-    _add_red_pen(db, results, settings)
+    _add_red_pen(db, results, settings, export.language)
     path, relative = _target(export, settings)
     with path.open("wb") as out:
         write_marked_pdf(out, results, exam.title, settings.data_dir, export.language)

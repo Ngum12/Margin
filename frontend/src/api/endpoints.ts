@@ -53,6 +53,8 @@ export const api = {
     id: number,
     data: Partial<{ title: string; subject_code: string; exam_date: string | null }>,
   ) => request<ExamDetail>("PATCH", `/api/exams/${String(id)}`, { json: data }),
+  updateExamSettings: (id: number, data: { show_scheme_to_students: boolean }) =>
+    request<ExamDetail>("PUT", `/api/exams/${String(id)}/settings`, { json: data }),
   saveMarkScheme: (id: number, scheme: MarkSchemeInput) =>
     request<ExamDetail>("PUT", `/api/exams/${String(id)}/mark-scheme`, { json: scheme }),
   setExamStatus: (id: number, status: ExamStatus) =>

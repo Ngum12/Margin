@@ -3,6 +3,7 @@ from enum import StrEnum
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     Date,
     ForeignKey,
@@ -42,6 +43,9 @@ class Exam(IdMixin, TimestampMixin, Base):
     # that adds pages clears it.
     pages_checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     pages_checked_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
+    # Show the mark scheme to students (owner, 2026-10-15): prints "Missing:" notes for points
+    # not earned on marked scripts and offers "Suggest from the mark scheme". Off by default.
+    show_scheme_to_students: Mapped[bool] = mapped_column(Boolean, default=False)
 
     school_class: Mapped[SchoolClass] = relationship()
     questions: Mapped[list["Question"]] = relationship(

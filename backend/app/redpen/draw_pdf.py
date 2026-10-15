@@ -62,8 +62,14 @@ def draw_layout(canvas: Canvas, layout: PageLayout, box: tuple[float, float, flo
             draw_cross(canvas, x, y, size)
         elif mark.kind == PARTIAL:
             right = draw_tick(canvas, x, y, size)
-            canvas.setFont(fonts.HANDWRITING, size * 0.55)
-            canvas.drawString(right + size * 0.08, y - size * 0.1, mark.text)
+            fonts.draw(
+                canvas,
+                right + size * 0.08,
+                y - size * 0.1,
+                mark.text,
+                fonts.HANDWRITING,
+                size * 0.55,
+            )
         elif mark.kind == "score":
             canvas.setFillColorRGB(*RED)
             canvas.setFont(fonts.HANDWRITING, size * 0.95)
@@ -89,11 +95,18 @@ def draw_layout(canvas: Canvas, layout: PageLayout, box: tuple[float, float, flo
             canvas.setFont(fonts.HANDWRITING, font_size)
             lines = [
                 part
-                for paragraph in fonts.printable(mark.text).split("\n")
+                for paragraph in fonts.printable(mark.text, fonts.HANDWRITING).split("\n")
                 for part in (
                     simpleSplit(paragraph, fonts.HANDWRITING, font_size, mark.width * width) or [""]
                 )
-            ][:3]
+            ][:4]
             for number, line in enumerate(lines):
-                canvas.drawString(x, y - font_size * (0.9 + number * 1.05), line)
+                fonts.draw(
+                    canvas,
+                    x,
+                    y - font_size * (0.9 + number * 1.05),
+                    line,
+                    fonts.HANDWRITING,
+                    font_size,
+                )
     canvas.restoreState()

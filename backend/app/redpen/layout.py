@@ -4,8 +4,11 @@ Positions are fractions of the upright page (x to the right, y down), so the PDF
 draw the same layout at any size.
 
 - A point that earned marks: a long tick just after the end of the last line holding its
-  evidence (several on one line are spaced along it).
-- A point that earned nothing: a cross after the question's first line.
+  evidence (several on one line are spaced along it). No evidence line, no tick.
+- A point that earned nothing: a cross only where it is unambiguous (owner, 2026-10-15): the
+  whole question earned nothing (cross on its first line), or exactly one line of the answer
+  earned nothing (cross on that line). Never on a line that earned a mark; otherwise no cross,
+  and the red question score shows the lost marks.
 - The question's score, in the left margin beside its first line.
 - The teacher's comment, written in the blank space below the question's answer when there is
   room, otherwise left for the margin column.
@@ -38,7 +41,11 @@ class QuestionMarks:
     label: str
     score: str  # "2/3"
     points: tuple[PointMark, ...]
+    # Printed below the answer: the teacher's comment, and the "Missing:" note when the exam
+    # shows the mark scheme to students.
     comment: str = ""
+    # The question earned some marks (on any page).
+    earned_any: bool = False
 
 
 @dataclass(frozen=True)
@@ -122,14 +129,16 @@ def layout_page(
     for question in questions:
         start_line = starts.get(question.label)
         start_span = band_of_line.get(start_line) if start_line is not None else None
+        cross_line = _cross_line(question, start_line, starts, band_of_line)
         for point in question.points:
             target: int | None = None
-            if point.sign != CROSS:
+            if point.sign == CROSS:
+                if cross_line is not None:
+                    target = band_of_line[cross_line][1]
+            else:
                 spans = [band_of_line[r] for r in point.refs if r in band_of_line]
                 if spans:
                     target = max(span[1] for span in spans)
-            if target is None and start_span is not None:
-                target = start_span[0]
             if target is None:
                 continue
             band = bands[target]
@@ -188,12 +197,79 @@ def layout_page(
             replace(mark, x=start + number * step, y=mark.y + dy)
             for number, mark in enumerate(marks)
         )
+    _write_leftover_notes(layout, bands, line_height)
     if total is not None:
         top = bands[0]
         layout.marks.append(
             Mark(kind="total", x=0.86, y=max(top.top - 0.035, 0.035), size=size, text=total)
         )
     return layout
+
+
+def _write_leftover_notes(layout: PageLayout, bands: list[Band], line_height: float) -> None:
+    """Notes with no room beside their answer go in the blank area below the last answer, as
+    "label: note", in order. Whatever still does not fit stays unplaced (the cover lists the
+    teacher's comments)."""
+    if not layout.unplaced_comments:
+        return
+    # Below the last answer and below any note already written there.
+    y = bands[-1].bottom + line_height * 1.2
+    for mark in layout.marks:
+        if mark.kind == "comment":
+            bottom = mark.y + _note_height(mark.text, mark.width, line_height)
+            y = max(y, bottom + line_height * 0.4)
+    left = min(b.left for b in bands)
+    still: list[QuestionMarks] = []
+    for question in layout.unplaced_comments:
+        text = f"{question.label}: {question.comment}"
+        height = _note_height(text, 0.95 - left, line_height)
+        if y + height > 0.97:
+            still.append(question)
+            continue
+        layout.marks.append(
+            Mark(
+                kind="comment",
+                x=left,
+                y=y,
+                size=line_height * 1.1,
+                text=text,
+                width=0.95 - left,
+                question_id=question.question_id,
+            )
+        )
+        y += height + line_height * 0.4
+    layout.unplaced_comments = still
+
+
+def _note_height(text: str, width: float, line_height: float) -> float:
+    """Rough height of a written note (about 100 characters per page width), at most 4 lines
+    as drawn."""
+    per_line = max(15, int(width * 100))
+    lines = sum(max(1, -(-len(part) // per_line)) for part in text.split("\n"))
+    return line_height * 1.2 * min(lines, 4)
+
+
+def _cross_line(
+    question: QuestionMarks,
+    start_line: int | None,
+    starts: dict[str, int],
+    band_of_line: dict[int, tuple[int, int]],
+) -> int | None:
+    """The one line a cross may go beside, or None when that would be ambiguous."""
+    if start_line is None or start_line not in band_of_line:
+        return None
+    if not question.earned_any:
+        return start_line  # nothing earned: the whole answer is wrong
+    later = [line for line in starts.values() if line > start_line]
+    end_line = min(later) if later else None
+    block = [
+        line
+        for line in band_of_line
+        if line >= start_line and (end_line is None or line < end_line)
+    ]
+    earned = {r for point in question.points if point.sign != CROSS for r in point.refs}
+    unearned = [line for line in block if line not in earned]
+    return unearned[0] if len(unearned) == 1 else None
 
 
 def _comment_spot(

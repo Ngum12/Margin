@@ -1088,6 +1088,7 @@ kbd {
 .red-pen-comment {
   color: #d01212;
   line-height: 1.05;
+  white-space: pre-line;
 }
 .red-pen-switch {
   display: inline-flex;

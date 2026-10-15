@@ -372,3 +372,26 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
   - **Matching:** a dynamic-programming match pairs transcription lines with lines of ink in order, using text length against ink width. One transcription line may cover up to three lines of ink, because the reader often joins a line the student wrapped.
 - **Safety:** if the match is not confident (mean cost above 0.12 page widths, or more than two skips), the page keeps the marks in the margin column and its comments go there too. Marks are never put in the wrong place. Where a line runs to the edge, its marks go just below its end rather than over the student's words. The stored images are never changed.
 - **Checked on the owner's synthetic pages:** the lines found match the written lines exactly on chemistry, economics and mathematics pages (11, 11 and 15 lines). The AI's joined line "…joined together." is matched to its two lines of ink.
+
+### D-061 · 2026-10-15 · Back to the v2 marking prompts
+- **Finding:** the short check of `marker-lines-v3` (`docs/evaluation/2026-10-15-prompt-v3.md`) was worse than v2:
+  - exact agreement fell from 81 % to 75 %, and under-marking grew from 7 questions (−10 marks) to 11 (−19);
+  - economics fell from 73 % to 60 %, and a correct weak-English answer got 0;
+  - "omitted" was used more, not less, and the inverted-method case still earned the method mark.
+
+  Stricter prompt rules made the small model under-mark.
+- **Decision (owner):** the exact v2 prompts are restored (`marker-lines-v2#268bfe02` default, `marker-v2#6bf69283` for quotes); no new evaluation is needed. Method-mark and category judgements stay with teacher review, which the review screen makes quick. The planned fix is fine-tuning on teacher corrections (the training-data export) after the demo.
+- **Owner's installation:** no script was marked with v3, so nothing is re-run.
+- **D-059 (a)–(b)** are withdrawn; **(c)** (line breaks kept in the display) stays.
+
+### D-062 · 2026-10-15 · Red pen refinements
+- **Decision (owner):**
+  - **Ticks** only beside lines that earned marks: a point with no evidence line gets no tick (the question score still counts it).
+  - **Crosses, conservatively:** a ✗ only when it is unambiguous: the answer earned nothing (✗ beside its first line), or exactly one line of the answer earned nothing (✗ beside that line). Otherwise no ✗; the red score shows the lost marks. Never a ✗ on a line that earned a mark. Model-cited wrong lines wait until after the demo.
+  - **"Show the mark scheme to students"**: one per-exam setting (exam setup page), off by default, audited. It controls both the printed "Missing: …" notes (the points not earned) and the "Suggest from the mark scheme" button on the review screen. Teachers' own comments always print. Migration 0009, `PUT /api/exams/{id}/settings`.
+  - **Pages:** the summary column is on the cover page only; answer pages give the scan the full width. Notes with no room below or beside their answer are written, labelled ("4: …"), in the blank space below the last answer.
+  - **Notation:** printed notes show `CH_4` as CH₄, `x^2` as x², `^-3` as ⁻³, `->` as → and `<=>` as ⇌ (`app/exports/notation.py`). Characters Caveat lacks fall back to Noto Sans, then Noto Sans Symbols 2; → and ⇌ are drawn as strokes.
+  - **Footer** on every page: "Marked with Margin AI assistance, reviewed and confirmed by [teacher]" / "Corrigé avec l'aide de l'IA Margin, revu et confirmé par [teacher]", in the exporting teacher's language (class PDFs: the export's language).
+- **Replaces part of D-060's safety rule:** with no column on answer pages, a page whose match is not confident gets no red pen at all; the cover's summary still lists every question score and the teacher's comments.
+- **Caveat** is recorded in `docs/DEPENDENCIES.md` with its SHA-256 (also in `fonts/fonts.json`).
+

@@ -625,7 +625,7 @@ function ReviewScreen({
                 />
                 <span className="field-hint">{t("review.commentHint")}</span>
               </label>
-              {editable && (
+              {editable && review.exam.show_scheme_to_students && (
                 <button
                   type="button"
                   className="button-secondary"

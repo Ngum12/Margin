@@ -929,7 +929,12 @@ def script_review(db: Session, actor: User, script_id: int) -> ScriptReviewOut:
             reviewed_at=script.reviewed_at,
             confirmed_at=script.confirmed_at,
         ),
-        exam=ReviewExamOut(id=exam.id, title=exam.title, subject_code=exam.subject_code),
+        exam=ReviewExamOut(
+            id=exam.id,
+            title=exam.title,
+            subject_code=exam.subject_code,
+            show_scheme_to_students=exam.show_scheme_to_students,
+        ),
         ready=ready,
         locked=locked,
         can_confirm=ready and not locked and totals.decided == total_points,

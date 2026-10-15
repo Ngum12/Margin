@@ -318,7 +318,7 @@ def test_line_evidence_marker_numbers_the_answer_and_copies_lines(fake: FakeOlla
     prompt = fake.requests[0]["messages"][0]["content"]
     assert "L1: 1(a) it conducts electricity" in prompt
     assert fake.requests[0]["format"] == marker_schema_for(QUESTIONS[0], line_count=2)
-    assert proposal.prompt_version.startswith("marker-lines-v3#")
+    assert proposal.prompt_version.startswith("marker-lines-v2#")
     assert proposal.questions[0].points[0].evidence == "1(a) it conducts electricity"
     assert proposal.questions[1].points[0].evidence == "1(b) hydrogen"
 

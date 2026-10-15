@@ -80,6 +80,7 @@ export function examDetail(overrides: Partial<ExamDetail> = {}): ExamDetail {
     total_marks: 2,
     scripts: { waiting: 0, ai_marked: 0, confirmed: 0 },
     updated_at: "2026-10-14T08:00:00Z",
+    show_scheme_to_students: false,
     questions: [
       {
         id: 11,

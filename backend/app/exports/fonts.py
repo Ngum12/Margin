@@ -49,31 +49,82 @@ def _covered(font: str) -> frozenset[int]:
     return frozenset(face.charToGlyph)
 
 
-def printable(text: str) -> str:
-    """The text without characters that no bundled font can print."""
-    text_chars, symbol_chars = _covered(REGULAR), _covered(SYMBOLS)
-    return "".join(c for c in text if c in "\n\t" or ord(c) in text_chars or ord(c) in symbol_chars)
+# Arrows no bundled font has: drawn as pen strokes in the text's colour (width in em).
+VECTOR_GLYPHS = {"→": 1.0, "⇌": 1.0}  # → and ⇌
+
+
+def _font_for(char: str, font: str) -> str | None:
+    """The first font that has ``char``: the requested one, then Noto Sans, then symbols."""
+    code = ord(char)
+    for candidate in (font, REGULAR, SYMBOLS):
+        if code in _covered(candidate):
+            return candidate
+    return None
+
+
+def printable(text: str, font: str = REGULAR) -> str:
+    """The text without characters that no bundled font can print (emoji)."""
+    return "".join(
+        c for c in text if c in "\n\t" or c in VECTOR_GLYPHS or _font_for(c, font) is not None
+    )
+
+
+def _arrow(canvas: Canvas, x: float, y: float, size: float, char: str) -> float:
+    width = size * VECTOR_GLYPHS[char]
+    mid = y + size * 0.3
+    canvas.saveState()
+    canvas.setLineWidth(max(0.6, size * 0.07))
+    canvas.setLineCap(1)
+    if char == "→":
+        canvas.line(x + size * 0.1, mid, x + width - size * 0.1, mid)
+        canvas.line(x + width - size * 0.32, mid + size * 0.18, x + width - size * 0.1, mid)
+        canvas.line(x + width - size * 0.32, mid - size * 0.18, x + width - size * 0.1, mid)
+    else:  # ⇌: a harpoon each way
+        top, bottom = mid + size * 0.1, mid - size * 0.1
+        canvas.line(x + size * 0.1, top, x + width - size * 0.1, top)
+        canvas.line(x + width - size * 0.32, top + size * 0.18, x + width - size * 0.1, top)
+        canvas.line(x + size * 0.1, bottom, x + width - size * 0.1, bottom)
+        canvas.line(x + size * 0.32, bottom - size * 0.18, x + size * 0.1, bottom)
+    canvas.restoreState()
+    return x + width
+
+
+def text_width(text: str, font: str, size: float) -> float:
+    total = 0.0
+    for char in text:
+        if char in VECTOR_GLYPHS:
+            total += size * VECTOR_GLYPHS[char]
+        else:
+            chosen = _font_for(char, font)
+            if chosen is not None:
+                total += pdfmetrics.stringWidth(char, chosen, size)
+    return total
 
 
 def draw(canvas: Canvas, x: float, y: float, text: str, font: str, size: float) -> float:
-    """Draw ``text`` starting at (x, y), switching to the symbol font for characters the text
-    font lacks (✓, ✗). Returns the x position after the text."""
-    text_chars, symbol_chars = _covered(font), _covered(SYMBOLS)
+    """Draw ``text`` from (x, y), falling back character by character to Noto Sans and then to
+    Noto Sans Symbols 2 (✓, ✗), and drawing → and ⇌ as strokes. Returns the x after the text."""
     run, run_font = "", font
-    for char in text:
-        code = ord(char)
-        wanted = font if code in text_chars else SYMBOLS if code in symbol_chars else None
-        if wanted is None:
-            continue
-        if wanted != run_font and run:
+
+    def flush() -> None:
+        nonlocal x, run
+        if run:
             canvas.setFont(run_font, size)
             canvas.drawString(x, y, run)
             x += pdfmetrics.stringWidth(run, run_font, size)
             run = ""
-        run_font = wanted
+
+    for char in text:
+        if char in VECTOR_GLYPHS:
+            flush()
+            x = _arrow(canvas, x, y, size, char)
+            continue
+        wanted = _font_for(char, font)
+        if wanted is None:
+            continue
+        if wanted != run_font:
+            flush()
+            run_font = wanted
         run += char
-    if run:
-        canvas.setFont(run_font, size)
-        canvas.drawString(x, y, run)
-        x += pdfmetrics.stringWidth(run, run_font, size)
+    flush()
     return x

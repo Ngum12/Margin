@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai.validation import quote_lines
-from app.db.models import MarkDecision, Page
+from app.db.models import Language, MarkDecision, Page
 from app.redpen.align import align
 from app.redpen.ink import Band, detect_lines
 from app.redpen.layout import CROSS, TICK, PointMark, QuestionMarks, layout_page, question_starts
@@ -123,6 +123,7 @@ def test_ticks_follow_their_evidence_and_crosses_the_question_start() -> None:
             "1/2",
             (PointMark(10, TICK, "", (1,)), PointMark(11, CROSS, "", ())),
             "Revise the second property.",
+            earned_any=True,
         ),
         QuestionMarks(2, "1(b)", "1/1", (PointMark(20, TICK, "", (2,)),)),
     ]
@@ -134,7 +135,7 @@ def test_ticks_follow_their_evidence_and_crosses_the_question_start() -> None:
     assert by_point[10].x == pytest.approx(0.32)  # just after "short" (its evidence line)
     assert by_point[10].y == pytest.approx(0.14)
     assert by_point[11].kind == CROSS
-    assert by_point[11].y == pytest.approx(0.11)  # on the question's first line
+    assert by_point[11].y == pytest.approx(0.11)  # the one line of 1(a) that earned nothing
     # A line running to the edge: the tick goes just below its end, not over the words.
     assert by_point[20].y > 0.31
     assert by_point[20].x + 0.01 < 0.985
@@ -143,6 +144,64 @@ def test_ticks_follow_their_evidence_and_crosses_the_question_start() -> None:
     comment = next(m for m in layout.marks if m.kind == "comment")
     assert comment.y > 0.15  # in the blank space below question 1(a)
     assert any(m.kind == "total" and m.text == "2/3" for m in layout.marks)
+
+
+# Line lengths that match _bands(), so the alignment is trusted.
+FITTING = ["1(a) long first line", "short", "1(b) a line to the edge"]
+
+
+def _crosses(questions: list[QuestionMarks], text: list[str]) -> list[float]:
+    alignment = align(text, _bands())
+    assert alignment is not None
+    layout = layout_page(text, _bands(), alignment, questions)
+    assert layout.placed
+    assert any(m.kind == TICK or m.kind == "score" for m in layout.marks)  # really placed
+    return [m.y for m in layout.marks if m.kind == CROSS]
+
+
+def test_a_cross_goes_on_the_first_line_when_the_answer_earned_nothing() -> None:
+    text = FITTING
+    points = (PointMark(10, CROSS, "", ()), PointMark(11, CROSS, "", ()))
+    crosses = _crosses([QuestionMarks(1, "1(a)", "0/2", points)], text)
+    assert crosses == [pytest.approx(0.11)] * 2  # both beside the first line
+
+
+def test_no_cross_when_more_than_one_line_earned_nothing() -> None:
+    text = FITTING  # with only 1(a) asked for, all three lines are its answer
+    points = (PointMark(10, TICK, "", (0,)), PointMark(11, CROSS, "", ()))
+    assert _crosses([QuestionMarks(1, "1(a)", "1/2", points, earned_any=True)], text) == []
+
+
+def test_a_cross_never_goes_on_a_line_that_earned_a_mark() -> None:
+    text = FITTING
+    points = (
+        PointMark(10, TICK, "", (0,)),
+        PointMark(11, TICK, "", (1,)),
+        PointMark(12, TICK, "", (2,)),
+        PointMark(13, CROSS, "", ()),
+    )
+    assert _crosses([QuestionMarks(1, "1(a)", "3/4", points, earned_any=True)], text) == []
+
+
+def test_a_cross_goes_on_the_only_line_that_earned_nothing() -> None:
+    points = (PointMark(10, TICK, "", (0,)), PointMark(11, CROSS, "", ()))
+    questions = [
+        QuestionMarks(1, "1(a)", "1/2", points, earned_any=True),
+        QuestionMarks(2, "1(b)", "1/1", (PointMark(20, TICK, "", (2,)),), earned_any=True),
+    ]
+    assert _crosses(questions, FITTING) == [pytest.approx(0.14)]  # "short", line 2 of 1(a)
+
+
+def test_a_point_with_no_evidence_line_gets_no_tick() -> None:
+    text = FITTING
+    alignment = align(text, _bands())
+    assert alignment is not None
+    points = (PointMark(10, TICK, "", ()),)
+    layout = layout_page(
+        text, _bands(), alignment, [QuestionMarks(1, "1(a)", "1/1", points, earned_any=True)]
+    )
+    assert [m for m in layout.marks if m.kind == TICK] == []
+    assert any(m.kind == "score" and m.text == "1/1" for m in layout.marks)
 
 
 def test_an_unsure_match_places_nothing_and_keeps_comments_for_the_margin() -> None:
@@ -220,6 +279,65 @@ def test_the_marked_pdf_carries_the_red_pen_and_comments(
     assert "3/3" in answer_page  # the circled total
     assert "Bien vu, élève." in answer_page
     assert b"Caveat" in content
+
+
+def _pdf_text(content: bytes) -> list[str]:
+    pdf = pdfium.PdfDocument(content)
+    try:
+        return [pdf[i].get_textpage().get_text_range() for i in range(len(pdf))]
+    finally:
+        pdf.close()
+
+
+def _confirm_with_a_missed_point(alice: ApiUser, script_id: int) -> None:
+    review = alice.get(f"/api/scripts/{script_id}/review").json()
+    question = review["questions"][1]
+    alice.post(f"/api/scripts/{script_id}/accept-all")
+    alice.put(
+        f"/api/scripts/{script_id}/decisions/{question['points'][0]['id']}", json={"marks": 0}
+    )
+    alice.put(
+        f"/api/scripts/{script_id}/questions/{question['id']}/comment",
+        json={"text": "H_2 gives a squeaky pop; Zn + 2HCl -> ZnCl_2 + H_2"},
+    )
+    alice.post(f"/api/scripts/{script_id}/confirm")
+
+
+def test_missed_points_print_only_when_the_exam_shows_the_scheme(
+    alice: ApiUser, marked: int, db: Session
+) -> None:
+    _confirm_with_a_missed_point(alice, marked)
+    exam_id = alice.get(f"/api/scripts/{marked}/review").json()["exam"]["id"]
+
+    hidden = _pdf_text(alice.get(f"/api/scripts/{marked}/marked.pdf").content)[1]
+    alice.put(f"/api/exams/{exam_id}/settings", json={"show_scheme_to_students": True})
+    shown = _pdf_text(alice.get(f"/api/scripts/{marked}/marked.pdf").content)[1]
+
+    assert "Missing:" not in hidden
+    assert "Missing:" in shown
+    # The teacher's own comment prints either way, with its notation written properly.
+    for text in (hidden, shown):
+        assert "H₂ gives a squeaky pop" in text
+        assert "ZnCl₂" in text
+
+
+def test_every_page_has_the_footer_and_only_the_cover_has_the_summary(
+    alice: ApiUser, marked: int, db: Session, world: World
+) -> None:
+    _confirm_with_a_missed_point(alice, marked)
+
+    cover, answer = _pdf_text(alice.get(f"/api/scripts/{marked}/marked.pdf").content)
+    world.teacher_a.preferred_language = Language.FR
+    db.commit()
+    cover_fr, answer_fr = _pdf_text(alice.get(f"/api/scripts/{marked}/marked.pdf").content)
+
+    name = world.teacher_a.display_name
+    for page in (cover, answer):
+        assert f"reviewed and confirmed by {name}" in " ".join(page.split())
+    for page in (cover_fr, answer_fr):
+        assert f"revu et confirmé par {name}" in " ".join(page.split())
+    assert "Results" in cover
+    assert "Results" not in answer
 
 
 def test_another_teacher_cannot_see_the_red_pen(app: FastAPI, world: World, marked: int) -> None:

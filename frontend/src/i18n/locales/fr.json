@@ -49,7 +49,9 @@
     "subject": "Matière",
     "date": "Date de l'examen",
     "status": "Statut",
-    "saveDetails": "Enregistrer les informations"
+    "saveDetails": "Enregistrer les informations",
+    "showScheme": "Montrer le barème aux élèves",
+    "showSchemeHelp": "Si activé, les copies imprimées indiquent les points du barème manqués (« Manque : ») et la correction propose « Suggérer à partir du barème ». Vos propres commentaires sont toujours imprimés."
   },
   "examStatus": {
     "draft": "Brouillon",

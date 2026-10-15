@@ -71,8 +71,10 @@ class ScriptResult:
     # Output from a test model (Mock): labelled in every export (owner, 2026-10-15).
     test_model: bool = False
     models: list[str] = field(default_factory=list)
-    # Red pen layout for the marked PDF (filled in by the exports service).
+    # Red pen layout and the confirming teacher's name for the marked PDF (filled in by the
+    # exports service).
     red_pen: "ScriptRedPen | None" = None
+    confirmed_by_name: str | None = None
 
     @property
     def confirmed(self) -> bool:

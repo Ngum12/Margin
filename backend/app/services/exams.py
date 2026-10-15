@@ -231,6 +231,23 @@ def set_status(db: Session, actor: User, exam_id: int, target: ExamStatus) -> Ex
     return exam
 
 
+def set_settings(db: Session, actor: User, exam_id: int, show_scheme_to_students: bool) -> Exam:
+    exam = get_visible_exam(db, actor, exam_id)
+    if exam.show_scheme_to_students != show_scheme_to_students:
+        old = exam.show_scheme_to_students
+        exam.show_scheme_to_students = show_scheme_to_students
+        audit.record(
+            db,
+            actor=actor,
+            entity_type="exam",
+            entity_id=exam.id,
+            action="settings",
+            old_value={"show_scheme_to_students": old},
+            new_value={"show_scheme_to_students": show_scheme_to_students},
+        )
+    return exam
+
+
 def delete_exam(db: Session, actor: User, exam_id: int) -> None:
     exam = get_visible_exam(db, actor, exam_id)
     if exam.status != ExamStatus.DRAFT:

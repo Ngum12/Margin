@@ -43,7 +43,12 @@ function review(overrides: Partial<ScriptReview> = {}): ScriptReview {
       reviewed_at: null,
       confirmed_at: null,
     },
-    exam: { id: 7, title: "Mock exam 1", subject_code: "chemistry" },
+    exam: {
+      id: 7,
+      title: "Mock exam 1",
+      subject_code: "chemistry",
+      show_scheme_to_students: false,
+    },
     ready: true,
     locked: false,
     can_confirm: false,
@@ -677,8 +682,18 @@ describe("red pen on screen (owner, 2026-10-15)", () => {
     expect(await screen.findByTestId("red-pen")).toBeInTheDocument();
   });
 
-  it("suggests a comment from the mark scheme for the points not earned", async () => {
+  it("offers no mark scheme suggestion while the exam keeps the scheme from students", async () => {
     const api = setup();
+    api.on("GET /api/scripts/5/red-pen", [200, redPen()]);
+    renderApp("/exams/7/review/5");
+
+    await screen.findByTestId("red-pen");
+    expect(screen.queryByRole("button", { name: en.redPen.suggest })).not.toBeInTheDocument();
+  });
+
+  it("suggests a comment from the mark scheme for the points not earned", async () => {
+    const base = review();
+    const api = setup({ ...base, exam: { ...base.exam, show_scheme_to_students: true } });
     api.on("GET /api/scripts/5/red-pen", [200, redPen()]);
     api.on("PUT /api/scripts/5/questions/11/comment", [200, review()]);
     const user = userEvent.setup();

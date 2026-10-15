@@ -49,7 +49,9 @@
     "subject": "Subject",
     "date": "Exam date",
     "status": "Status",
-    "saveDetails": "Save details"
+    "saveDetails": "Save details",
+    "showScheme": "Show the mark scheme to students",
+    "showSchemeHelp": "When on, printed scripts list the mark scheme points a student missed (“Missing:”), and review offers “Suggest from the mark scheme”. Your own comments always print."
   },
   "examStatus": {
     "draft": "Draft",

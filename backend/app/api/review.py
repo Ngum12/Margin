@@ -173,7 +173,7 @@ class RedPenOut(ApiModel):
 def red_pen(script_id: int, db: DbSession, user: CurrentUser, settings: AppSettings) -> RedPenOut:
     """Where the red pen marks go on each answer page (fractions of the upright page)."""
     script = get_visible_script(db, user, script_id)
-    layout = script_red_pen(db, script, settings.data_dir)
+    layout = script_red_pen(db, script, settings.data_dir, language=user.preferred_language.value)
     return RedPenOut(
         total=layout.total,
         pages=[

@@ -95,6 +95,7 @@ export interface ExamSummary {
   total_marks: number;
   scripts: { waiting: number; ai_marked: number; confirmed: number };
   updated_at: string;
+  show_scheme_to_students: boolean;
 }
 
 export interface ExamDetail extends ExamSummary {
@@ -327,7 +328,7 @@ export interface ScriptReview {
     reviewed_at: string | null;
     confirmed_at: string | null;
   };
-  exam: { id: number; title: string; subject_code: string };
+  exam: { id: number; title: string; subject_code: string; show_scheme_to_students: boolean };
   ready: boolean;
   locked: boolean;
   can_confirm: boolean;

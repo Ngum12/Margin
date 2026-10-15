@@ -18,6 +18,23 @@ function setup(language: "en" | "fr" = "en") {
 }
 
 describe("exam setup", () => {
+  it("turns on showing the mark scheme to students", async () => {
+    const api = setup();
+    api.on("PUT /api/exams/7/settings", [200, examDetail({ show_scheme_to_students: true })]);
+    const user = userEvent.setup();
+    renderApp("/exams/7");
+
+    const box = await screen.findByRole("checkbox", { name: en.exam.showScheme });
+    expect(box).not.toBeChecked();
+    await user.click(box);
+
+    await waitFor(() => {
+      expect(box).toBeChecked();
+    });
+    const call = api.calls.find((c) => c.path === "/api/exams/7/settings");
+    expect(call?.body).toEqual({ show_scheme_to_students: true });
+  });
+
   it("shows the existing mark scheme and exam total", async () => {
     setup();
     renderApp("/exams/7");

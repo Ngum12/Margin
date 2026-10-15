@@ -5,7 +5,7 @@ from app.api.deps import CurrentUser, DbSession
 from app.db.models import Exam, ScriptStatus
 from app.errors import Issue, ValidationFailedError
 from app.marks import from_half_marks
-from app.schemas.common import IssueOut
+from app.schemas.common import ApiModel, IssueOut
 from app.schemas.exams import (
     ExamCreateIn,
     ExamDetailOut,
@@ -64,6 +64,7 @@ def _summary_out(exam: Exam, counts: ScriptCounts | None = None) -> ExamSummaryO
         total_marks=from_half_marks(exam_service.total_half_marks(exam)),
         scripts=counts,
         updated_at=exam.updated_at,
+        show_scheme_to_students=exam.show_scheme_to_students,
     )
 
 
@@ -144,6 +145,18 @@ def replace_mark_scheme(
     db.flush()
     db.refresh(exam)
     return _detail_out(exam)
+
+
+class ExamSettingsIn(ApiModel):
+    show_scheme_to_students: bool
+
+
+@router.put("/exams/{exam_id}/settings")
+def update_settings(
+    exam_id: int, body: ExamSettingsIn, db: DbSession, user: CurrentUser
+) -> ExamDetailOut:
+    """Settings that may change at any time, even after marking (they affect printing only)."""
+    return _detail_out(exam_service.set_settings(db, user, exam_id, body.show_scheme_to_students))
 
 
 @router.put("/exams/{exam_id}/status")

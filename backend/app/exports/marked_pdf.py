@@ -23,6 +23,7 @@ from reportlab.pdfgen.canvas import Canvas
 
 from app.exports import fonts
 from app.exports.labels import labels
+from app.exports.notation import pretty
 from app.marks import from_half_marks
 from app.redpen.draw_pdf import draw_layout
 from app.services.results import PointResult, QuestionResult, ScriptResult
@@ -32,6 +33,7 @@ MARGIN = 10 * mm
 HEADER = 10 * mm
 COLUMN = 52 * mm
 GAP = 4 * mm
+FOOTER = 6 * mm
 FONT = fonts.REGULAR
 BOLD = fonts.BOLD
 
@@ -93,14 +95,14 @@ class _Column:
         self.y -= amount
 
 
-def _questions_by_page(result: ScriptResult) -> dict[int, list[QuestionResult]]:
-    """Each question is shown on the first answer page that contains its evidence."""
-    by_page: dict[int, list[QuestionResult]] = {}
-    for question in result.questions:
-        pages = result.pages_for_question(question.question.id)
-        if pages:
-            by_page.setdefault(pages[0], []).append(question)
-    return by_page
+def _footer(canvas: Canvas, result: ScriptResult, words: dict[str, str]) -> None:
+    """On every page (owner, 2026-10-15): who reviewed and confirmed the marks."""
+    teacher = result.confirmed_by_name or "-"
+    canvas.setFillColorRGB(0.35, 0.35, 0.35)
+    text = words["footer"].format(teacher=teacher)
+    width = fonts.text_width(text, FONT, 8)
+    fonts.draw(canvas, (PAGE_W - width) / 2, MARGIN / 2, text, FONT, 8)
+    canvas.setFillColorRGB(0, 0, 0)
 
 
 def draw_script(
@@ -108,9 +110,20 @@ def draw_script(
 ) -> None:
     words = labels(language)
     code = result.script.student.code
-    by_page = _questions_by_page(result)
     pages = result.pages
-    image_box = (MARGIN, MARGIN, PAGE_W - 2 * MARGIN - COLUMN - GAP, PAGE_H - 2 * MARGIN - HEADER)
+    # The cover carries the summary in a side column; answer pages give the scan the full width.
+    cover_box = (
+        MARGIN,
+        MARGIN + FOOTER,
+        PAGE_W - 2 * MARGIN - COLUMN - GAP,
+        PAGE_H - 2 * MARGIN - HEADER - FOOTER,
+    )
+    answer_box = (
+        MARGIN,
+        MARGIN + FOOTER,
+        PAGE_W - 2 * MARGIN,
+        PAGE_H - 2 * MARGIN - HEADER - FOOTER,
+    )
     for number, result_page in enumerate(pages, 1):
         page = result_page.page
         fonts.draw(
@@ -130,14 +143,17 @@ def draw_script(
                 fonts.printable(words["test_model"].upper()),
             )
             canvas.setFillColorRGB(0, 0, 0)
-        drawn = _draw_image(canvas, data_dir / page.image_path, page.effective_rotation, image_box)
+        box = cover_box if page.is_cover else answer_box
+        drawn = _draw_image(canvas, data_dir / page.image_path, page.effective_rotation, box)
         layout = result.red_pen.pages.get(page.id) if result.red_pen else None
         if layout is not None:
             draw_layout(canvas, layout, drawn)
-        column = _Column(canvas)
-        canvas.setStrokeColorRGB(0.6, 0.6, 0.6)
-        canvas.line(column.x - GAP / 2, MARGIN, column.x - GAP / 2, PAGE_H - MARGIN - HEADER)
         if page.is_cover:
+            column = _Column(canvas)
+            canvas.setStrokeColorRGB(0.6, 0.6, 0.6)
+            canvas.line(
+                column.x - GAP / 2, MARGIN + FOOTER, column.x - GAP / 2, PAGE_H - MARGIN - HEADER
+            )
             column.line(words["results"], size=12, bold=True)
             column.line(code, size=11)
             column.space()
@@ -155,23 +171,8 @@ def draw_script(
                 column.space()
                 column.line(words["comments"], bold=True)
                 for question in comments:
-                    column.line(f"{question.question.label}: {question.comment}", size=9)
-        else:
-            here = by_page.get(page.id, [])
-            if here:
-                column.line(words["marks_here"], size=9, bold=True)
-                column.space(1 * mm)
-                for question in here:
-                    column.line(
-                        f"{question.question.label}   {_marks(question)}", size=12, bold=True
-                    )
-            else:
-                column.line(words["not_marked"], size=8)
-            if layout is not None:
-                # Comments with no room beside their answer are written here instead.
-                for unplaced in layout.unplaced_comments:
-                    column.space()
-                    column.line(f"{unplaced.label}: {unplaced.comment}", size=9)
+                    column.line(f"{question.question.label}: {pretty(question.comment)}", size=9)
+        _footer(canvas, result, words)
         canvas.showPage()
 
 

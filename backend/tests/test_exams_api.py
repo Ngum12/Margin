@@ -201,6 +201,25 @@ def test_exam_changes_are_audited(alice: ApiUser, exam: dict[str, Any], db: Sess
     assert (events[2].old_value, events[2].new_value) == ("draft", "ready")
 
 
+def test_showing_the_scheme_to_students_is_off_by_default_and_audited(
+    app: FastAPI, alice: ApiUser, exam: dict[str, Any], db: Session
+) -> None:
+    assert exam["show_scheme_to_students"] is False
+    url = f"/api/exams/{exam['id']}/settings"
+
+    body = alice.put(url, json={"show_scheme_to_students": True}).json()
+    alice.put(url, json={"show_scheme_to_students": True})  # no change: no second event
+
+    assert body["show_scheme_to_students"] is True
+    events = db.scalars(select(AuditEvent).where(AuditEvent.action == "settings")).all()
+    assert [(e.old_value, e.new_value) for e in events] == [
+        ({"show_scheme_to_students": False}, {"show_scheme_to_students": True})
+    ]
+    assert (
+        ApiUser(app, "bruno").put(url, json={"show_scheme_to_students": False}).status_code == 404
+    )
+
+
 def alice_id(db: Session) -> int:
     return db.scalars(select(User.id).where(User.username == "alice")).one()
 

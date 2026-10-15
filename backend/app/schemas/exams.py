@@ -40,6 +40,7 @@ class ExamSummaryOut(ApiModel):
     total_marks: int | float
     scripts: ScriptCounts
     updated_at: datetime
+    show_scheme_to_students: bool
 
 
 class PointOut(ApiModel):

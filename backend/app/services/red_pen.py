@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Exam,
     MarkDecision,
     Page,
     PageState,
@@ -23,6 +24,8 @@ from app.db.models import (
     Script,
     Transcription,
 )
+from app.exports.labels import labels
+from app.exports.notation import pretty
 from app.marks import from_half_marks
 from app.redpen.align import align
 from app.redpen.ink import Band, detect_lines
@@ -88,7 +91,11 @@ def script_red_pen(
     data_dir: Path,
     *,
     question_results: list[QuestionResult] | None = None,
+    language: str = "en",
 ) -> ScriptRedPen:
+    exam = db.get(Exam, script.exam_id)
+    show_scheme = bool(exam and exam.show_scheme_to_students)
+    missing_prefix = labels(language)["missing"]
     questions = exam_questions(db, script.exam_id)
     decisions = current_decisions(db, [script.id])
     if question_results is not None:
@@ -103,11 +110,12 @@ def script_red_pen(
     proposed = [d.proposed_at for d in decisions.values() if d.proposed_at is not None]
     marked_at = min(proposed) if proposed else None
 
-    per_question: list[tuple[Question, list[tuple[PointMark, list[list[int]]]], str]] = []
+    per_question: list[tuple[Question, list[tuple[PointMark, list[list[int]]]], str, str]] = []
     total_half = max_half = 0
     for question in questions:
         marks = []
         half_sum = 0
+        missed: list[str] = []
         for point in question.points:
             decision = decisions.get((script.id, point.id))
             mark = _point_mark(decision, point.half_marks, point.id)
@@ -115,6 +123,8 @@ def script_red_pen(
                 continue
             refs = (decision.evidence_refs or []) if decision else []
             marks.append((mark, refs))
+            if mark.sign != TICK:
+                missed.append(point.description)
             if decision is not None:
                 half = decision.final_half_marks
                 half_sum += half if half is not None else (decision.proposed_half_marks or 0)
@@ -122,17 +132,23 @@ def script_red_pen(
         total_half += capped
         max_half += question.max_half_marks
         score = f"{from_half_marks(capped)}/{from_half_marks(question.max_half_marks)}"
-        per_question.append((question, marks, score))
+        # Printed below the answer: the teacher's comment always; the points missed only when
+        # the exam shows the mark scheme to students (owner, 2026-10-15).
+        notes = [comments.get(question.id, "")]
+        if show_scheme and missed:
+            notes.append(f"{missing_prefix} {'; '.join(missed)}")
+        note = pretty("\n".join(n for n in notes if n))
+        per_question.append((question, marks, score, note))
     total = f"{from_half_marks(total_half)}/{from_half_marks(max_half)}"
 
     pages = [p for p in script.pages if p.state == PageState.ASSIGNED and not p.is_cover]
-    labels = [q.label for q, _, _ in per_question]
+    question_labels = [q.label for q, _, _, _ in per_question]
     texts = {page.id: _text_for_page(db, page, marked_at) for page in pages}
-    starts = {page.id: question_starts(texts[page.id], labels) for page in pages}
+    starts = {page.id: question_starts(texts[page.id], question_labels) for page in pages}
     layouts: dict[int, PageLayout] = {}
     for index, page in enumerate(pages):
         on_page: list[QuestionMarks] = []
-        for question, marks, score in per_question:
+        for question, marks, score, note in per_question:
             starts_here = question.label in starts[page.id]
             point_marks = tuple(
                 PointMark(
@@ -155,7 +171,8 @@ def script_red_pen(
                         question.label,
                         score if starts_here else "",
                         point_marks,
-                        comments.get(question.id, "") if starts_here else "",
+                        note if starts_here else "",
+                        earned_any=any(mark.sign != CROSS for mark, _ in marks),
                     )
                 )
         bands: list[Band] = detect_lines(

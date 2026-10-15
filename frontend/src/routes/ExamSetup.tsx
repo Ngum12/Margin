@@ -72,6 +72,7 @@ function ExamSetupLoaded({
       <ExamHeader exam={exam} />
 
       <ExamDetailsForm exam={exam} onSaved={onSaved} />
+      <ExamSettingsCard exam={exam} onSaved={onSaved} />
 
       <div className="section-header">
         <h2>{t("editor.title")}</h2>
@@ -264,6 +265,47 @@ function ExamDetailsForm({
         </div>
       )}
     </form>
+  );
+}
+
+/** Per-exam settings that any status allows (owner, 2026-10-15). */
+function ExamSettingsCard({
+  exam,
+  onSaved,
+}: {
+  exam: ExamDetail;
+  onSaved: (e: ExamDetail) => void;
+}) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  async function toggle(value: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      onSaved(await api.updateExamSettings(exam.id, { show_scheme_to_students: value }));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          checked={exam.show_scheme_to_students}
+          disabled={busy}
+          onChange={(e) => void toggle(e.target.checked)}
+        />
+        {t("exam.showScheme")}
+      </label>
+      <p className="field-hint">{t("exam.showSchemeHelp")}</p>
+      <ErrorMessage error={error} />
+    </div>
   );
 }
 
