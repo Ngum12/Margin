@@ -421,7 +421,7 @@
     "averageTime_other": "Average review time ({{count}} confirmed scripts):",
     "activeTime": "active:",
     "noReviewTime": "Average review time will appear here once scripts are confirmed.",
-    "localOnly": "Review times are stored on the school's own server only and never sent anywhere."
+    "localOnly": "Review times are stored only in this Margin installation's database and are never sent anywhere else."
   },
   "review": {
     "positionOf": "Script {{position}} of {{count}}",

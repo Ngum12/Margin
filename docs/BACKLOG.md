@@ -35,3 +35,14 @@ Ideas and features deliberately not built yet. Add here instead of expanding sco
 - Per-question marking when the model's context is too small for a whole script; send only the relevant pages per question (needs question regions).
 - Show model output invalid rates and timings to admins (from the job table and evaluation reports).
 - A real evaluation set: teacher-typed transcriptions of real (consented) scripts per subject. The Phase 3 sample set is synthetic.
+
+## Deployment modes 2 and 3 (D-052; not built yet)
+What a district hub (mode 2) and a Margin-hosted cloud (mode 3) will need beyond the school box:
+- **TLS everywhere:** browser to server, server to model server, server to database; no plain-HTTP option in these modes.
+- **Stronger authentication:** multi-factor sign-in for staff, optional single sign-on with the district or ministry identity provider, shorter sessions, account lockout reporting.
+- **Per-school data separation:** every query scoped by school (tenant), tested like the class scoping; per-school storage folders or buckets; admins of one school can never see another's data; district-level roles defined explicitly.
+- **Resumable, compressed uploads:** scans sent over slow or unreliable links in chunks that resume after a dropped connection, with compression and checksums.
+- **Data retention and deletion:** a configurable retention period per school; deleting a school's, class's or student's data (database rows, page images, original PDFs, backups), with an audit record of the deletion.
+- **A data processing agreement template** for schools, districts and Margin (who controls the data, where it is stored, sub-processors: none for AI, retention, breach notification).
+- Mode 3 only: our own model servers sized for many schools (queueing, fair scheduling between schools), and monitoring that never includes student content.
+- Mode 3 only: **replace `MARGIN_ALLOW_PUBLIC_MODEL_HOST` with an explicit allowlist of approved model hosts** (for example `MARGIN_APPROVED_MODEL_HOSTS`). Private and loopback hosts are accepted as today; a public host is accepted only if it is on the list, never through a general on/off switch. When built, add a test that an unlisted public host is refused at start-up, even in cloud mode.

@@ -238,7 +238,7 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Fresh reads:** `transcription.rotation` records which way up the page was read. After a teacher corrects an orientation, the page is marked `rotated_after_transcription` and the teacher may ask for a fresh read (`transcribe_page` job; never automatic). The fresh read is stored beside the first (the uniqueness key includes the rotation).
 - **Current text rule changed:** a page's current transcription is now its newest version, whoever made it (Phase 3 preferred any teacher version). A fresh read the teacher asked for must be able to supersede an earlier teacher edit.
 - **Quarter turns only (live run, 2026-10-15):** zxing reports a QR code's exact angle, so a cover tilted about a degree (phone-scan look) gave `rotation_stack` 359. The angle is now snapped to the nearest quarter turn (`app/pdf/orientation.py`), with unit and end-to-end tests.
-- **Live finding (2026-10-15):** with `qwen3-vl:4b-instruct`, the owner's upside-down chemistry page was read well (CER 8.7 %) but judged "upright" with confidence 1.0, so layer c did not act; layers a and b work. Accuracy is measured with `evaluate --orientation`.
+- **Live finding (2026-10-15):** with `qwen3-vl:4b-instruct`, the owner's upside-down chemistry page was read well (CER 8.7 %) but judged "upright" with confidence 1.0, so layer c did not act; layers a and b work. Measured with `evaluate --orientation` (`docs/evaluation/2026-10-15-orientation.md`): 0 of 30 turned pages detected, 0 wrong turns, 1 timeout. Layer c stays on (harmless, no extra calls) but does not help with this model; layers a and b carry orientation. Timeouts and model-server 5xx errors are recorded as results in that evaluation instead of stopping it.
 - **Reason:** owner requirements of 2026-10-14 (orientation layers a, b, c) and owner changes on approval.
 
 ### D-050 · 2026-10-15 · Review screen details
@@ -254,3 +254,18 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 ### D-051 · 2026-10-15 · Browser tests
 - **Decision:** Playwright drives the installed Microsoft Edge (`channel: "msedge"`, headless, background networking switched off). `scripts/e2e_server.py` seeds a fresh temporary database (reusing the backend test builders and the Mock models) and serves the real app with the built frontend; Playwright starts it. Six scenarios: queue order; keyboard-only review and confirm; rotate and undo auto-rotation (image reloads rotated); manual marking; French; another teacher gets "not found". Part of `python scripts/check.py` as `frontend: browser tests`, after the build.
 - **Note:** `fsevents` 2.3.3 (MIT) appears in `package-lock.json` as an optional dependency of `playwright`. It is macOS-only and is not installed on Windows or Linux. It was not in the approved table; reported to the owner.
+
+### D-052 · 2026-10-15 · Three deployment modes, one code base
+- **Decision (owner):** Margin will support three deployment modes with the same code:
+  1. **School box, offline**: everything on one machine or the school LAN (the current build).
+  2. **District hub**: one installation serving several schools over a network.
+  3. **Margin-hosted cloud**: run by us with our own open models; never third-party AI APIs.
+- **Now:** only mode 1 is built. Modes 2 and 3 are not built now (requirements in `docs/BACKLOG.md`).
+- **Rule from Phase 4 onward:** nothing may assume the model server or the database is on the same machine as the browser. In practice:
+  - the model host stays configurable (`MARGIN_MODEL_BASE_URL`, http or https). A non-private host stays refused unless `MARGIN_ALLOW_PUBLIC_MODEL_HOST=true` is set deliberately;
+  - the browser talks only to the Margin server, never to the database or the model server;
+  - all database access goes through SQLAlchemy (PostgreSQL-swappable);
+  - no feature may rely on `localhost`, the local file system of the browser's machine, or the client and server sharing a clock or disk;
+  - user-facing text says "this Margin installation", not "this computer" or "the school's server", where the mode could differ.
+- **Checked on 2026-10-15:** the Phase 4 code meets this. One queue string ("stored on the school's own server") was made neutral.
+- **Unchanged for every mode:** student data is never sent to third-party AI services, and the non-negotiables in `CLAUDE.md` still apply. Mode 3 changes who runs the server, not where student data may go.

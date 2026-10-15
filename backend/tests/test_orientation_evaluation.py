@@ -16,7 +16,7 @@ from app.ai.orientation_evaluation import (
     _appearance,
     evaluate_orientation,
 )
-from app.ai.types import PageImage, PageText
+from app.ai.types import ModelUnavailableError, PageImage, PageText
 from app.ai.types import Transcription as AiTranscription
 from app.config import get_settings
 from app.subjects.registry import SubjectConfig, get_registry
@@ -142,4 +142,54 @@ def test_cli_rejects_a_malformed_extra_page(tmp_path: Path) -> None:
                 "--orientation-extra",
                 "chemistry:sideways:missing.jpg",
             ]
+        )
+
+
+class FailingReader(MockReader):
+    def __init__(self, error: str) -> None:
+        super().__init__()
+        self.error = error
+
+    def transcribe(self, pages: list[PageImage], subject: SubjectConfig) -> AiTranscription:
+        raise ModelUnavailableError(self.error)
+
+
+@pytest.mark.parametrize(
+    ("error", "recorded"), [("TimeoutError", "timeout"), ("http_500", "server_error")]
+)
+def test_a_reply_that_never_finishes_is_recorded_not_fatal(
+    tmp_path: Path, error: str, recorded: str
+) -> None:
+    """Seen on upside-down pages (2026-10-15): the model rambles until the call times out."""
+    path = tmp_path / "page.jpg"
+    Image.new("RGB", (60, 80), "white").save(path, "JPEG")
+    chemistry = get_registry().get("cm_gce_ol", "chemistry")
+    assert chemistry is not None
+
+    summary = evaluate_orientation(
+        FailingReader(error),
+        [OrientationPage(path, "chemistry")],
+        lambda _code: chemistry,
+        turns=(180,),
+        threshold=0.8,
+    )
+
+    case = summary.cases[0]
+    assert (case.judged, case.error, case.outcome) == (None, recorded, "missed")
+    report = summary.as_json()
+    assert report["no_valid_reply"] == 1
+
+
+def test_a_server_that_is_down_still_stops_the_evaluation(tmp_path: Path) -> None:
+    path = tmp_path / "page.jpg"
+    Image.new("RGB", (60, 80), "white").save(path, "JPEG")
+    chemistry = get_registry().get("cm_gce_ol", "chemistry")
+    assert chemistry is not None
+    with pytest.raises(ModelUnavailableError):
+        evaluate_orientation(
+            FailingReader("ConnectionRefusedError"),
+            [OrientationPage(path, "chemistry")],
+            lambda _code: chemistry,
+            turns=(0,),
+            threshold=0.8,
         )

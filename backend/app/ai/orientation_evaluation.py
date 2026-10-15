@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.ai.eval_cache import EvalCache
-from app.ai.types import ModelOutputInvalidError, PageImage, Reader
+from app.ai.types import ModelOutputInvalidError, ModelUnavailableError, PageImage, Reader
 from app.ai.validation import ORIENTATION_TURN
 from app.subjects.registry import SubjectConfig
 
@@ -41,6 +41,7 @@ class OrientationCase:
     confidence: float | None
     seconds: float
     threshold: float
+    error: str | None = None
 
     @property
     def would_turn(self) -> bool:
@@ -83,6 +84,9 @@ class OrientationSummary:
             "wrong": self.count("wrong"),
             "missed": self.count("missed"),
             "judged_right": self.judged_right,
+            "no_valid_reply": sum(1 for c in self.cases if c.judged is None),
+            "timeouts": sum(1 for c in self.cases if c.error == "timeout"),
+            "server_errors": sum(1 for c in self.cases if c.error == "server_error"),
             "seconds_per_call": round(self.seconds_per_call, 2),
             "cases": [
                 {
@@ -93,6 +97,7 @@ class OrientationSummary:
                     "judged": c.judged,
                     "confidence": c.confidence,
                     "outcome": c.outcome,
+                    "error": c.error,
                     "seconds": round(c.seconds, 2),
                 }
                 for c in self.cases
@@ -132,6 +137,7 @@ def evaluate_orientation(
                 started = time.monotonic()
                 judged: str | None = None
                 confidence: float | None = None
+                error: str | None = None
                 try:
                     result = reader.transcribe(
                         [PageImage(0, page.path, None, rotation=turned)],
@@ -139,18 +145,29 @@ def evaluate_orientation(
                     )
                     judged = result.pages[0].orientation
                     confidence = result.pages[0].orientation_confidence
-                except ModelOutputInvalidError:
-                    pass
+                except ModelOutputInvalidError as exc:
+                    error = str(exc)
+                except ModelUnavailableError as exc:
+                    # A reply that never finishes (seen on upside-down pages: the model rambles
+                    # until the call times out) is a result to report, not a reason to stop.
+                    # An Ollama 5xx mid-reply was also seen on an upside-down page (2026-10-15).
+                    if str(exc) == "TimeoutError":
+                        error = "timeout"
+                    elif str(exc).startswith("http_5"):
+                        error = "server_error"
+                    else:
+                        raise
                 cached = {
                     "judged": judged,
                     "confidence": confidence,
+                    "error": error,
                     "seconds": time.monotonic() - started,
                 }
                 if cache is not None:
                     cache.put(key, cached)
                 note = ""
             case = OrientationCase(
-                page=page.path.name,
+                page=f"{page.path.parent.name}/{page.path.name}",
                 subject=page.subject,
                 turned=turned,
                 expected=expected,
@@ -158,11 +175,12 @@ def evaluate_orientation(
                 confidence=cached["confidence"],
                 seconds=float(cached["seconds"]),
                 threshold=threshold,
+                error=cached.get("error"),
             )
             summary.cases.append(case)
             if progress:
                 progress(
-                    f"  orientation {page.subject}/{page.path.name} turned {turned}: "
+                    f"  orientation {page.subject}/{case.page} turned {turned}: "
                     f"{case.judged} ({case.confidence}) -> {case.outcome}, "
                     f"{case.seconds:.1f}s{note}"
                 )

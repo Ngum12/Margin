@@ -7,7 +7,7 @@ export const IDLE_MS = 5 * 60_000;
 
 /** Review time (owner change 2): while the review screen is visible and has been used in the
  * last 5 minutes, tell the local server every 30 seconds. The first call opens the session.
- * Nothing leaves the school's own server. */
+ * It goes only to the Margin server, never anywhere else (D-052). */
 export function useHeartbeat(scriptId: number, enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;

@@ -421,7 +421,7 @@
     "averageTime_other": "Temps moyen de révision ({{count}} copies confirmées) :",
     "activeTime": "actif :",
     "noReviewTime": "Le temps moyen de révision s'affichera ici quand des copies seront confirmées.",
-    "localOnly": "Les temps de révision sont enregistrés uniquement sur le serveur de l'établissement et ne sont jamais envoyés ailleurs."
+    "localOnly": "Les temps de révision sont enregistrés uniquement dans la base de données de cette installation de Margin et ne sont jamais envoyés ailleurs."
   },
   "review": {
     "positionOf": "Copie {{position}} sur {{count}}",
