@@ -371,7 +371,8 @@
       "ai": {
         "reader_invalid_output": "L'IA n'a pas pu produire une transcription valide.",
         "marker_invalid_output": "L'IA n'a pas pu proposer de notes valides pour certaines questions.",
-        "no_answer_pages": "Cette copie n'a aucune page de réponse."
+        "no_answer_pages": "Cette copie n'a aucune page de réponse.",
+        "reader_timeout": "L'IA a mis trop de temps sur une page (elle n'a pas terminé dans le délai prévu)."
       }
     }
   },

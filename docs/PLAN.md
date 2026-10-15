@@ -506,6 +506,102 @@ All of the above pass in `python scripts/check.py` (output read before committin
 
 ---
 
+## Phase 5: Results and exports
+
+Status: planned 2026-10-15. Phase 4 approved the same day. Order of work agreed for the demo on 26 October: Phase 5 now; per-question output schemas alongside it, with the evaluation re-run overnight; then Phase 6; whole-script marking only if time allows.
+
+### Dependencies
+**None new.** Marked PDFs use ReportLab, approved in Phase 2 for "cover sheets; later marked PDFs". Images use Pillow; CSV, JSON lines and zip files use the Python standard library; tests read the PDFs back with pypdfium2 (already installed).
+
+### Goal
+The teacher sees the class's results, downloads a CSV and marked PDFs (one per student and one combined file for printing). An admin exports the training dataset, consented students only. Nothing unconfirmed ever leaves the system.
+
+### Design
+**Results (screen 8).** Per exam:
+- a table with one row per student and a column per question, plus the total and a percentage;
+- per-question class averages;
+- status counts, with the scripts not yet confirmed listed (they are shown but never exported);
+- the class's average review time, wall and active, as on the queue (owner change 2).
+
+The screen is reached from a new **Results** tab.
+- **Marks:** a question's mark is the sum of its points' final marks, capped at the question maximum, as on the review screen. Totals add up the capped question marks.
+- **Rounding:** whole marks today; half marks would show as .5 (D-018).
+
+**CSV export.**
+- **Encoding:** UTF-8 with a byte-order mark, so Excel opens accents correctly. Comma-separated.
+- **Columns:** student code, student name (if recorded), one column per question label, total, maximum, percentage, confirmed at.
+- **Rows:** confirmed scripts only, via `exportable_scripts`. A note in the screen says how many are not included.
+- **Formulas:** cells that start with `=`, `+`, `-` or `@` are prefixed with `'`, so a student's name can never run as a spreadsheet formula.
+- **Audit:** every export writes an audit event.
+
+**Marked PDFs.**
+- **Content:** built from the stored page images, turned upright by each page's effective rotation. The original scans are never changed.
+  - **Cover sheet:** stamped with a results box (total, per-question marks, the teacher's comments).
+  - **Each answer page:** a margin column showing the marks for the questions whose evidence is on that page. Positions on the page are not known (there are no question regions), so marks go in the margin, not next to the words.
+- **Identity:** student code only on paper, never names (non-negotiable).
+- **Files:** one PDF per student, and one combined PDF for the class in student-code order.
+- **Generation:** the combined file is built by the worker, as a new `export_pdfs` job, so the web app stays responsive. A single student's PDF is built on request.
+- **Storage and audit:** files are stored under `MARGIN_DATA_DIR/exports/` and downloaded only through authenticated endpoints. Every export is audited.
+
+**Training-data export (brief section 8).**
+- **Who and what:** admin only. Covers confirmed scripts of students with training consent only.
+- **Contents:** a zip with `images/` (upright page images, file names from student code and page number), `dataset.jsonl` and `README.md`. Each line of `dataset.jsonl` holds:
+  - subject, curriculum, exam, question text and mark scheme;
+  - the page images;
+  - the final transcription per page;
+  - per point: the final marks and category next to the model's original proposal (marks, evidence, confidence, category);
+  - the model and prompt versions.
+- **Privacy:** pseudonymous codes only. No names anywhere, checked by a test that searches the whole zip for every student name.
+- **Generation:** built by the worker as an `export_dataset` job. Audited with the number of students and scripts.
+- **Admin screen:** a training-data section in the admin area (choose exams, see consent counts, export, download), and a read-only view of the model configuration and model server status (brief screen 9).
+
+**Exports table.** `export` stores id, kind (`csv`, `student_pdf`, `class_pdf`, `dataset`), exam (null for datasets across exams), requested by, status, file path, size, created and finished times, error. Old files can be deleted by an admin. Retention rules for modes 2 and 3 are in the backlog (D-052).
+
+**Exam completion.** When every script of an exam is confirmed, the exam moves to `completed`. Reopening a script moves it back to `reviewing`. Both are audited.
+
+**Per-question output schemas (alongside, owner order).**
+- **Schema:** each marking call's JSON schema lists exactly that question's points as required object properties keyed by point id, for both evidence designs. Prompts become `marker-v2` and `marker-lines-v2`.
+- **Validation:** unchanged.
+- **Evaluation:** re-run overnight on the synthetic set with both designs. The report gives the per-subject figures the owner asked for.
+- **Default:** changes only with the owner's approval after the report.
+
+### Decisions for the owner (defaults used unless told otherwise)
+1. **Names in the CSV:** included when recorded. They are the school's own data, already shown on screen, and the CSV goes to the teacher. Never on PDFs or in the dataset.
+2. **Unconfirmed scripts in the CSV:** left out entirely, with the count shown on screen. The alternative is rows with status and empty marks.
+3. **Marked-PDF overlay:** results box on the cover sheet plus per-page margin marks, as above.
+
+### Data model changes (migration 0005)
+- New table `export`.
+- Job types `export_pdfs` and `export_dataset`.
+
+### API
+- `GET /api/exams/{id}/results`
+- `GET /api/exams/{id}/results.csv`
+- `GET /api/scripts/{id}/marked.pdf`
+- `POST /api/exams/{id}/exports/class-pdf`
+- `GET /api/exports/{id}` (status)
+- `GET /api/exports/{id}/file`
+- `POST /api/admin/training-export` (admin)
+- `GET /api/admin/training-export/preview` (counts per exam, admin)
+
+All are scoped like the rest (404 outside the teacher's classes).
+
+### Tests
+- **CSV:** totals and per-question marks equal the stored final marks (capped). Only confirmed scripts appear. Formula-like values are neutralised. UTF-8 with BOM.
+- **Marked PDFs:** require confirmed scripts. Page count equals the script's pages. The student code is in the text and the name is not. The stored page images are byte-for-byte unchanged. The combined file holds every confirmed script.
+- **Dataset:** excludes non-consented students and unconfirmed scripts. No student name appears anywhere in the zip. The manifest fields match the README. Images are upright. The export is audited. Admin only.
+- **Exam completion:** the exam completes when the last script is confirmed and returns to reviewing on reopen.
+- **Permissions:** another teacher gets 404 on every endpoint; a teacher gets 403 on the training export.
+- **Frontend:** Vitest tests for the results screen and admin export. A browser test exports the CSV and one marked PDF from the seeded exam.
+- **Per-question schemas:** each schema requires exactly the question's point ids. Validation and evaluation tests updated.
+
+### Done when
+- All of the above pass in `python scripts/check.py`, and its output has been read before committing.
+- A teacher can download the CSV and the marked PDFs, and an admin the dataset, in the browser.
+- The overnight evaluation with per-question schemas has been reported.
+
+---
+
 ## After Phase 4 (owner, 2026-10-15; in this order, each after Phase 4 is approved)
 1. **Per-question output schemas:** each marking call gets a schema listing exactly that question's point ids (each required once), for both evidence designs. Then re-run the evaluation overnight with both designs.
 2. **Whole-script marking in one call** as a third marker design: all questions in one reply, validated per question, re-asking only the failed questions. Evaluated against the per-question designs on agreement, failures and time.

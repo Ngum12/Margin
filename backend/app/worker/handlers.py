@@ -15,7 +15,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.ai.factory import build_marker, build_reader
-from app.ai.types import ModelInfo, ModelOutputInvalidError, PageImage, PageText, Reader
+from app.ai.types import (
+    ModelCallTimeoutError,
+    ModelInfo,
+    ModelOutputInvalidError,
+    PageImage,
+    PageText,
+    Reader,
+)
 from app.ai.types import Transcription as AiTranscription
 from app.ai.validation import ORIENTATION_TURN
 from app.clock import utcnow
@@ -135,8 +142,12 @@ def transcribe_script(
                 continue  # resumed after a restart
             try:
                 result = _read_page(db, reader, settings, page, subject)
-            except ModelOutputInvalidError:
-                _flag_manual(db, script, "ai.reader_invalid_output")
+            except ModelOutputInvalidError as exc:
+                # Literal reasons: tests check every one is translated.
+                if isinstance(exc, ModelCallTimeoutError):
+                    _flag_manual(db, script, "ai.reader_timeout")
+                else:
+                    _flag_manual(db, script, "ai.reader_invalid_output")
                 db.commit()
                 update_exam_progress(db, script.exam_id)
                 db.commit()

@@ -3,8 +3,10 @@
 import base64
 import io
 import json
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from PIL import Image
@@ -13,6 +15,7 @@ from app.ai.ollama import OllamaMarker, OllamaReader, resolve_model
 from app.ai.ollama_client import OllamaClient
 from app.ai.types import (
     ExamSpec,
+    ModelCallTimeoutError,
     ModelInfo,
     ModelOutputInvalidError,
     ModelUnavailableError,
@@ -315,3 +318,67 @@ def test_line_evidence_marker_numbers_the_answer_and_copies_lines(fake: FakeOlla
     assert proposal.prompt_version.startswith("marker-lines-v1#")
     assert proposal.questions[0].points[0].evidence == "1(a) it conducts electricity"
     assert proposal.questions[1].points[0].evidence == "1(b) hydrogen"
+
+
+# --- time-outs (owner, 2026-10-15) ------------------------------------------------------------
+
+
+def _slow(seconds: float, reply: str) -> Callable[[dict[str, Any]], str]:
+    def answer(_body: dict[str, Any]) -> str:
+        time.sleep(seconds)
+        return reply
+
+    return answer
+
+
+def test_a_slow_reply_is_invalid_output_not_an_unavailable_server(fake: FakeOllama) -> None:
+    fake.replies.append(_slow(1.0, json.dumps({"text": "late"})))
+    quick = OllamaClient(fake.url, timeout_seconds=0.3)
+    with pytest.raises(ModelCallTimeoutError):
+        quick.chat_json("qwen3-vl:4b-instruct", "p", READER_SCHEMA)
+
+
+def test_a_server_that_cannot_be_reached_is_unavailable() -> None:
+    # Nothing listens on port 9 (discard) on the test machine.
+    with pytest.raises(ModelUnavailableError) as raised:
+        OllamaClient("http://127.0.0.1:9", timeout_seconds=1).chat_json("m", "p", READER_SCHEMA)
+    assert not isinstance(raised.value, ModelOutputInvalidError)
+
+
+def test_reader_retries_a_time_out_once_only(fake: FakeOllama, page: PageImage) -> None:
+    fake.replies.extend([_slow(1.0, "{}"), _slow(1.0, "{}"), json.dumps({"text": "never"})])
+    reader = OllamaReader(
+        OllamaClient(fake.url, timeout_seconds=0.3),
+        ModelInfo("qwen3-vl:4b-instruct", "x", "ollama"),
+        max_image_px=800,
+        output_retries=2,
+    )
+    with pytest.raises(ModelCallTimeoutError):
+        reader.transcribe([page], CHEMISTRY)
+    assert len(fake.requests) == 2  # 1 try + 1 retry, although 2 output retries are allowed
+
+
+def test_reader_recovers_when_the_retry_after_a_time_out_is_valid(
+    fake: FakeOllama, page: PageImage
+) -> None:
+    fake.replies.extend([_slow(1.0, "{}"), json.dumps({"text": "on time"})])
+    reader = OllamaReader(
+        OllamaClient(fake.url, timeout_seconds=0.3),
+        ModelInfo("qwen3-vl:4b-instruct", "x", "ollama"),
+        max_image_px=800,
+        output_retries=0,
+    )
+    assert reader.transcribe([page], CHEMISTRY).pages[0].text == "on time"
+
+
+def test_marker_question_that_times_out_twice_is_reported_failed(fake: FakeOllama) -> None:
+    fake.replies.extend([_slow(1.0, "{}"), _slow(1.0, "{}")])
+    marker = OllamaMarker(
+        OllamaClient(fake.url, timeout_seconds=0.3),
+        ModelInfo("qwen3-vl:4b-instruct", "x", "ollama"),
+        output_retries=2,
+    )
+    spec = ExamSpec(CHEMISTRY, (QuestionSpec(1, "1(a)", "q", 1, (PointSpec(10, "p", 1),)),))
+    proposal = marker.mark(_answer("answer"), spec)
+    assert proposal.failed_question_ids == (1,)
+    assert len(fake.requests) == 2

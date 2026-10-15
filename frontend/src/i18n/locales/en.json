@@ -371,7 +371,8 @@
       "ai": {
         "reader_invalid_output": "The AI could not produce a valid transcription.",
         "marker_invalid_output": "The AI could not propose valid marks for some questions.",
-        "no_answer_pages": "This script has no answer pages."
+        "no_answer_pages": "This script has no answer pages.",
+        "reader_timeout": "The AI took too long on a page (it did not finish within the time limit)."
       }
     }
   },

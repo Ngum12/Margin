@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     reader_model: str = "qwen3-vl:4b-instruct"
     marker_model: str = "qwen3-vl:4b-instruct"
     # Seconds to wait for one model reply; slow machines may need a lot (see the Phase 3 report).
-    model_timeout_seconds: int = Field(default=900, ge=5)
+    model_timeout_seconds: int = Field(default=300, ge=5)
     # Extra attempts when the model replies with output that fails validation.
     model_output_retries: int = Field(default=2, ge=0, le=5)
     # Models with a "thinking" mode (e.g. Qwen3-VL) reason before replying when this is true.
@@ -65,7 +65,9 @@ class Settings(BaseSettings):
     # Orientation layer c (Phase 4, owner change 1): the Reader judges which way up each answer
     # page is in the same call; a page judged not upright with at least this confidence is
     # turned and read once more. "off" ignores the judgement.
-    orientation_check: Literal["reader", "off"] = "reader"
+    # Off by default (owner, 2026-10-15): qwen3-vl:4b-instruct detected no turned page in the
+    # orientation evaluation. Re-enable only for a model that passes `evaluate --orientation`.
+    orientation_check: Literal["reader", "off"] = "off"
     orientation_min_confidence: float = Field(default=0.8, ge=0.5, le=1.0)
     # Mock models only: artificial delay per call in seconds (demos and tests).
     mock_delay_seconds: float = Field(default=0.0, ge=0)

@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai.mock import MockMarker, MockReader
-from app.ai.types import ModelOutputInvalidError, ModelUnavailableError
+from app.ai.types import ModelCallTimeoutError, ModelOutputInvalidError, ModelUnavailableError
 from app.db.models import (
     AuditEvent,
     ErrorCategory,
@@ -251,3 +251,26 @@ def test_system_status_reports_worker_and_mock_backend(
     assert after["worker_online"] is True
     assert after["ai_backend"] == "mock"
     assert after["model_server_reachable"] is True
+
+
+def test_reader_time_out_flags_the_script_with_its_own_reason(
+    app: FastAPI,
+    alice: ApiUser,
+    scanned: dict[str, Any],
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Owner, 2026-10-15: a page that never finishes is invalid output, not a server outage."""
+
+    class SlowReader(MockReader):
+        def transcribe(self, pages, subject):  # type: ignore[no-untyped-def]
+            raise ModelCallTimeoutError
+
+    monkeypatch.setattr("app.worker.handlers.build_reader", lambda _s: SlowReader())
+    alice.post(f"/api/exams/{scanned['id']}/ai-marking")
+    run_jobs(app)
+
+    scripts = db.scalars(select(Script)).all()
+    assert [s.manual_reason for s in scripts] == ["ai.reader_timeout"] * 2
+    jobs = db.scalars(select(Job).where(Job.type == "transcribe_script")).all()
+    assert all(j.status == JobStatus.SUCCEEDED for j in jobs)  # not retried as an outage

@@ -18,6 +18,16 @@ class ModelOutputInvalidError(Exception):
     """The model replied, but its output failed validation (after the allowed retries)."""
 
 
+class ModelCallTimeoutError(ModelOutputInvalidError):
+    """The server was reached but one call did not finish within MARGIN_MODEL_TIMEOUT_SECONDS
+    (seen on upside-down pages: the model rambles). Counted as invalid output for that page or
+    question: retried once, then flagged for manual marking (owner, 2026-10-15). A server that
+    cannot be reached at all is ModelUnavailableError instead."""
+
+    def __init__(self) -> None:
+        super().__init__("timeout")
+
+
 @dataclass(frozen=True)
 class ModelInfo:
     name: str

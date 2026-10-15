@@ -16,7 +16,7 @@ from app.ai.orientation_evaluation import (
     _appearance,
     evaluate_orientation,
 )
-from app.ai.types import ModelUnavailableError, PageImage, PageText
+from app.ai.types import ModelCallTimeoutError, ModelUnavailableError, PageImage, PageText
 from app.ai.types import Transcription as AiTranscription
 from app.config import get_settings
 from app.subjects.registry import SubjectConfig, get_registry
@@ -146,19 +146,20 @@ def test_cli_rejects_a_malformed_extra_page(tmp_path: Path) -> None:
 
 
 class FailingReader(MockReader):
-    def __init__(self, error: str) -> None:
+    def __init__(self, error: Exception) -> None:
         super().__init__()
         self.error = error
 
     def transcribe(self, pages: list[PageImage], subject: SubjectConfig) -> AiTranscription:
-        raise ModelUnavailableError(self.error)
+        raise self.error
 
 
 @pytest.mark.parametrize(
-    ("error", "recorded"), [("TimeoutError", "timeout"), ("http_500", "server_error")]
+    ("error", "recorded"),
+    [(ModelCallTimeoutError(), "timeout"), (ModelUnavailableError("http_500"), "server_error")],
 )
 def test_a_reply_that_never_finishes_is_recorded_not_fatal(
-    tmp_path: Path, error: str, recorded: str
+    tmp_path: Path, error: Exception, recorded: str
 ) -> None:
     """Seen on upside-down pages (2026-10-15): the model rambles until the call times out."""
     path = tmp_path / "page.jpg"
@@ -187,7 +188,7 @@ def test_a_server_that_is_down_still_stops_the_evaluation(tmp_path: Path) -> Non
     assert chemistry is not None
     with pytest.raises(ModelUnavailableError):
         evaluate_orientation(
-            FailingReader("ConnectionRefusedError"),
+            FailingReader(ModelUnavailableError("ConnectionRefusedError")),
             [OrientationPage(path, "chemistry")],
             lambda _code: chemistry,
             turns=(0,),

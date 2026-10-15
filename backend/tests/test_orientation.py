@@ -19,6 +19,7 @@ from app.ai.ollama import OllamaReader, resolve_model
 from app.ai.ollama_client import OllamaClient
 from app.ai.types import PageImage, PageText
 from app.ai.types import Transcription as AiTranscription
+from app.config import Settings
 from app.db.models import AuditEvent, Page, Script, ScriptStatus, Transcription
 from app.subjects.registry import SubjectConfig, get_registry
 from tests.conftest import World
@@ -98,6 +99,12 @@ class JudgingReader(MockReader):
 @pytest.fixture
 def alice(app: FastAPI, world: World) -> ApiUser:
     return ApiUser(app, "alice")
+
+
+@pytest.fixture(autouse=True)
+def _orientation_check_on(app: FastAPI) -> None:
+    """Layer c is off by default (owner, 2026-10-15); these tests switch it on."""
+    app.state.settings = app.state.settings.model_copy(update={"orientation_check": "reader"})
 
 
 @pytest.fixture
@@ -256,3 +263,22 @@ def test_stack_rotation_from_the_cover_is_applied_before_reading(
     page = _answer_page(db)
     assert page.rotation_stack == 180
     assert reader.reads == [(page.id, 180)]  # read upright, no re-read needed
+
+
+def test_orientation_check_is_off_by_default(
+    app: FastAPI,
+    alice: ApiUser,
+    scanned: dict[str, Any],
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Owner, 2026-10-15: off until a model passes the orientation evaluation."""
+    app.state.settings = app.state.settings.model_copy(
+        update={"orientation_check": Settings.model_fields["orientation_check"].default}
+    )
+    assert app.state.settings.orientation_check == "off"
+    reader = JudgingReader(("upside_down", 0.99))
+    _run(app, alice, scanned, reader, monkeypatch)
+    page = _answer_page(db)
+    assert reader.reads == [(page.id, 0)]
+    assert page.rotation_auto == 0

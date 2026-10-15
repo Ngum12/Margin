@@ -10,7 +10,7 @@ import json
 from typing import Any
 from urllib.parse import urlsplit
 
-from app.ai.types import ModelOutputInvalidError, ModelUnavailableError
+from app.ai.types import ModelCallTimeoutError, ModelOutputInvalidError, ModelUnavailableError
 
 
 class OllamaClient:
@@ -38,19 +38,37 @@ class OllamaClient:
         if context_tokens is not None:
             self._options["num_ctx"] = context_tokens
 
-    def _request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
+    def _request(
+        self,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None = None,
+        *,
+        slow_reply_is_invalid: bool = False,
+    ) -> Any:
+        """``slow_reply_is_invalid``: a model call that connects but does not finish in time
+        raises ModelCallTimeoutError (invalid output) rather than ModelUnavailableError."""
         connection_class = (
             http.client.HTTPSConnection if self._https else http.client.HTTPConnection
         )
         connection = connection_class(self._host, self._port, timeout=self._timeout)
         try:
+            try:
+                connection.connect()
+            except (OSError, http.client.HTTPException) as exc:  # includes TimeoutError
+                raise ModelUnavailableError(type(exc).__name__) from exc
             payload = json.dumps(body).encode("utf-8") if body is not None else None
             headers = {"Content-Type": "application/json"} if payload else {}
-            connection.request(method, self._prefix + path, body=payload, headers=headers)
-            response = connection.getresponse()
-            data = response.read()
-        except (TimeoutError, OSError, http.client.HTTPException) as exc:
-            raise ModelUnavailableError(type(exc).__name__) from exc
+            try:
+                connection.request(method, self._prefix + path, body=payload, headers=headers)
+                response = connection.getresponse()
+                data = response.read()
+            except TimeoutError as exc:
+                if slow_reply_is_invalid:
+                    raise ModelCallTimeoutError from exc
+                raise ModelUnavailableError(type(exc).__name__) from exc
+            except (OSError, http.client.HTTPException) as exc:
+                raise ModelUnavailableError(type(exc).__name__) from exc
         finally:
             connection.close()
         if response.status >= 500:
@@ -97,7 +115,7 @@ class OllamaClient:
         }
         if self._think is not None:
             body["think"] = self._think
-        data = self._request("POST", "/api/chat", body)
+        data = self._request("POST", "/api/chat", body, slow_reply_is_invalid=True)
         content = data.get("message", {}).get("content")
         if not isinstance(content, str):
             raise ModelUnavailableError("bad_response")

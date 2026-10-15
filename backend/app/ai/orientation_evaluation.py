@@ -150,13 +150,12 @@ def evaluate_orientation(
                 except ModelUnavailableError as exc:
                     # A reply that never finishes (seen on upside-down pages: the model rambles
                     # until the call times out) is a result to report, not a reason to stop.
-                    # An Ollama 5xx mid-reply was also seen on an upside-down page (2026-10-15).
-                    if str(exc) == "TimeoutError":
-                        error = "timeout"
-                    elif str(exc).startswith("http_5"):
-                        error = "server_error"
-                    else:
+                    # An Ollama 5xx mid-reply was seen on a turned page (2026-10-15). A server that
+                    # cannot be reached still stops the run. (Slow replies arrive as
+                    # ModelCallTimeoutError, an invalid output with the message "timeout".)
+                    if not str(exc).startswith("http_5"):
                         raise
+                    error = "server_error"
                 cached = {
                     "judged": judged,
                     "confidence": confidence,

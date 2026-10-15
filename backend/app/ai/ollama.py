@@ -2,6 +2,7 @@
 
 import io
 import logging
+from collections.abc import Callable
 from typing import Literal
 
 from PIL import Image
@@ -11,6 +12,7 @@ from app.ai.prompts import load_prompt
 from app.ai.types import (
     ExamSpec,
     MarkingProposal,
+    ModelCallTimeoutError,
     ModelInfo,
     ModelOutputInvalidError,
     ModelUnavailableError,
@@ -46,6 +48,30 @@ def resolve_model(client: OllamaClient, name: str) -> ModelInfo:
         # A configuration problem (model not pulled yet): retried later, shown in the AI status.
         raise ModelUnavailableError(f"model_not_installed:{name}")
     return ModelInfo(name, digest[:12], "ollama")
+
+
+# A call that times out is retried once only, whatever MARGIN_MODEL_OUTPUT_RETRIES says: each
+# try can take the whole time limit (owner, 2026-10-15).
+TIMEOUT_RETRIES = 1
+
+
+def call_with_retries[T](call: Callable[[], T], output_retries: int, what: str) -> T:
+    """Run one model call, retrying invalid output up to ``output_retries`` times and a
+    time-out once. The last error is raised when the retries are used up."""
+    invalid = timeouts = 0
+    while True:
+        try:
+            return call()
+        except ModelCallTimeoutError:
+            timeouts += 1
+            if timeouts > TIMEOUT_RETRIES:
+                raise
+            logger.warning("%s call timed out; trying once more", what)
+        except ModelOutputInvalidError as exc:
+            invalid += 1
+            if invalid > output_retries:
+                raise
+            logger.warning("%s output invalid (%s)", what, exc)
 
 
 def _jpeg_for_model(path: str, max_px: int, rotation: int = 0) -> bytes:
@@ -86,15 +112,11 @@ class OllamaReader:
         return Transcription(texts, self.model, self.prompt_version, utcnow())
 
     def _ask(self, prompt: str, image: bytes) -> ReaderOutput:
-        error = ModelOutputInvalidError("no_attempt")
-        for _ in range(self._retries + 1):
-            try:
-                raw = self._client.chat_json(self.model.name, prompt, READER_SCHEMA, images=[image])
-                return parse_reader_output(raw)
-            except ModelOutputInvalidError as exc:
-                logger.warning("Reader output invalid (%s)", exc)
-                error = exc
-        raise error
+        def call() -> ReaderOutput:
+            raw = self._client.chat_json(self.model.name, prompt, READER_SCHEMA, images=[image])
+            return parse_reader_output(raw)
+
+        return call_with_retries(call, self._retries, "Reader")
 
 
 class OllamaMarker:
@@ -146,13 +168,11 @@ class OllamaMarker:
             answer=numbered_answer(lines) if self._evidence == "lines" else answer,
         )
         schema = MARKER_LINES_SCHEMA if self._evidence == "lines" else MARKER_SCHEMA
-        error = ModelOutputInvalidError("no_attempt")
-        for _ in range(self._retries + 1):
-            try:
-                raw = self._client.chat_json(self.model.name, prompt, schema)
-                if self._evidence == "lines":
-                    return parse_marker_lines_output(raw, question, lines)
-                return parse_marker_output(raw, question, answer)
-            except ModelOutputInvalidError as exc:
-                error = exc
-        raise error
+
+        def call() -> tuple[PointProposal, ...]:
+            raw = self._client.chat_json(self.model.name, prompt, schema)
+            if self._evidence == "lines":
+                return parse_marker_lines_output(raw, question, lines)
+            return parse_marker_output(raw, question, answer)
+
+        return call_with_retries(call, self._retries, "Marker")
