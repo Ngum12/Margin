@@ -1,6 +1,9 @@
 """Unit tests for page placement: every rule, without images or a database."""
 
+import pytest
+
 from app.db.models import UnassignedReason as R
+from app.pdf.orientation import quarter_turn_from_qr
 from app.pdf.runner import RenderedPage
 from app.services.splitting import Placement, SheetOwner, place_pages
 from app.sheets.tokens import payload_for
@@ -157,3 +160,26 @@ def test_cover_rotation_carries_to_following_pages_until_next_cover() -> None:
 
 def test_pages_before_any_cover_are_not_rotated() -> None:
     assert [p.rotation_stack for p in place([answer(0), answer(1)])] == [0, 0]
+
+
+@pytest.mark.parametrize(
+    ("qr", "turn"),
+    [
+        (0, 0),
+        (1, 0),
+        (-1, 0),
+        (359, 0),
+        (2, 0),
+        (180, 180),
+        (178, 180),
+        (-90, 90),
+        (88, 270),
+        (271, 90),
+        (90, 270),
+        (44, 0),
+        (46, 270),
+    ],
+)
+def test_qr_angle_snaps_to_a_quarter_turn(qr: int, turn: int) -> None:
+    """Live run, 2026-10-15: a phone-photo cover tilted ~1 degree gave rotation 359."""
+    assert quarter_turn_from_qr(qr) == turn

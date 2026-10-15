@@ -23,6 +23,7 @@ import zxingcpp
 from PIL import Image
 
 from app.pdf.cover_frame import has_cover_frame
+from app.pdf.orientation import quarter_turn_from_qr
 
 EXIT_OK = 0
 EXIT_UNREADABLE = 2
@@ -77,7 +78,7 @@ def render(
             # the page and before transcription, and carries it to the pages that follow.
             qr_rotation = 0
             if qr["texts"] and qr["orientation"]:
-                qr_rotation = (-int(qr["orientation"])) % 360
+                qr_rotation = quarter_turn_from_qr(int(qr["orientation"]))
             frame = has_cover_frame(image)
 
             name = f"{index:04d}.jpg"

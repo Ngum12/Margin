@@ -312,3 +312,22 @@ def test_script_with_only_a_cover_is_flagged(alice: ApiUser, setup: dict[str, An
 
     flags = {s["student"]["code"]: s["page_count_flag"] for s in overview["scripts"]}
     assert flags == {"AAAAAA": "no_answer_pages", "BBBBBB": None}
+
+
+def test_slightly_tilted_covers_give_whole_quarter_turns(
+    alice: ApiUser, setup: dict[str, Any], db: Session
+) -> None:
+    """Live run, 2026-10-15: phone-scan covers tilted about a degree must not give 359."""
+    c = setup["covers"]
+    scan = (
+        ScanBuilder()
+        .add(c["AAAAAA"], rotate=1)
+        .add(answer_page(1))
+        .add(c["BBBBBB"], rotate=182)
+        .add(answer_page(2), rotate=180)
+    ).build()
+    upload_pdf(alice, setup["exam"]["id"], scan)
+
+    pages = {p.source_page_index: p for p in db.scalars(select(Page))}
+    assert [pages[i].rotation_stack for i in range(4)] == [0, 0, 180, 180]
+    assert pages[1].effective_rotation == 0
