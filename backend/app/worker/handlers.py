@@ -9,6 +9,8 @@ Errors:
 """
 
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +31,8 @@ from app.clock import utcnow
 from app.config import Settings
 from app.db.models import (
     Exam,
+    Export,
+    ExportStatus,
     JobType,
     MarkDecision,
     ModelRole,
@@ -42,7 +46,7 @@ from app.db.models import (
     TranscriptionSource,
 )
 from app.marks import to_half_marks
-from app.services import audit, jobs, transcripts, uploads
+from app.services import audit, exports, jobs, transcripts, uploads
 from app.services.ai_marking import exam_spec, mark_key, update_exam_progress
 from app.subjects.registry import SubjectConfig, get_registry
 
@@ -362,9 +366,47 @@ def mark_script(
         db.commit()
 
 
+def _run_export(
+    factory: sessionmaker[Session],
+    payload: dict[str, Any],
+    build: Callable[[Session, Export], None],
+) -> None:
+    """Build one export file. A failure marks the export failed (shown to the teacher) and
+    completes the job: retrying would not help a broken file and must not loop."""
+    with factory() as db:
+        export = db.get(Export, payload["export_id"])
+        if export is None or export.status != ExportStatus.PENDING:
+            return  # already built (resumed after a restart) or removed
+        try:
+            build(db, export)
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("Export %s failed", payload["export_id"])
+            export = db.get(Export, payload["export_id"])
+            if export is not None:
+                exports.fail(db, export, "export.failed")
+                db.commit()
+
+
+def export_pdfs(
+    factory: sessionmaker[Session], settings: Settings, payload: dict[str, Any]
+) -> None:
+    _run_export(factory, payload, lambda db, e: exports.build_class_pdf(db, e, settings))
+
+
+def export_dataset(
+    factory: sessionmaker[Session], settings: Settings, payload: dict[str, Any]
+) -> None:
+    exam_ids = [int(i) for i in payload.get("exam_ids", [])]
+    _run_export(factory, payload, lambda db, e: exports.build_dataset(db, e, exam_ids, settings))
+
+
 HANDLERS = {
     JobType.PROCESS_UPLOAD: process_upload,
     JobType.TRANSCRIBE_SCRIPT: transcribe_script,
     JobType.MARK_SCRIPT: mark_script,
     JobType.TRANSCRIBE_PAGE: transcribe_page,
+    JobType.EXPORT_PDFS: export_pdfs,
+    JobType.EXPORT_DATASET: export_dataset,
 }

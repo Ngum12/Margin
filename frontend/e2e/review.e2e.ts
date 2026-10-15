@@ -2,6 +2,8 @@
 // exam 1 with scripts 1 (AAAAAA, plain), 2 (BBBBBB, auto-rotated page and a deduction) and
 // 3 (CCCCCC, manual marking). Tests run in order in one browser worker.
 
+import { readFile } from "node:fs/promises";
+
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
@@ -104,6 +106,34 @@ test("mark a manual-marking script", async ({ page }) => {
   await page.keyboard.press("Control+Enter");
   await expect(page.getByText("Script confirmed.")).toBeVisible();
   await expect(page.getByText("Total: 3 / 3")).toBeVisible();
+});
+
+test("results, CSV and marked PDFs for the confirmed scripts", async ({ page }) => {
+  await signIn(page, "alice");
+  await page.goto("/exams/1/results");
+  await expect(page.getByText("Confirmed: 2 of 3 scripts")).toBeVisible();
+
+  const [csv] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "Download results (CSV)" }).click(),
+  ]);
+  expect(csv.suggestedFilename()).toBe("results-mock-exam-1.csv");
+  const text = await readFile(await csv.path(), "utf-8");
+  expect(text).toContain("AAAAAA");
+  expect(text).toContain("CCCCCC");
+  expect(text).not.toContain("BBBBBB"); // not confirmed
+
+  const [pdf] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "Marked PDF for AAAAAA" }).click(),
+  ]);
+  expect(pdf.suggestedFilename()).toBe("mock-exam-1-AAAAAA.pdf");
+  expect((await readFile(await pdf.path())).subarray(0, 5).toString()).toBe("%PDF-");
+
+  // The class file is built by the worker in the background.
+  await page.getByRole("button", { name: /Prepare marked PDFs for the class/ }).click();
+  const ready = page.getByRole("link", { name: "Download mock-exam-1-marked-scripts.pdf" });
+  await expect(ready).toBeVisible({ timeout: 30_000 });
 });
 
 test("the review screen in French", async ({ page }) => {

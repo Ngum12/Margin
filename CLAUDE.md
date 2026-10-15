@@ -3,7 +3,7 @@
 On-premise AI marking assistant for secondary schools. Full requirements: `PROJECT_BRIEF.md` (read it). Plan: `docs/PLAN.md`. Decisions: `docs/DECISIONS.md`. Out-of-scope ideas: `docs/BACKLOG.md`. Dependency licences: `docs/DEPENDENCIES.md`.
 
 ## Current phase
-**Phase 0: complete and approved.** **Phase 1: complete and approved (2026-10-14).** **Phases 0–3: complete and approved** (default model `qwen3-vl:4b-instruct`, quote evidence, D-048). **Phase 4 (teacher review): built, waiting for owner approval.** Then: per-question schemas and whole-script marking experiments (`docs/PLAN.md`, "After Phase 4").
+**Phase 0: complete and approved.** **Phase 1: complete and approved (2026-10-14).** **Phases 0–3: complete and approved** (default model `qwen3-vl:4b-instruct`, quote evidence, D-048). **Phase 4: complete and approved (2026-10-15).** **Phase 5 (results and exports) and per-question schemas: built, waiting for owner approval.** Then Phase 6 (deployment, demo on 26 October); whole-script marking only if time allows.
 
 Workflow: one phase at a time → plan → build → `python scripts/check.py` passes → commit → stop and report. Never claim something works without running it. Record decisions and deviations in `docs/DECISIONS.md` first. Out-of-scope ideas go to `docs/BACKLOG.md`.
 

@@ -34,35 +34,6 @@ READER_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
-MARKER_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "points": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "point_id": {"type": "integer"},
-                    "awarded_marks": {"type": "integer", "minimum": 0},
-                    "evidence": {"type": "string"},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                    "error_category": {"type": "string", "enum": [c.value for c in ErrorCategory]},
-                },
-                "required": [
-                    "point_id",
-                    "awarded_marks",
-                    "evidence",
-                    "confidence",
-                    "error_category",
-                ],
-                "additionalProperties": False,
-            },
-        }
-    },
-    "required": ["points"],
-    "additionalProperties": False,
-}
-
 
 class _Closed(BaseModel):
     # No extra keys; numbers and text must arrive as such ("2" or 2.0 is not a whole number).
@@ -137,10 +108,77 @@ def evidence_is_quoted(evidence: str, answer: str) -> bool:
     return _normalise(evidence) in _normalise(answer)
 
 
+def point_key(point_id: int) -> str:
+    """Property name of a point in the per-question schema."""
+    return f"p{point_id}"
+
+
+def _keyed_to_list(data: Any) -> Any:
+    """Per-question replies key each point by ``p<id>``; turn them into the list shape so every
+    validation rule below applies unchanged. Anything else is returned as it is."""
+    if not isinstance(data, dict) or not isinstance(data.get("points"), dict):
+        return data
+    points = []
+    for key, value in data["points"].items():
+        if not (isinstance(key, str) and key.startswith("p") and key[1:].isdigit()):
+            raise ModelOutputInvalidError("marker_schema")
+        if not isinstance(value, dict):
+            raise ModelOutputInvalidError("marker_schema")
+        points.append({"point_id": int(key[1:]), **value})
+    return {**data, "points": points}
+
+
+def _point_schema(marks: int, evidence: dict[str, Any], evidence_key: str) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "awarded_marks": {"type": "integer", "enum": list(range(marks + 1))},
+            evidence_key: evidence,
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "error_category": {"type": "string", "enum": [c.value for c in ErrorCategory]},
+        },
+        "required": ["awarded_marks", evidence_key, "confidence", "error_category"],
+        "additionalProperties": False,
+    }
+
+
+def marker_schema_for(question: QuestionSpec, line_count: int | None = None) -> dict[str, Any]:
+    """JSON schema for one question (owner, 2026-10-15): every point of the question exactly
+    once, keyed by ``p<id>``, marks limited to 0..the point's marks. With ``line_count`` (line
+    evidence design) cited lines are limited to the answer's lines."""
+    if line_count is None:
+        evidence: dict[str, Any] = {"type": "string"}
+        evidence_key = "evidence"
+    else:
+        evidence = {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 1, "maximum": max(line_count, 1)},
+            "maxItems": MAX_EVIDENCE_LINES,
+        }
+        evidence_key = "evidence_lines"
+    keys = [point_key(p.id) for p in question.points]
+    return {
+        "type": "object",
+        "properties": {
+            "points": {
+                "type": "object",
+                "properties": {
+                    point_key(p.id): _point_schema(p.marks, evidence, evidence_key)
+                    for p in question.points
+                },
+                "required": keys,
+                "additionalProperties": False,
+            }
+        },
+        "required": ["points"],
+        "additionalProperties": False,
+    }
+
+
 def parse_marker_output(raw: str, question: QuestionSpec, answer: str) -> tuple[PointProposal, ...]:
     """Validate the marker's output for one question against its mark scheme and the answer."""
     try:
-        parsed = _MarkerOut.model_validate(_load_json(raw))
+        parsed = _MarkerOut.model_validate(_keyed_to_list(_load_json(raw)))
     except ValidationError as exc:
         raise ModelOutputInvalidError("marker_schema") from exc
 
@@ -174,35 +212,6 @@ def parse_marker_output(raw: str, question: QuestionSpec, answer: str) -> tuple[
 
 MAX_EVIDENCE_LINES = 6
 
-MARKER_LINES_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "points": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "point_id": {"type": "integer"},
-                    "awarded_marks": {"type": "integer", "minimum": 0},
-                    "evidence_lines": {"type": "array", "items": {"type": "integer"}},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                    "error_category": {"type": "string", "enum": [c.value for c in ErrorCategory]},
-                },
-                "required": [
-                    "point_id",
-                    "awarded_marks",
-                    "evidence_lines",
-                    "confidence",
-                    "error_category",
-                ],
-                "additionalProperties": False,
-            },
-        }
-    },
-    "required": ["points"],
-    "additionalProperties": False,
-}
-
 
 class _LinePointOut(_Closed):
     point_id: StrictInt
@@ -230,7 +239,7 @@ def parse_marker_lines_output(
     """Validate line-number evidence (D-047). Margin copies the cited lines itself, so the
     evidence is always the student's own words."""
     try:
-        parsed = _MarkerLinesOut.model_validate(_load_json(raw))
+        parsed = _MarkerLinesOut.model_validate(_keyed_to_list(_load_json(raw)))
     except ValidationError as exc:
         raise ModelOutputInvalidError("marker_schema") from exc
 

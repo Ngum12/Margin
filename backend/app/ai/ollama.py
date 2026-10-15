@@ -24,15 +24,15 @@ from app.ai.types import (
     Transcription,
 )
 from app.ai.validation import (
-    MARKER_LINES_SCHEMA,
-    MARKER_SCHEMA,
     READER_SCHEMA,
     ReaderOutput,
     answer_lines,
+    marker_schema_for,
     numbered_answer,
     parse_marker_lines_output,
     parse_marker_output,
     parse_reader_output,
+    point_key,
 )
 from app.clock import utcnow
 from app.subjects.registry import SubjectConfig
@@ -72,6 +72,21 @@ def call_with_retries[T](call: Callable[[], T], output_retries: int, what: str) 
             if invalid > output_retries:
                 raise
             logger.warning("%s output invalid (%s)", what, exc)
+
+
+def reply_example(question: QuestionSpec, evidence: Literal["quote", "lines"]) -> str:
+    """The JSON shape the marker must reply with, listing this question's point keys."""
+    field = (
+        '"evidence_lines": [<line numbers>]'
+        if evidence == "lines"
+        else '"evidence": "<exact quote or empty>"'
+    )
+    entries = ",\n  ".join(
+        f'"{point_key(p.id)}": {{"awarded_marks": <0 to {p.marks}>, {field}, '
+        '"confidence": <0 to 1>, "error_category": "<category>"}'
+        for p in question.points
+    )
+    return '{"points": {\n  ' + entries + "\n}}"
 
 
 def _jpeg_for_model(path: str, max_px: int, rotation: int = 0) -> bytes:
@@ -154,7 +169,7 @@ class OllamaMarker:
         self, question: QuestionSpec, answer: str, subject: str
     ) -> tuple[PointProposal, ...]:
         points = "\n".join(
-            f"- point_id {p.id} ({p.marks} mark{'s' if p.marks != 1 else ''}): {p.description}"
+            f"- {point_key(p.id)} ({p.marks} mark{'s' if p.marks != 1 else ''}): {p.description}"
             + (f" | also accept: {'; '.join(p.alternatives)}" if p.alternatives else "")
             for p in question.points
         )
@@ -166,8 +181,10 @@ class OllamaMarker:
             question=question.prompt_text or "(see mark scheme)",
             points=points,
             answer=numbered_answer(lines) if self._evidence == "lines" else answer,
+            reply=reply_example(question, self._evidence),
         )
-        schema = MARKER_LINES_SCHEMA if self._evidence == "lines" else MARKER_SCHEMA
+        # Per-question schema (owner, 2026-10-15): exactly this question's points, each once.
+        schema = marker_schema_for(question, len(lines) if self._evidence == "lines" else None)
 
         def call() -> tuple[PointProposal, ...]:
             raw = self._client.chat_json(self.model.name, prompt, schema)

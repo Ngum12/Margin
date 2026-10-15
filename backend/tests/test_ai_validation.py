@@ -6,8 +6,10 @@ import pytest
 from app.ai.prompts import load_prompt
 from app.ai.types import ModelOutputInvalidError, PointSpec, QuestionSpec
 from app.ai.validation import (
+    MAX_EVIDENCE_LINES,
     answer_lines,
     evidence_is_quoted,
+    marker_schema_for,
     numbered_answer,
     parse_marker_lines_output,
     parse_marker_output,
@@ -115,7 +117,7 @@ def test_prompt_version_changes_with_content() -> None:
     marker_prompt = load_prompt("marker")
 
     assert reader.version.startswith("reader-v2#")
-    assert marker_prompt.version.startswith("marker-v1#")
+    assert marker_prompt.version.startswith("marker-v2#")
     assert len(reader.version.split("#")[1]) == 8
     assert "{subject_hints}" not in reader.render(subject_hints="")
     assert '{"text"' in reader.render(subject_hints="")  # JSON example braces kept
@@ -214,3 +216,78 @@ def test_reader_output_carries_a_valid_orientation_judgement() -> None:
 def test_invalid_orientation_judgement_keeps_the_text_and_rotates_nothing(judgement: str) -> None:
     out = parse_reader_output('{"text": "kept", ' + judgement + "}")
     assert (out.text, out.orientation, out.orientation_confidence) == ("kept", None, None)
+
+
+# --- per-question output schemas (owner, 2026-10-15) -------------------------------------------
+
+
+def test_question_schema_requires_exactly_its_points_once() -> None:
+    schema = marker_schema_for(QUESTION)
+    points = schema["properties"]["points"]
+    assert points["type"] == "object"
+    assert points["required"] == [f"p{p.id}" for p in QUESTION.points]
+    assert set(points["properties"]) == set(points["required"])
+    assert points["additionalProperties"] is False
+    for point in QUESTION.points:
+        marks = points["properties"][f"p{point.id}"]["properties"]["awarded_marks"]
+        assert marks["enum"] == list(range(point.marks + 1))
+
+
+def test_line_schema_limits_cited_lines_to_the_answer() -> None:
+    schema = marker_schema_for(QUESTION, line_count=4)
+    point = next(iter(schema["properties"]["points"]["properties"].values()))
+    lines = point["properties"]["evidence_lines"]
+    assert (lines["items"]["minimum"], lines["items"]["maximum"]) == (1, 4)
+    assert lines["maxItems"] == MAX_EVIDENCE_LINES
+
+
+def _keyed(points: dict[str, dict[str, object]]) -> str:
+    return json.dumps({"points": points})
+
+
+def test_keyed_reply_is_validated_like_the_list_shape() -> None:
+    first, second = QUESTION.points[0], QUESTION.points[1]
+    raw = _keyed(
+        {
+            f"p{first.id}": {
+                "awarded_marks": first.marks,
+                "evidence": "conducts electricity",
+                "confidence": 0.9,
+                "error_category": "correct",
+            },
+            f"p{second.id}": {
+                "awarded_marks": 0,
+                "evidence": "",
+                "confidence": 0.8,
+                "error_category": "omitted",
+            },
+        }
+    )
+    proposals = parse_marker_output(raw, QUESTION, "Metals conducts electricity well")
+    assert [p.point_id for p in proposals] == [first.id, second.id]
+
+
+@pytest.mark.parametrize(
+    ("change", "error"),
+    [
+        ("missing", "marker_points_mismatch"),
+        ("unknown_key", "marker_schema"),
+        ("not_object", "marker_schema"),
+        ("invented", "marker_invented_evidence"),
+    ],
+)
+def test_keyed_reply_rejects_what_the_list_shape_rejects(change: str, error: str) -> None:
+    first, second = QUESTION.points[0], QUESTION.points[1]
+    good = {"awarded_marks": 0, "evidence": "", "confidence": 0.5, "error_category": "omitted"}
+    points: dict[str, object] = {f"p{first.id}": dict(good), f"p{second.id}": dict(good)}
+    if change == "missing":
+        del points[f"p{second.id}"]
+    elif change == "unknown_key":
+        points["point_x"] = dict(good)
+    elif change == "not_object":
+        points[f"p{second.id}"] = 3
+    else:
+        points[f"p{first.id}"] = good | {"awarded_marks": 1, "evidence": "never written"}
+    with pytest.raises(ModelOutputInvalidError) as raised:
+        parse_marker_output(json.dumps({"points": points}), QUESTION, "Metals are shiny")
+    assert str(raised.value) == error

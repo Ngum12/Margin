@@ -83,7 +83,7 @@ def test_cover_sheets_are_not_transcribed_and_outputs_carry_versions(
     for d in decisions:
         assert (d.model_name, d.model_version) == ("mock-marker", "mock-1")
         assert d.prompt_version is not None
-        assert d.prompt_version.startswith("marker-v1#")
+        assert d.prompt_version.startswith("marker-v2#")
         assert d.final_half_marks is None  # the AI never finalises a mark
     assert {(m.name, m.role.value) for m in db.scalars(select(ModelVersion))} == {
         ("mock-reader", "reader"),

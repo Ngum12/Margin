@@ -16,6 +16,9 @@ class JobType(StrEnum):
     MARK_SCRIPT = "mark_script"
     # A teacher asked for a fresh read of one page after correcting its orientation (Phase 4).
     TRANSCRIBE_PAGE = "transcribe_page"
+    # Phase 5: files built in the background.
+    EXPORT_PDFS = "export_pdfs"
+    EXPORT_DATASET = "export_dataset"
 
 
 class JobStatus(StrEnum):

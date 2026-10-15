@@ -25,7 +25,7 @@ from app.ai.types import (
     QuestionSpec,
     Transcription,
 )
-from app.ai.validation import MARKER_LINES_SCHEMA, MARKER_SCHEMA, READER_SCHEMA
+from app.ai.validation import READER_SCHEMA, marker_schema_for
 from app.clock import utcnow
 from app.subjects.registry import SubjectConfig, get_registry
 from tests.fake_ollama import CUT_OFF, FakeOllama
@@ -178,9 +178,12 @@ def test_marker_marks_each_question_separately_with_schema(fake: FakeOllama) -> 
 
     assert [q.question_id for q in proposal.questions] == [1, 2]
     assert proposal.failed_question_ids == ()
-    assert fake.requests[0]["format"] == MARKER_SCHEMA
+    # A schema per question: exactly that question's points (owner, 2026-10-15).
+    assert fake.requests[0]["format"] == marker_schema_for(QUESTIONS[0])
+    assert fake.requests[1]["format"] == marker_schema_for(QUESTIONS[1])
     prompt = fake.requests[0]["messages"][0]["content"]
-    assert "point_id 10" in prompt
+    assert "- p10 (1 mark): Conducts electricity" in prompt
+    assert '"p10": {"awarded_marks": <0 to 1>' in prompt  # reply shape lists the keys
     assert "Question 1(a)" in prompt
     assert "images" not in fake.requests[0]["messages"][0]
 
@@ -314,8 +317,8 @@ def test_line_evidence_marker_numbers_the_answer_and_copies_lines(fake: FakeOlla
 
     prompt = fake.requests[0]["messages"][0]["content"]
     assert "L1: 1(a) it conducts electricity" in prompt
-    assert fake.requests[0]["format"] == MARKER_LINES_SCHEMA
-    assert proposal.prompt_version.startswith("marker-lines-v1#")
+    assert fake.requests[0]["format"] == marker_schema_for(QUESTIONS[0], line_count=2)
+    assert proposal.prompt_version.startswith("marker-lines-v2#")
     assert proposal.questions[0].points[0].evidence == "1(a) it conducts electricity"
     assert proposal.questions[1].points[0].evidence == "1(b) hydrogen"
 

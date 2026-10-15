@@ -22,7 +22,8 @@
     "exams": "Examens",
     "classes": "Classes",
     "users": "Comptes du personnel",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "trainingData": "Modèles et données d'entraînement"
   },
   "signIn": {
     "title": "Connexion",
@@ -235,7 +236,11 @@
       "too_long": "Les commentaires font au plus 300 caractères."
     },
     "export": {
-      "not_confirmed": "Seules les copies confirmées peuvent être exportées."
+      "not_confirmed": "Seules les copies confirmées peuvent être exportées.",
+      "nothing_confirmed": "Il n'y a pas encore de copies confirmées à exporter.",
+      "nothing_consented": "Aucun des examens choisis n'a de copie confirmée d'un élève ayant donné son consentement.",
+      "not_ready": "Le fichier n'est pas encore prêt.",
+      "failed": "Le fichier n'a pas pu être préparé. Réessayez."
     }
   },
   "issues": {
@@ -292,7 +297,8 @@
     "setup": "Questions et barème",
     "sheets": "Fiches de couverture",
     "scans": "Copies scannées",
-    "queue": "Correction"
+    "queue": "Correction",
+    "results": "Résultats"
   },
   "sheets": {
     "needReady": "Marquez l'examen comme prêt (après avoir complété le barème) avant d'imprimer les fiches de couverture ou de téléverser les copies.",
@@ -513,5 +519,61 @@
       "confirm": "Confirmer la copie",
       "help": "Afficher ou masquer cette liste"
     }
+  },
+  "results": {
+    "title": "Résultats de la classe",
+    "confirmedCount": "Confirmées : {{confirmed}} copies sur {{count}}",
+    "notIncluded_one": "{{count}} copie n'est pas encore confirmée : elle est affichée sans notes et n'est incluse dans aucun export.",
+    "notIncluded_other": "{{count}} copies ne sont pas encore confirmées : elles sont affichées sans notes et ne sont incluses dans aucun export.",
+    "empty": "Aucune copie pour l'instant.",
+    "total": "Total",
+    "average": "Moyenne de la classe (confirmées)",
+    "markedPdf": "PDF corrigé",
+    "markedPdfFor": "PDF corrigé de {{code}}",
+    "exportsTitle": "Exports",
+    "exportsHelp": "Seules les copies confirmées sont exportées. Les PDF corrigés montrent uniquement les codes des élèves, jamais les noms.",
+    "nothingToExport": "Confirmez au moins une copie pour exporter les résultats.",
+    "downloadCsv": "Télécharger les résultats (CSV)",
+    "classPdf": "Préparer les PDF corrigés de la classe (un fichier à imprimer)"
+  },
+  "exports": {
+    "download": "Télécharger {{name}}",
+    "preparing": "Préparation du fichier…"
+  },
+  "trainingData": {
+    "title": "Modèles et données d'entraînement",
+    "modelTitle": "Modèles d'IA",
+    "backend": "Moteur d'IA",
+    "modelHost": "Serveur de modèles",
+    "readerModel": "Modèle de lecture",
+    "markerModel": "Modèle de correction",
+    "installed": "installé",
+    "missing": "non installé",
+    "evidence": {
+      "quote": "preuves citées",
+      "lines": "preuves par numéros de ligne"
+    },
+    "timeout": "Délai par appel au modèle",
+    "seconds_one": "{{count}} seconde",
+    "seconds_other": "{{count}} secondes",
+    "orientation": "Vérification automatique de l'orientation des pages",
+    "orientationCheck": {
+      "reader": "activée",
+      "off": "désactivée"
+    },
+    "status": "État",
+    "workerOnline": "Tâches en arrière-plan actives",
+    "serverReachable": "serveur de modèles joignable",
+    "configHelp": "Les modèles se changent dans le fichier de configuration de l'installation, pas ici.",
+    "exportTitle": "Export des données d'entraînement",
+    "exportHelp": "Exporte les copies confirmées des élèves dont le consentement est enregistré : images des pages, transcriptions finales, et notes de l'enseignant à côté des propositions de l'IA. Les élèves apparaissent uniquement par leur code.",
+    "noConfirmed": "Aucun examen n'a encore de copies confirmées.",
+    "include": "Inclure",
+    "includeExam": "Inclure {{title}}",
+    "confirmed": "Copies confirmées",
+    "consented": "Avec consentement",
+    "export_one": "Exporter {{count}} copie",
+    "export_other": "Exporter {{count}} copies",
+    "privacy": "Chaque export est enregistré dans le journal d'audit. Vérifiez les fichiers avant de les partager hors de l'établissement : un élève a pu écrire son nom sur une page de réponse."
   }
 }

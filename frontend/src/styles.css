@@ -917,3 +917,22 @@ kbd {
   margin-right: var(--space-1);
   background: var(--color-bg);
 }
+
+/* Results (screen 8) and admin model facts */
+.results-table tfoot th,
+.results-table tfoot td {
+  border-top: 2px solid var(--color-border);
+  font-weight: 600;
+}
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-2);
+}
+.facts dt {
+  color: var(--color-muted);
+}
+.facts dd {
+  margin: 0;
+}

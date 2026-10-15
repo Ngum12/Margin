@@ -4,13 +4,16 @@ import type {
   CoverSheetRow,
   ExamDetail,
   ExamStatus,
+  ExportJob,
   ExamSummary,
   ErrorCategory,
   ImportPreview,
   Language,
   MarkSchemeInput,
   Me,
+  ModelConfig,
   Queue,
+  Results,
   Rotation,
   Role,
   SchoolClass,
@@ -19,6 +22,8 @@ import type {
   ScriptsOverview,
   Student,
   Subject,
+  SystemStatus,
+  TrainingExport,
   Upload,
   User,
 } from "./types";
@@ -143,6 +148,20 @@ export const api = {
     request<ScriptReview>("POST", `/api/pages/${String(pageId)}/undo-auto-rotation`),
   retranscribePage: (pageId: number) =>
     request<ScriptReview>("POST", `/api/pages/${String(pageId)}/retranscribe`),
+
+  // Results and exports (Phase 5). Downloads are plain links: same origin, session cookie.
+  results: (examId: number) => request<Results>("GET", `/api/exams/${String(examId)}/results`),
+  resultsCsvUrl: (examId: number) => `/api/exams/${String(examId)}/results.csv`,
+  markedPdfUrl: (scriptId: number) => `/api/scripts/${String(scriptId)}/marked.pdf`,
+  requestClassPdf: (examId: number) =>
+    request<ExportJob>("POST", `/api/exams/${String(examId)}/exports/class-pdf`),
+  exportStatus: (exportId: number) => request<ExportJob>("GET", `/api/exports/${String(exportId)}`),
+  exportFileUrl: (exportId: number) => `/api/exports/${String(exportId)}/file`,
+  trainingExport: () => request<TrainingExport>("GET", "/api/admin/training-export"),
+  requestTrainingExport: (examIds: number[] | null) =>
+    request<ExportJob>("POST", "/api/admin/training-export", { json: { exam_ids: examIds } }),
+  modelConfig: () => request<ModelConfig>("GET", "/api/admin/model-config"),
+  systemStatus: () => request<SystemStatus>("GET", "/api/system/status"),
 
   classes: () => request<SchoolClass[]>("GET", "/api/classes"),
   createClass: (data: { name: string; academic_year: string; teacher_id: number }) =>

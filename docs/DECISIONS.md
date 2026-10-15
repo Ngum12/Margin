@@ -274,3 +274,29 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Decision (owner):** a model reply that does not finish within `MARGIN_MODEL_TIMEOUT_SECONDS` counts as invalid output for that page or question: retried once (whatever `MARGIN_MODEL_OUTPUT_RETRIES` says), then the script is flagged for manual marking. Reader time-outs have their own reason, `ai.reader_timeout`; a marking question that times out is a failed question, like any other invalid output. Only a server that cannot be reached (connection refused, or no connection within the time limit) is "model unavailable" and the job is retried later.
 - **Default lowered from 900 to 300 seconds:** normal calls measured on the development laptop take 35-140 s to read a page and 40-60 s to mark a question; real handwriting will give longer transcriptions, and the first call also loads the model. 300 s is about twice the slowest normal call. Configurable.
 - **Reason:** in the orientation evaluation an upside-down page made the model ramble until the 15-minute limit. As "model unavailable", the job would have been retried again and again, wasting an hour or more of a night run on one page.
+
+### D-054 · 2026-10-15 · Per-question output schemas for marking
+- **Decision (owner order):** each marking call sends a JSON schema built for that question. `points` is an object with one required property per mark scheme point, keyed `p<point id>`, and no other properties. `awarded_marks` is limited to 0 up to that point's marks. In the line design, cited lines are limited to the answer's real line numbers, at most 6. Both designs: prompts `marker-v2` and `marker-lines-v2` list the point keys and show the exact reply shape.
+- **Validation unchanged:** the parsers turn the keyed reply into the earlier list shape and apply every existing rule: points mismatch, marks range, verbatim evidence or valid lines. The list shape is still accepted when parsing, for the Mock and older tests; the model is only ever asked for the keyed shape.
+- **Reason:** most line-design failures in the model comparison were `marker_points_mismatch` (a point left out or repeated). A keyed, required-properties schema makes that output impossible at generation time. The evaluation is re-run with both designs before any default changes.
+
+### D-055 · 2026-10-15 · Results and exports (Phase 5)
+- **Results:** a question's mark is the sum of its points' final marks, capped at the question maximum; a total is the sum of question marks; averages are over confirmed scripts. Unconfirmed scripts are listed without marks.
+- **CSV:**
+  - **Rows:** confirmed scripts only, with the student name when recorded (owner default 1). Unconfirmed scripts are left out entirely and the screen says how many (default 2).
+  - **Format:** UTF-8 with a byte-order mark; headings in the teacher's language.
+  - **Safety:** cells starting with `=`, `+`, `-` or `@` are prefixed with `'` so they never run as formulas.
+- **Marked PDFs (default 3):**
+  - **Pages:** stored images turned upright by their effective rotation; the stored files are never changed.
+  - **Marks:** the cover sheet carries a results box (total, marks per question, comments). Each answer page has a margin column with the marks of the questions whose evidence is on that page.
+  - **Identity:** codes only, never names.
+  - **Text:** built-in PDF fonts (Windows-1252); characters they cannot print, such as emoji, are left out. No font files are added.
+  - **Generation:** a single student's PDF is built on request; the class file is built by the worker (`export_pdfs` job).
+- **Training dataset:**
+  - **Contents:** admin only; confirmed scripts of consenting students; a zip with upright images, `dataset.jsonl` and a README that describes every field (a test checks this).
+  - **Privacy:** no names and no teacher comments, since comments are free text that could mention a name. The README warns that students may write names on answer pages.
+  - **Generation and audit:** built by the worker (`export_dataset` job), audited with counts.
+- **Exports table:** every export is recorded, with its status and file, and audited. A failed build is marked failed and shown to the teacher, not retried.
+- **Exam completion:** an exam becomes `completed` when every script is confirmed, and returns to `reviewing` when one is reopened. Both changes are audited like other exam status changes.
+- **Admin screen:** read-only model configuration and status (brief screen 9); models are changed in the configuration file.
+- **Browser tests:** the e2e server now runs the real worker in a thread, so background exports are tested end to end.

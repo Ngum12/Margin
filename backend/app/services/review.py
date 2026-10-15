@@ -21,6 +21,7 @@ from app.config import Settings
 from app.db.models import (
     ErrorCategory,
     Exam,
+    ExamStatus,
     Job,
     JobStatus,
     JobType,
@@ -103,13 +104,13 @@ def _touch(script: Script) -> None:
         script.status = ScriptStatus.IN_REVIEW
 
 
-def _questions(db: Session, exam_id: int) -> list[Question]:
+def exam_questions(db: Session, exam_id: int) -> list[Question]:
     return list(
         db.scalars(select(Question).where(Question.exam_id == exam_id).order_by(Question.position))
     )
 
 
-def _current_decisions(
+def current_decisions(
     db: Session, script_ids: Iterable[int]
 ) -> dict[tuple[int, int], MarkDecision]:
     """(script id, point id) -> the decision row the teacher works on: the newest row per point.
@@ -136,7 +137,7 @@ def _point_of_exam(db: Session, exam_id: int, point_id: int) -> MarkSchemePoint:
 
 
 def _decision_for(db: Session, script: Script, point: MarkSchemePoint) -> MarkDecision:
-    decision = _current_decisions(db, [script.id]).get((script.id, point.id))
+    decision = current_decisions(db, [script.id]).get((script.id, point.id))
     if decision is None:
         # Manual marking (or a question the AI failed): a row with no AI proposal.
         decision = MarkDecision(
@@ -244,7 +245,7 @@ def _accept(db: Session, actor: User, decision: MarkDecision, action: str) -> bo
 def accept_point(db: Session, actor: User, script_id: int, point_id: int) -> None:
     script = _editable_script(db, actor, script_id)
     point = _point_of_exam(db, script.exam_id, point_id)
-    decision = _current_decisions(db, [script.id]).get((script.id, point.id))
+    decision = current_decisions(db, [script.id]).get((script.id, point.id))
     if decision is None or decision.proposed_half_marks is None:
         raise ConflictError("There is no AI proposal for this point", code="decision.no_proposal")
     if _accept(db, actor, decision, "accept"):
@@ -255,7 +256,7 @@ def accept_all(db: Session, actor: User, script_id: int) -> int:
     """Accept every AI proposal the teacher has not decided yet; teacher decisions are kept."""
     script = _editable_script(db, actor, script_id)
     accepted = 0
-    for decision in _current_decisions(db, [script.id]).values():
+    for decision in current_decisions(db, [script.id]).values():
         if decision.final_half_marks is None and decision.final_category is None:
             accepted += _accept(db, actor, decision, "accept_all")
     if accepted:
@@ -457,9 +458,9 @@ def request_retranscription(db: Session, actor: User, page_id: int, settings: Se
 
 
 def undecided_points(db: Session, script: Script) -> list[int]:
-    decisions = _current_decisions(db, [script.id])
+    decisions = current_decisions(db, [script.id])
     missing = []
-    for question in _questions(db, script.exam_id):
+    for question in exam_questions(db, script.exam_id):
         for point in question.points:
             d = decisions.get((script.id, point.id))
             if d is None or d.final_half_marks is None or d.final_category is None:
@@ -494,6 +495,7 @@ def confirm(db: Session, actor: User, script_id: int) -> None:
         old_value={"status": old_status.value},
         new_value={"status": script.status.value, "confirmed_at": now.isoformat()},
     )
+    _update_exam_completion(db, actor, script.exam_id)
 
 
 def reopen(db: Session, actor: User, script_id: int) -> None:
@@ -516,6 +518,31 @@ def reopen(db: Session, actor: User, script_id: int) -> None:
         action="reopen",
         old_value=old,
         new_value={"status": script.status.value},
+    )
+    _update_exam_completion(db, actor, script.exam_id)
+
+
+def _update_exam_completion(db: Session, actor: User, exam_id: int) -> None:
+    """Phase 5: an exam is completed once every script is confirmed, and goes back to
+    reviewing when one is reopened."""
+    exam = db.get(Exam, exam_id)
+    if exam is None or exam.status not in (ExamStatus.REVIEWING, ExamStatus.COMPLETED):
+        return
+    db.flush()
+    statuses = set(db.scalars(select(Script.status).where(Script.exam_id == exam_id)))
+    target = ExamStatus.COMPLETED if statuses == {ScriptStatus.CONFIRMED} else ExamStatus.REVIEWING
+    if exam.status == target:
+        return
+    old = exam.status
+    exam.status = target
+    audit.record(
+        db,
+        actor=actor,
+        entity_type="exam",
+        entity_id=exam.id,
+        action="set_status",
+        old_value=old.value,
+        new_value=target.value,
     )
 
 
@@ -608,7 +635,7 @@ class _Summary:
 def _summaries(
     db: Session, scripts: list[Script], questions: list[Question]
 ) -> dict[int, _Summary]:
-    decisions = _current_decisions(db, [s.id for s in scripts])
+    decisions = current_decisions(db, [s.id for s in scripts])
     out: dict[int, _Summary] = {}
     for script in scripts:
         summary = _Summary()
@@ -647,7 +674,7 @@ def _marks(half: int | None) -> Marks | None:
 
 def _queue_items(db: Session, exam: Exam) -> tuple[list[QueueItemOut], int | None]:
     scripts = list(db.scalars(select(Script).where(Script.exam_id == exam.id)))
-    questions = _questions(db, exam.id)
+    questions = exam_questions(db, exam.id)
     max_half = sum(q.max_half_marks for q in questions)
     total_points = sum(len(q.points) for q in questions)
     page_counts = dict(
@@ -782,8 +809,8 @@ def script_review(db: Session, actor: User, script_id: int) -> ScriptReviewOut:
     exam = db.get(Exam, script.exam_id)
     if exam is None:  # pragma: no cover
         raise NotFoundError("Exam")
-    questions = _questions(db, exam.id)
-    decisions = _current_decisions(db, [script.id])
+    questions = exam_questions(db, exam.id)
+    decisions = current_decisions(db, [script.id])
     comments = {
         c.question_id: c.text
         for c in db.scalars(select(QuestionComment).where(QuestionComment.script_id == script.id))

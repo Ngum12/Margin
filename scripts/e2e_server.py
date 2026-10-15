@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import sys
 import tempfile
+import threading
 import warnings
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from app.config import Settings  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.models import MarkDecision, Page, Role, Script, Student  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.worker.runner import Worker  # noqa: E402
 from tests.factories import ApiUser, Factory, make_ready_exam, run_jobs, upload_pdf  # noqa: E402
 from tests.scan_builder import ScanBuilder, answer_page, render_pdf_pages  # noqa: E402
 
@@ -101,7 +103,11 @@ def main() -> int:
         sys.exit("error: frontend/dist is missing; run `npm run build` in frontend/ first")
     seed(settings)
     print(f"e2e: seeded {data_dir}; serving on http://127.0.0.1:{args.port}", flush=True)
-    uvicorn.run(create_app(settings), host="127.0.0.1", port=args.port, log_level="warning")
+    app = create_app(settings)
+    # The real worker, in a thread, so background exports run as in production.
+    worker = Worker(app.state.sessionmaker, settings)
+    threading.Thread(target=worker.run_forever, name="e2e-worker", daemon=True).start()
+    uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
     return 0
 
 

@@ -75,19 +75,19 @@ def test_full_pipeline_only_contacts_the_model_host(
             import json
             import re
 
-            ids = [int(i) for i in re.findall(r"point_id (\d+)", body["messages"][0]["content"])]
+            # The prompt lists points as "- p<id> (...)"; reply in the per-question keyed shape.
+            ids = re.findall(r"^- p(\d+) \(", body["messages"][0]["content"], re.MULTILINE)
             return json.dumps(
                 {
-                    "points": [
-                        {
-                            "point_id": i,
+                    "points": {
+                        f"p{i}": {
                             "awarded_marks": 0,
                             "evidence": "",
                             "confidence": 0.5,
                             "error_category": "omitted",
                         }
                         for i in ids
-                    ]
+                    }
                 }
             )
 

@@ -6,12 +6,14 @@ import { RequireAuth } from "./auth/RequireAuth";
 import { Layout } from "./components/Layout";
 import Classes from "./routes/admin/Classes";
 import ClassStudents from "./routes/admin/ClassStudents";
+import TrainingData from "./routes/admin/TrainingData";
 import Users from "./routes/admin/Users";
 import CoverSheets from "./routes/CoverSheets";
 import ExamSetup from "./routes/ExamSetup";
 import Home from "./routes/Home";
 import NewExam from "./routes/NewExam";
 import Queue from "./routes/Queue";
+import Results from "./routes/Results";
 import Review from "./routes/Review";
 import Scans from "./routes/Scans";
 import SignIn from "./routes/SignIn";
@@ -81,6 +83,22 @@ export default function App() {
           element={
             <RequireAuth>
               <Review />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/exams/:examId/results"
+          element={
+            <RequireAuth>
+              <Results />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/training-data"
+          element={
+            <RequireAuth admin>
+              <TrainingData />
             </RequireAuth>
           }
         />

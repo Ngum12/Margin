@@ -24,6 +24,7 @@ from app.ai.validation import (
     parse_marker_lines_output,
     parse_marker_output,
     parse_reader_output,
+    point_key,
 )
 from app.clock import utcnow
 from app.db.models import ErrorCategory
@@ -118,8 +119,13 @@ class MockMarker:
                     item["evidence_lines"] = [
                         i for i, line in enumerate(lines, start=1) if quote and quote in line
                     ][:1]
-                parsed = parse_marker_lines_output(json.dumps({"points": points}), question, lines)
+            # Same keyed shape as a real reply under the per-question schema.
+            reply = json.dumps(
+                {"points": {point_key(int(str(i.pop("point_id")))): i for i in points}}
+            )
+            if self._evidence == "lines":
+                parsed = parse_marker_lines_output(reply, question, lines)
             else:
-                parsed = parse_marker_output(json.dumps({"points": points}), question, answer)
+                parsed = parse_marker_output(reply, question, answer)
             questions.append(QuestionProposal(question.id, parsed))
         return MarkingProposal(tuple(questions), self.model, self.prompt_version, utcnow())

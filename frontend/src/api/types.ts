@@ -344,3 +344,66 @@ export interface ScriptReview {
   };
   marked_on_earlier_text: boolean;
 }
+
+// --- results and exports (Phase 5) --------------------------------------------------------
+
+export type ExportKind = "csv" | "student_pdf" | "class_pdf" | "dataset";
+export type ExportStatus = "pending" | "done" | "failed";
+
+export interface ExportJob {
+  id: number;
+  kind: ExportKind;
+  status: ExportStatus;
+  filename: string | null;
+  size_bytes: number | null;
+  error_code: string | null;
+  created_at: string;
+  finished_at: string | null;
+}
+
+export interface Results {
+  exam_id: number;
+  exam_title: string;
+  exam_status: ExamStatus;
+  questions: { id: number; label: string; max_marks: number; average: number | null }[];
+  rows: {
+    script_id: number;
+    student_code: string;
+    student_name: string | null;
+    status: ScriptStatus;
+    confirmed: boolean;
+    marks: (number | null)[];
+    total: number | null;
+    percentage: number | null;
+  }[];
+  max_total: number;
+  average_total: number | null;
+  confirmed_count: number;
+  script_count: number;
+  timed_count: number;
+  average_review_seconds: number | null;
+  average_active_seconds: number | null;
+  class_pdfs: ExportJob[];
+}
+
+export interface TrainingExport {
+  exams: {
+    exam_id: number;
+    title: string;
+    subject_code: string;
+    confirmed: number;
+    consented: number;
+  }[];
+  exports: ExportJob[];
+}
+
+export interface ModelConfig {
+  ai_backend: string;
+  model_host: string;
+  reader_model: string;
+  marker_model: string;
+  marker_evidence: string;
+  model_timeout_seconds: number;
+  model_output_retries: number;
+  orientation_check: string;
+}

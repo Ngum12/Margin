@@ -22,7 +22,8 @@
     "exams": "Exams",
     "classes": "Classes",
     "users": "Staff accounts",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "trainingData": "Models and training data"
   },
   "signIn": {
     "title": "Sign in",
@@ -235,7 +236,11 @@
       "too_long": "Comments can be at most 300 characters."
     },
     "export": {
-      "not_confirmed": "Only confirmed scripts can be exported."
+      "not_confirmed": "Only confirmed scripts can be exported.",
+      "nothing_confirmed": "There are no confirmed scripts to export yet.",
+      "nothing_consented": "None of the chosen exams has a confirmed script of a student with training consent.",
+      "not_ready": "The file is not ready yet.",
+      "failed": "The file could not be prepared. Try again."
     }
   },
   "issues": {
@@ -292,7 +297,8 @@
     "setup": "Questions and mark scheme",
     "sheets": "Cover sheets",
     "scans": "Scans",
-    "queue": "Marking"
+    "queue": "Marking",
+    "results": "Results"
   },
   "sheets": {
     "needReady": "Mark the exam as ready (after completing the mark scheme) before printing cover sheets or uploading scans.",
@@ -513,5 +519,61 @@
       "confirm": "Confirm the script",
       "help": "Show or hide this list"
     }
+  },
+  "results": {
+    "title": "Class results",
+    "confirmedCount": "Confirmed: {{confirmed}} of {{count}} scripts",
+    "notIncluded_one": "{{count}} script is not confirmed yet: it is shown without marks and is not included in any export.",
+    "notIncluded_other": "{{count}} scripts are not confirmed yet: they are shown without marks and are not included in any export.",
+    "empty": "No scripts yet.",
+    "total": "Total",
+    "average": "Class average (confirmed)",
+    "markedPdf": "Marked PDF",
+    "markedPdfFor": "Marked PDF for {{code}}",
+    "exportsTitle": "Exports",
+    "exportsHelp": "Only confirmed scripts are exported. Marked PDFs show student codes only, never names.",
+    "nothingToExport": "Confirm at least one script to export results.",
+    "downloadCsv": "Download results (CSV)",
+    "classPdf": "Prepare marked PDFs for the class (one file for printing)"
+  },
+  "exports": {
+    "download": "Download {{name}}",
+    "preparing": "Preparing the file…"
+  },
+  "trainingData": {
+    "title": "Models and training data",
+    "modelTitle": "AI models",
+    "backend": "AI backend",
+    "modelHost": "Model server",
+    "readerModel": "Reading model",
+    "markerModel": "Marking model",
+    "installed": "installed",
+    "missing": "not installed",
+    "evidence": {
+      "quote": "evidence as quotes",
+      "lines": "evidence as line numbers"
+    },
+    "timeout": "Time limit per model call",
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "orientation": "Automatic page orientation check",
+    "orientationCheck": {
+      "reader": "on",
+      "off": "off"
+    },
+    "status": "Status",
+    "workerOnline": "Background worker running",
+    "serverReachable": "model server reachable",
+    "configHelp": "Models are changed in the installation's configuration file, not here.",
+    "exportTitle": "Training-data export",
+    "exportHelp": "Exports confirmed scripts of students whose training consent is recorded: page images, the final transcriptions, and the teacher's marks next to the AI's proposals. Students appear by code only.",
+    "noConfirmed": "No exam has confirmed scripts yet.",
+    "include": "Include",
+    "includeExam": "Include {{title}}",
+    "confirmed": "Confirmed scripts",
+    "consented": "With consent",
+    "export_one": "Export {{count}} script",
+    "export_other": "Export {{count}} scripts",
+    "privacy": "Every export is recorded in the audit log. Check the files before sharing them outside the school: a student may have written a name on an answer page."
   }
 }

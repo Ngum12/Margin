@@ -508,7 +508,7 @@ All of the above pass in `python scripts/check.py` (output read before committin
 
 ## Phase 5: Results and exports
 
-Status: planned 2026-10-15. Phase 4 approved the same day. Order of work agreed for the demo on 26 October: Phase 5 now; per-question output schemas alongside it, with the evaluation re-run overnight; then Phase 6; whole-script marking only if time allows.
+Status: built 2026-10-15, waiting for owner approval (D-054, D-055). Planned 2026-10-15; Phase 4 approved the same day. Order of work agreed for the demo on 26 October: Phase 5 now; per-question output schemas alongside it, with the evaluation re-run overnight; then Phase 6; whole-script marking only if time allows.
 
 ### Dependencies
 **None new.** Marked PDFs use ReportLab, approved in Phase 2 for "cover sheets; later marked PDFs". Images use Pillow; CSV, JSON lines and zip files use the Python standard library; tests read the PDFs back with pypdfium2 (already installed).

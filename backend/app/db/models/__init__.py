@@ -18,6 +18,7 @@ from app.db.models.ai import (
 from app.db.models.audit import AuditEvent
 from app.db.models.classes import SchoolClass, Student
 from app.db.models.exams import Exam, ExamStatus, MarkSchemePoint, Question
+from app.db.models.exports import Export, ExportKind, ExportStatus
 from app.db.models.scans import (
     CoverSheet,
     Page,
@@ -35,6 +36,9 @@ __all__ = [
     "ErrorCategory",
     "Exam",
     "ExamStatus",
+    "Export",
+    "ExportKind",
+    "ExportStatus",
     "Job",
     "JobStatus",
     "JobType",
