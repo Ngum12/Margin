@@ -80,7 +80,12 @@ class _Column:
 
     def line(self, text: str, *, size: float = 10, bold: bool = False, gap: float = 1.4) -> None:
         font = BOLD if bold else FONT
-        for part in simpleSplit(fonts.printable(text), font, size, COLUMN - 2 * mm) or [""]:
+        parts = [
+            wrapped
+            for paragraph in fonts.printable(text).split("\n")  # keep the writer's line breaks
+            for wrapped in (simpleSplit(paragraph, font, size, COLUMN - 2 * mm) or [""])
+        ]
+        for part in parts:
             if self.y < MARGIN + size:
                 return  # column full: the results box on the cover is the complete record
             fonts.draw(self.canvas, self.x + 1 * mm, self.y, part, font, size)

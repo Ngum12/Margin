@@ -53,7 +53,8 @@ class Settings(BaseSettings):
     # How the Marker cites evidence (D-047): "quote" = the model copies the student's words and
     # Margin checks they are verbatim; "lines" = the model gives line numbers and Margin copies
     # those lines itself, so evidence can never be paraphrased.
-    marker_evidence: Literal["quote", "lines"] = "quote"
+    # Owner, 2026-10-15 (D-059): line numbers by default; "quote" stays available.
+    marker_evidence: Literal["quote", "lines"] = "lines"
     # Hard cap on tokens per model reply: a model that rambles (or reasons at length) is cut off
     # and its reply treated as invalid, instead of occupying the machine for many minutes.
     model_max_output_tokens: int = Field(default=2048, ge=64)

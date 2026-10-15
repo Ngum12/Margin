@@ -339,3 +339,21 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
   - **Timings:** each call's duration goes into `model_call` (role, model, seconds; no content).
   - **Marker hook:** the Marker interface gains an optional `on_question` callback.
 - **Polling:** the queue polls `GET /api/exams/{id}/ai-progress` every 3 s while work runs and every 10 s otherwise. Starting a run from the screen makes it look at once, so a quick run is never missed.
+
+### D-059 · 2026-10-15 · Line-number evidence by default; the owner's marking findings
+- **Decision (owner):** `MARGIN_MARKER_EVIDENCE` defaults to `lines`; `quote` stays available as a setting.
+- **Evidence** (`docs/evaluation/2026-10-15-per-question-schemas.md`, 57 questions, `qwen3-vl:4b-instruct`, per-question schemas), on the real pipeline (marking the model's own transcription):
+
+  | Design | Exact | Within 1 mark | MAD | Failed questions | Seconds per script |
+  |---|---|---|---|---|---|
+  | lines | 81 % | 95 % | 0.25 | 0 | 212 |
+  | quotes | 81 % | 89 % | 0.25 | 2 | 338 |
+
+  On the true transcription, quotes 86 % exact and lines 79 %. Both designs lean towards under-marking; economics is the weakest subject.
+- **Prompt changes from the owner's manual review** (`marker-v3`, `marker-lines-v3`):
+  - **(a) Method marks:** a method point needs the mark scheme's method, used the right way round. The same numbers in an inverted method ("moles = 40 / 4.0") earn nothing.
+  - **(b) Categories:** "omitted" means nothing relevant was written. A written but wrong answer is a "conceptual error".
+  - **(c) Display:** the student's line breaks are kept in the evidence shown on screen and in comments on marked PDFs.
+- **Evaluation of (a) and (b):** one short overnight check under the owner's evaluation rule: line design only, marking only, cached transcriptions.
+- **Accept all (owner's review):** a point where the teacher had chosen a category but no mark was skipped, so "accept all" seemed to do nothing. It now fills the AI's mark on every point without a mark and keeps the teacher's category. Tested with the owner's sequence.
+- **Upgrades on SQLite with data (restart of the owner's installation):** migration 0007 rebuilds the `exam` table, which SQLite refused while scripts referred to it. The migration runner now switches foreign keys off during upgrades and checks every reference afterwards (`PRAGMA foreign_key_check`); the upgrade fails if any is broken. The new test upgrades a database containing data through the app's own engine; it fails on the old runner and passes now. The owner's database was backed up, the two empty leftover tables were removed, and it was upgraded with everything intact.

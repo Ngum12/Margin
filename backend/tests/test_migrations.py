@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
@@ -9,9 +10,11 @@ from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import models  # noqa: F401  (registers tables)
 from app.db.base import Base
 from app.db.models import Page
+from app.db.session import make_engine
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
@@ -94,3 +97,63 @@ def test_legacy_cover_rotation_is_never_applied_twice(tmp_path: Path) -> None:
         restored = connection.exec_driver_sql("SELECT rotation_applied FROM page ORDER BY id")
         assert [row[0] for row in restored] == [180, 0]
     engine.dispose()
+
+
+def test_upgrade_works_on_a_database_with_data_and_foreign_keys_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Owner's installation, 2026-10-15: migration 0007 rebuilds the exam table, which SQLite
+    refused while scripts referred to it. Upgrades now run with foreign keys off and check
+    every reference afterwards. Runs through the app's own engine (foreign keys on)."""
+    monkeypatch.setenv("MARGIN_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MARGIN_ENV", "test")
+    get_settings.cache_clear()
+    try:
+        config = _alembic_config()
+        command.upgrade(config, "0006")
+        engine = make_engine(get_settings())
+        with engine.begin() as connection:
+            assert connection.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1
+            connection.exec_driver_sql(
+                "INSERT INTO school (id, name, country, curriculum, created_at, updated_at)"
+                " VALUES (1, 'S', 'Cameroon', 'cm_gce_ol', '2026-10-01', '2026-10-01')"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO user (id, school_id, username, display_name, password_hash, role,"
+                " preferred_language, is_active, created_at, updated_at) VALUES"
+                " (1, 1, 'alice', 'Alice', 'x', 'teacher', 'en', 1, '2026-10-01', '2026-10-01')"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO school_class (id, school_id, name, academic_year, teacher_id,"
+                " created_at, updated_at)"
+                " VALUES (1, 1, '5A', '2026', 1, '2026-10-01', '2026-10-01')"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO student (id, school_id, class_id, code, training_consent,"
+                " created_at, updated_at) VALUES (1, 1, 1, 'AAAAAA', 0, '2026-10-01', '2026-10-01')"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO exam (id, class_id, subject_code, title, status, created_by_id,"
+                " created_at, updated_at) VALUES"
+                " (1, 1, 'chemistry', 'T', 'reviewing', 1, '2026-10-01', '2026-10-01')"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO script (id, exam_id, student_id, status, ai_run, created_at,"
+                " updated_at) VALUES (1, 1, 1, 'ai_marked', 0, '2026-10-01', '2026-10-01')"
+            )
+        engine.dispose()
+
+        command.upgrade(config, "head")
+
+        engine = make_engine(get_settings())
+        with engine.connect() as connection:
+            assert connection.exec_driver_sql("SELECT count(*) FROM script").scalar() == 1
+            assert connection.exec_driver_sql("SELECT title FROM exam").scalar() == "T"
+            assert connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall() == []
+            tables = {
+                row[0] for row in connection.exec_driver_sql("SELECT name FROM sqlite_master")
+            }
+            assert not any(name.startswith("_alembic_tmp") for name in tables)
+        engine.dispose()
+    finally:
+        get_settings.cache_clear()

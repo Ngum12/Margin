@@ -203,12 +203,17 @@ def set_decision(
     )
 
 
-def _accept(db: Session, actor: User, decision: MarkDecision, action: str) -> bool:
+def _accept(
+    db: Session, actor: User, decision: MarkDecision, action: str, *, keep_category: bool = False
+) -> bool:
+    """Copy the AI's proposal into the final fields. With ``keep_category``, a category the
+    teacher already chose is kept and only the missing mark is filled in."""
     if decision.proposed_half_marks is None or decision.error_category is None:
         return False
     old = _decision_value(decision)
     decision.final_half_marks = decision.proposed_half_marks
-    decision.final_category = decision.error_category
+    if not (keep_category and decision.final_category is not None):
+        decision.final_category = decision.error_category
     new = _decision_value(decision)
     if new == old:
         return False
@@ -237,12 +242,14 @@ def accept_point(db: Session, actor: User, script_id: int, point_id: int) -> Non
 
 
 def accept_all(db: Session, actor: User, script_id: int) -> int:
-    """Accept every AI proposal the teacher has not decided yet; teacher decisions are kept."""
+    """Accept the AI's proposal for every point that has no final mark yet. Teacher decisions are
+    kept: a point the teacher already marked is skipped, and a category the teacher chose before
+    accepting stays (owner's review, 2026-10-15: changing categories first left marks empty)."""
     script = _editable_script(db, actor, script_id)
     accepted = 0
     for decision in current_decisions(db, [script.id]).values():
-        if decision.final_half_marks is None and decision.final_category is None:
-            accepted += _accept(db, actor, decision, "accept_all")
+        if decision.final_half_marks is None:
+            accepted += _accept(db, actor, decision, "accept_all", keep_category=True)
     if accepted:
         _touch(script)
     return accepted

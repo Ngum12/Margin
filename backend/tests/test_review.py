@@ -752,3 +752,21 @@ def test_another_teacher_gets_not_found_on_every_review_endpoint(
     ]
     assert [r.status_code for r in responses] == [404] * len(responses)
     assert db.scalars(select(ReviewSession)).all() == []
+
+
+def test_accept_all_fills_marks_where_the_teacher_only_chose_a_category(
+    alice: ApiUser, marked: dict[str, Any], db: Session
+) -> None:
+    """Owner's review, 2026-10-15: categories changed before "accept all" left those points
+    without a mark, and every further click accepted nothing."""
+    script_id = marked["script_ids"][0]
+    p1, p2, _p3 = (p["id"] for p in _points(_review(alice, script_id)))
+    alice.put(f"/api/scripts/{script_id}/decisions/{p1}", json={"category": "conceptual_error"})
+    alice.put(f"/api/scripts/{script_id}/decisions/{p2}", json={"marks": 0, "category": "omitted"})
+
+    body = alice.post(f"/api/scripts/{script_id}/accept-all").json()
+
+    assert body["accepted"] == 2  # p1 (mark filled in) and p3; p2 was already decided
+    finals = [(p["final_marks"], p["final_category"]) for p in _points(body["review"])]
+    assert finals == [(1, "conceptual_error"), (0, "omitted"), (1, "correct")]
+    assert body["review"]["can_confirm"] is True

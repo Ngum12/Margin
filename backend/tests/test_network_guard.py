@@ -76,13 +76,18 @@ def test_full_pipeline_only_contacts_the_model_host(
             import re
 
             # The prompt lists points as "- p<id> (...)"; reply in the per-question keyed shape.
-            ids = re.findall(r"^- p(\d+) \(", body["messages"][0]["content"], re.MULTILINE)
+            prompt = body["messages"][0]["content"]
+            ids = re.findall(r"^- p(\d+) \(", prompt, re.MULTILINE)
+            # Reply in the evidence shape the prompt asks for (line numbers or a quote).
+            evidence: dict[str, Any] = (
+                {"evidence_lines": []} if "evidence_lines" in prompt else {"evidence": ""}
+            )
             return json.dumps(
                 {
                     "points": {
                         f"p{i}": {
                             "awarded_marks": 0,
-                            "evidence": "",
+                            **evidence,
                             "confidence": 0.5,
                             "error_category": "omitted",
                         }

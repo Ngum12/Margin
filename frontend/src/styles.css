@@ -833,6 +833,8 @@ tr.inactive td {
 .evidence {
   font-style: italic;
   flex-basis: 100%;
+  /* Line evidence spans several of the student's lines: keep their line breaks. */
+  white-space: pre-line;
 }
 .confidence.low {
   color: var(--color-error);

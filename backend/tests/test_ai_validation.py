@@ -117,7 +117,7 @@ def test_prompt_version_changes_with_content() -> None:
     marker_prompt = load_prompt("marker")
 
     assert reader.version.startswith("reader-v2#")
-    assert marker_prompt.version.startswith("marker-v2#")
+    assert marker_prompt.version.startswith("marker-v3#")
     assert len(reader.version.split("#")[1]) == 8
     assert "{subject_hints}" not in reader.render(subject_hints="")
     assert '{"text"' in reader.render(subject_hints="")  # JSON example braces kept

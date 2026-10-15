@@ -1,4 +1,10 @@
-"""Alembic environment. Uses the app's settings and models; batch mode for SQLite ALTERs."""
+"""Alembic environment. Uses the app's settings and models; batch mode for SQLite ALTERs.
+
+SQLite: the app connects with foreign keys enforced. Batch mode rebuilds a table by copying it
+and dropping the original, which SQLite refuses while other rows refer to it (seen on the
+owner's data, 2026-10-15). So foreign keys are switched off for the upgrade and every
+relationship is checked afterwards; the upgrade fails if any is broken.
+"""
 
 from alembic import context
 from sqlalchemy import Connection
@@ -11,6 +17,10 @@ from app.db.session import make_engine
 target_metadata = Base.metadata
 
 
+class ForeignKeyCheckError(RuntimeError):
+    """The upgrade would leave rows pointing at rows that do not exist."""
+
+
 def _configure(connection: Connection) -> None:
     context.configure(
         connection=connection,
@@ -20,9 +30,30 @@ def _configure(connection: Connection) -> None:
     )
 
 
+def _run(connection: Connection) -> None:
+    sqlite = connection.dialect.name == "sqlite"
+    if sqlite:
+        # Must run outside a transaction, or SQLite ignores it.
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        connection.commit()
+    try:
+        _configure(connection)
+        with context.begin_transaction():
+            context.run_migrations()
+            if sqlite:
+                broken = connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
+                if broken:
+                    raise ForeignKeyCheckError(f"Broken references after upgrade: {broken[:5]}")
+    finally:
+        if sqlite:
+            connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+            connection.commit()
+
+
 def run_migrations_online() -> None:
     connection = context.config.attributes.get("connection")
     if connection is not None:
+        # Tests pass their own connection (inside their transaction).
         _configure(connection)
         with context.begin_transaction():
             context.run_migrations()
@@ -30,9 +61,7 @@ def run_migrations_online() -> None:
 
     engine = make_engine(get_settings())
     with engine.connect() as conn:
-        _configure(conn)
-        with context.begin_transaction():
-            context.run_migrations()
+        _run(conn)
     engine.dispose()
 
 
