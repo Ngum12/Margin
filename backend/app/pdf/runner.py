@@ -23,7 +23,8 @@ class RenderedPage:
     thumb: str
     width: int
     height: int
-    rotation_applied: int
+    # Clockwise degrees that make the page upright, from a readable QR code (0 otherwise).
+    qr_rotation: int
     qr_texts: list[str]
     qr_damaged: int
     cover_frame: bool

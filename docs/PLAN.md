@@ -391,7 +391,7 @@ Mock pipeline and kill/restart tests pass; full check suite passes and is read; 
 
 ## Phase 4: Teacher review
 
-Status: approved 2026-10-14 with changes (orientation from the Reader, review time, legacy covers; see "Owner changes" below). `@playwright/test` 1.64.1 approved (dev, installed Edge). Building starts after the evaluation queues finish and the combined report is sent. Phase 4 does not depend on which model wins the evaluation: models are configuration.
+Status: built 2026-10-15, waiting for owner approval (deviations in D-049 to D-051). Approved 2026-10-14 with changes (orientation from the Reader, review time, legacy covers; see "Owner changes" below). `@playwright/test` 1.64.1 approved (dev, installed Edge). Building starts after the evaluation queues finish and the combined report is sent. Phase 4 does not depend on which model wins the evaluation: models are configuration.
 
 ### Goal
 A teacher works through a class's scripts in the order that most needs attention, sees each page beside its transcription and the AI's proposed marks with evidence, corrects anything (marks, categories, transcription, page orientation), adds short comments, and confirms the script. Every change is audit-logged. Nothing is final, and nothing can be exported, until a teacher confirms it. The whole review can be done from the keyboard.
@@ -411,6 +411,7 @@ A teacher works through a class's scripts in the order that most needs attention
 1. **No separate orientation model call.** The Reader returns an orientation judgement with a confidence in the same call as the transcription. Pages it flags as not upright with confidence of at least 0.8 are rotated and read again (once). Teacher undo and the off switch stay.
 2. **Review time per script**, from opening to confirming, stored locally only and never sent anywhere; the class average is shown on the results screen. It is the impact measure for MIT Solve.
 3. **Legacy covers:** pages uploaded before Phase 4 whose cover images were already turned upright in Phase 2 are recorded so they are never rotated twice. Tested.
+4. **AI deductions easy to spot (2026-10-15):** in the review screen, every point where the AI proposed fewer marks than the point's maximum is clearly marked (a visible "−N" badge and highlight), and the question shows how many marks the AI deducted, so the teacher checks those first. Keyboard: `d` jumps to the next point with a deduction.
 
 ### Owner requirements for this phase
 1. Screens 6 (marking queue) and 7 (script review), audit log, confirm flow, uncertainty-first ordering, keyboard shortcuts (brief).
@@ -502,3 +503,11 @@ All of the above pass in `python scripts/check.py` (output read before committin
 - The orientation check adds one model call per page; on this machine that is tens of seconds per page. If the evaluation shows it is too slow or inaccurate with the chosen model, it can be switched off (`MARGIN_ORIENTATION_CHECK=off`) and teachers rely on layers a and b.
 - Small models may be unreliable at orientation judgement; the confidence threshold and teacher undo limit the harm, and the accuracy is measured before relying on it.
 - Browser tests depend on Edge being installed on the development machine.
+
+---
+
+## After Phase 4 (owner, 2026-10-15; in this order, each after Phase 4 is approved)
+1. **Per-question output schemas:** each marking call gets a schema listing exactly that question's point ids (each required once), for both evidence designs. Then re-run the evaluation overnight with both designs.
+2. **Whole-script marking in one call** as a third marker design: all questions in one reply, validated per question, re-asking only the failed questions. Evaluated against the per-question designs on agreement, failures and time.
+
+**Evaluation reports from now on** also give, per subject: agreement within 1 mark, mean absolute difference, and the direction of disagreements (over- versus under-marking).

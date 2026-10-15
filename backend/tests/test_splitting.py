@@ -142,3 +142,18 @@ def test_pages_are_placed_in_scan_order_whatever_the_input_order() -> None:
     result = place([answer(1), cover(0, "A" * 16)])
 
     assert summary(result) == [(0, 10), (1, 10)]
+
+
+def test_cover_rotation_carries_to_following_pages_until_next_cover() -> None:
+    turned = RenderedPage(
+        0, "0.jpg", "t0.jpg", 10, 10, 180, [payload_for("AAAAAAAAAAAAAAAA")], 0, True
+    )
+    unreadable = page(3, frame=True)
+    placements = place(
+        [turned, answer(1), answer(2), unreadable, answer(4), cover(5, "BBBBBBBBBBBBBBBB")]
+    )
+    assert [p.rotation_stack for p in placements] == [180, 180, 180, 0, 0, 0]
+
+
+def test_pages_before_any_cover_are_not_rotated() -> None:
+    assert [p.rotation_stack for p in place([answer(0), answer(1)])] == [0, 0]

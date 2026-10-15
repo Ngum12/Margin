@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.clock import utcnow
@@ -73,6 +73,8 @@ class Script(IdMixin, TimestampMixin, Base):
     # Set when the AI could not produce valid output: the teacher marks this script by hand.
     manual_reason: Mapped[str | None] = mapped_column(String(64))
     ai_started_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    # First teacher edit during review.
+    reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
     student: Mapped[Student] = relationship()
     pages: Mapped[list["Page"]] = relationship(
@@ -115,8 +117,22 @@ class Page(IdMixin, Base):
     thumb_path: Mapped[str] = mapped_column(String(500))
     width: Mapped[int] = mapped_column(Integer)
     height: Mapped[int] = mapped_column(Integer)
-    # Degrees the image was rotated to make a cover sheet upright (0 for answer pages).
-    rotation_applied: Mapped[int] = mapped_column(Integer, default=0)
+    # Orientation (Phase 4). All angles are clockwise degrees (0/90/180/270). The stored image
+    # file is never changed; the effective rotation is applied when displaying and before
+    # transcription. See effective_rotation and docs/DECISIONS.md D-049.
+    # Already applied to the stored image by Phase 2 (legacy covers): never applied again.
+    rotation_baked: Mapped[int] = mapped_column(Integer, default=0)
+    # From the cover sheet's QR orientation, for the cover and the pages after it (layer b).
+    rotation_stack: Mapped[int] = mapped_column(Integer, default=0)
+    # From the Reader's orientation judgement before transcription (layer c).
+    rotation_auto: Mapped[int] = mapped_column(Integer, default=0)
+    auto_rotation_confidence: Mapped[float | None] = mapped_column(Float)
+    auto_rotation_model: Mapped[str | None] = mapped_column(String(100))
+    auto_rotation_prompt_version: Mapped[str | None] = mapped_column(String(100))
+    # Set by a teacher with the rotate control (layer a); overrides the others when set.
+    rotation_teacher: Mapped[int | None] = mapped_column(Integer)
+    # The teacher rotated the page after it had been transcribed.
+    rotated_after_transcription: Mapped[bool] = mapped_column(Boolean, default=False)
     is_cover: Mapped[bool] = mapped_column(Boolean, default=False)
     state: Mapped[PageState] = mapped_column(str_enum(PageState, "page_state"))
     script_id: Mapped[int | None] = mapped_column(ForeignKey("script.id"), index=True)
@@ -133,3 +149,14 @@ class Page(IdMixin, Base):
 
     upload: Mapped[Upload] = relationship()
     script: Mapped[Script | None] = relationship(back_populates="pages", foreign_keys=[script_id])
+
+    @property
+    def effective_rotation(self) -> int:
+        """Clockwise degrees to turn the stored image so it reads upright."""
+        if self.rotation_teacher is not None:
+            return self.rotation_teacher % 360
+        return (self.rotation_stack + self.rotation_auto) % 360
+
+    @property
+    def auto_rotated(self) -> bool:
+        return self.rotation_teacher is None and self.rotation_auto % 360 != 0

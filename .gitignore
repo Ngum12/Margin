@@ -29,3 +29,7 @@ Thumbs.db
 
 # Model evaluation outputs and resume files (large, machine-specific)
 /eval_runs/
+
+# Playwright output (browser tests)
+frontend/test-results/
+frontend/playwright-report/

@@ -57,6 +57,20 @@ function setup(language: "en" | "fr" = "en") {
   api.on("GET /api/exams/7", [200, examDetail({ status: "ready" })]);
   api.on("GET /api/exams/7/cover-sheets", [200, STUDENTS]);
   api.on("GET /api/exams/7/ai-status", [200, aiStatus()]);
+  api.on("GET /api/exams/7/queue", [
+    200,
+    {
+      exam_id: 7,
+      exam_title: "Mock exam 1",
+      exam_status: "marking",
+      items: [],
+      typical_page_count: null,
+      confirmed_count: 0,
+      timed_count: 0,
+      average_review_seconds: null,
+      average_active_seconds: null,
+    },
+  ]);
   api.on("GET /api/exams/7/uploads", [
     200,
     [
@@ -226,12 +240,12 @@ describe("page count check", () => {
   });
 });
 
-describe("AI marking panel", () => {
+describe("AI marking panel (marking queue screen)", () => {
   it("starts AI marking with the CSRF token", async () => {
     const api = setup();
     api.on("POST /api/exams/7/ai-marking", [202, { scripts_queued: 2 }]);
     const user = userEvent.setup();
-    renderApp("/exams/7/scans");
+    renderApp("/exams/7/queue");
 
     await user.click(await screen.findByRole("button", { name: en.ai.start }));
 
@@ -251,7 +265,7 @@ describe("AI marking panel", () => {
         system: { ...status.system, worker_online: false, reader_model_installed: false },
       }),
     ]);
-    renderApp("/exams/7/scans");
+    renderApp("/exams/7/queue");
 
     expect(await screen.findByText(en.ai.workerOffline)).toBeInTheDocument();
     expect(
@@ -267,7 +281,7 @@ describe("AI marking panel", () => {
         flagged: [{ script_id: 1, student_code: "AAAAAA", reason: "ai.reader_invalid_output" }],
       }),
     ]);
-    renderApp("/exams/7/scans");
+    renderApp("/exams/7/queue");
 
     expect(await screen.findByText(fr.ai.flaggedTitle)).toBeInTheDocument();
     expect(

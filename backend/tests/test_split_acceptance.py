@@ -131,11 +131,18 @@ def test_synthetic_class_scan_is_split_correctly(
     ]
 
     pages = {p.source_page_index: p for p in db.scalars(select(Page))}
-    # Rotated covers were turned upright; the /Rotate page was rendered landscape by PDFium.
-    assert pages[4].rotation_applied == 180
-    assert pages[8].rotation_applied in (90, 270)
-    assert pages[8].height > pages[8].width
+    # Images are stored as scanned; rotated covers record the turn that makes them upright and
+    # it carries to the answer pages after them (layer b). /Rotate is applied by PDFium.
+    assert pages[4].rotation_stack == 180
+    assert pages[5].rotation_stack == 180
+    assert pages[8].rotation_stack in (90, 270)
+    assert pages[9].rotation_stack == pages[8].rotation_stack
+    assert pages[8].width > pages[8].height
     assert pages[3].width > pages[3].height
+    assert pages[1].rotation_stack == pages[2].rotation_stack == 0
+    # The cover with damaged codes resets the stack rotation.
+    assert pages[6].rotation_stack == pages[7].rotation_stack == 0
+    assert all(p.rotation_baked == 0 for p in pages.values())
     # Follow-on pages point at the problem cover they follow.
     assert pages[7].related_page_id == pages[6].id
     # Script page order is cover first, then answers in scan order.
@@ -215,7 +222,7 @@ def test_processing_is_audited(alice: ApiUser, setup: dict[str, Any], db: Sessio
     assert actions == ["create", "process"]
 
 
-def test_cover_images_are_upright_after_rotation(
+def test_upside_down_cover_is_upright_after_its_effective_rotation(
     alice: ApiUser, setup: dict[str, Any], db: Session, settings: Any
 ) -> None:
     upload_pdf(
@@ -223,7 +230,11 @@ def test_cover_images_are_upright_after_rotation(
     )
 
     page = db.scalars(select(Page)).one()
-    image = Image.open(settings.data_dir / page.image_path)
+    assert page.effective_rotation == 180
+    # The stored file is unchanged; turning it clockwise by the effective rotation makes it upright.
+    image = Image.open(settings.data_dir / page.image_path).rotate(
+        -page.effective_rotation, expand=True
+    )
     # Upright: the student code block is in the top half (dark pixels concentrated there).
     gray = image.convert("L").resize((50, 70))
 

@@ -87,7 +87,7 @@ def test_reader_request_is_deterministic_schema_constrained_and_shrinks_images(
     result = reader.transcribe([page], CHEMISTRY)
 
     assert result.pages[0].text == "H_2O is a compound"
-    assert result.prompt_version.startswith("reader-v1#")
+    assert result.prompt_version.startswith("reader-v2#")
     request = fake.requests[0]
     assert request["options"]["temperature"] == 0
     assert request["stream"] is False

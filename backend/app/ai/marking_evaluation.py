@@ -182,6 +182,30 @@ class MarkingSummary:
     def seconds_per_script(self) -> float:
         return sum(self.seconds) / len(self.seconds) if self.seconds else 0.0
 
+    def by_subject(self) -> dict[str, dict[str, float | int]]:
+        """Per subject (owner, 2026-10-15, for every evaluation report): exact agreement,
+        agreement within 1 mark, mean absolute difference, and the direction of disagreements.
+        Failed questions count as disagreements in the agreement rates and are listed apart."""
+        out: dict[str, dict[str, float | int]] = {}
+        for subject in sorted({c.subject for c in self.comparisons}):
+            items = [c for c in self.comparisons if c.subject == subject]
+            answered = [(c.expected, c.proposed) for c in items if c.proposed is not None]
+            diffs = [p - e for e, p in answered]
+            out[subject] = {
+                "questions": len(items),
+                "failed": len(items) - len(answered),
+                "exact_agreement": sum(1 for d in diffs if d == 0) / len(items),
+                "within_one_mark": sum(1 for d in diffs if abs(d) <= 1) / len(items),
+                "mean_absolute_difference": (
+                    sum(abs(d) for d in diffs) / len(diffs) if diffs else 0.0
+                ),
+                "over_marked_questions": sum(1 for d in diffs if d > 0),
+                "under_marked_questions": sum(1 for d in diffs if d < 0),
+                "marks_over": sum(d for d in diffs if d > 0),
+                "marks_under": -sum(d for d in diffs if d < 0),
+            }
+        return out
+
 
 def evaluate_marking(
     marker: Marker,

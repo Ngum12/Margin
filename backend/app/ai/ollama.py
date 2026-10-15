@@ -25,6 +25,7 @@ from app.ai.validation import (
     MARKER_LINES_SCHEMA,
     MARKER_SCHEMA,
     READER_SCHEMA,
+    ReaderOutput,
     answer_lines,
     numbered_answer,
     parse_marker_lines_output,
@@ -47,9 +48,12 @@ def resolve_model(client: OllamaClient, name: str) -> ModelInfo:
     return ModelInfo(name, digest[:12], "ollama")
 
 
-def _jpeg_for_model(path: str, max_px: int) -> bytes:
+def _jpeg_for_model(path: str, max_px: int, rotation: int = 0) -> bytes:
     with Image.open(path) as source:
         image = source.convert("RGB")
+        if rotation % 360:
+            # PIL turns anticlockwise; page rotations are clockwise degrees.
+            image = image.rotate(-(rotation % 360), expand=True)
         image.thumbnail((max_px, max_px))
         buffer = io.BytesIO()
         image.save(buffer, "JPEG", quality=90)
@@ -74,11 +78,14 @@ class OllamaReader:
         )
         texts = []
         for page in pages:
-            image = _jpeg_for_model(str(page.path), self._max_px)
-            texts.append(PageText(page.page_id, self._ask(prompt, image)))
+            image = _jpeg_for_model(str(page.path), self._max_px, page.rotation)
+            out = self._ask(prompt, image)
+            texts.append(
+                PageText(page.page_id, out.text, out.orientation, out.orientation_confidence)
+            )
         return Transcription(texts, self.model, self.prompt_version, utcnow())
 
-    def _ask(self, prompt: str, image: bytes) -> str:
+    def _ask(self, prompt: str, image: bytes) -> ReaderOutput:
         error = ModelOutputInvalidError("no_attempt")
         for _ in range(self._retries + 1):
             try:

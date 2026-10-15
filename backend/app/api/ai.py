@@ -56,14 +56,15 @@ class TranscriptionOut(ApiModel):
 class DecisionOut(ApiModel):
     id: int
     mark_scheme_point_id: int
-    proposed_marks: int | float
+    # Empty for a point the teacher marked without an AI proposal (Phase 4).
+    proposed_marks: int | float | None
     evidence: str
-    confidence: float
-    error_category: ErrorCategory
-    model_name: str
-    model_version: str
-    prompt_version: str
-    proposed_at: datetime
+    confidence: float | None
+    error_category: ErrorCategory | None
+    model_name: str | None
+    model_version: str | None
+    prompt_version: str | None
+    proposed_at: datetime | None
 
 
 class AiResultsOut(ApiModel):
@@ -122,7 +123,11 @@ def results(script_id: int, db: DbSession, user: CurrentUser) -> AiResultsOut:
             DecisionOut(
                 id=d.id,
                 mark_scheme_point_id=d.mark_scheme_point_id,
-                proposed_marks=from_half_marks(d.proposed_half_marks),
+                proposed_marks=(
+                    None
+                    if d.proposed_half_marks is None
+                    else from_half_marks(d.proposed_half_marks)
+                ),
                 evidence=d.evidence,
                 confidence=d.confidence,
                 error_category=d.error_category,

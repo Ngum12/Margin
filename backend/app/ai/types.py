@@ -31,12 +31,17 @@ class PageImage:
     path: Path
     # Optional typed ground truth next to the image (used by MockReader for demos/evaluation).
     sidecar_text: Path | None = None
+    # Clockwise degrees to turn the stored image before reading it (the page's orientation).
+    rotation: int = 0
 
 
 @dataclass(frozen=True)
 class PageText:
     page_id: int
     text: str
+    # The Reader's judgement of which way up the page was as sent (None when not given).
+    orientation: str | None = None
+    orientation_confidence: float | None = None
 
 
 @dataclass(frozen=True)

@@ -4,7 +4,7 @@ import { NavLink } from "react-router";
 import type { ExamSummary } from "../api/types";
 import { StatusBadge } from "../components/ui";
 
-/** Exam title, status and the tabs shared by the setup, cover sheet and scan screens. */
+/** Exam title, status and the tabs shared by the exam screens. */
 export function ExamHeader({ exam }: { exam: Pick<ExamSummary, "id" | "title" | "status"> }) {
   const { t } = useTranslation();
   const base = `/exams/${String(exam.id)}`;
@@ -20,6 +20,7 @@ export function ExamHeader({ exam }: { exam: Pick<ExamSummary, "id" | "title" | 
         </NavLink>
         <NavLink to={`${base}/sheets`}>{t("examTabs.sheets")}</NavLink>
         <NavLink to={`${base}/scans`}>{t("examTabs.scans")}</NavLink>
+        <NavLink to={`${base}/queue`}>{t("examTabs.queue")}</NavLink>
       </nav>
     </>
   );

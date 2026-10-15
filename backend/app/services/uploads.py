@@ -223,7 +223,7 @@ def process_upload(factory: sessionmaker[Session], settings: Settings, upload_id
                 thumb_path=(pages_rel / rendered.thumb).as_posix(),
                 width=rendered.width,
                 height=rendered.height,
-                rotation_applied=rendered.rotation_applied,
+                rotation_stack=placement.rotation_stack,
                 is_cover=placement.is_cover,
                 state=PageState.UNASSIGNED,
                 unassigned_reason=placement.reason,

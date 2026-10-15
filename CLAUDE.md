@@ -3,7 +3,7 @@
 On-premise AI marking assistant for secondary schools. Full requirements: `PROJECT_BRIEF.md` (read it). Plan: `docs/PLAN.md`. Decisions: `docs/DECISIONS.md`. Out-of-scope ideas: `docs/BACKLOG.md`. Dependency licences: `docs/DEPENDENCIES.md`.
 
 ## Current phase
-**Phase 0: complete and approved.** **Phase 1: complete and approved (2026-10-14).** **Phase 2: complete and approved.** **Phase 3 (AI pipeline): built with Mock models; real-model run (qwen3-vl:8b) pending the owner's download.** Do not start Phase 4 until the owner says so.
+**Phase 0: complete and approved.** **Phase 1: complete and approved (2026-10-14).** **Phases 0–3: complete and approved** (default model `qwen3-vl:4b-instruct`, quote evidence, D-048). **Phase 4 (teacher review): built, waiting for owner approval.** Then: per-question schemas and whole-script marking experiments (`docs/PLAN.md`, "After Phase 4").
 
 Workflow: one phase at a time → plan → build → `python scripts/check.py` passes → commit → stop and report. Never claim something works without running it. Record decisions and deviations in `docs/DECISIONS.md` first. Out-of-scope ideas go to `docs/BACKLOG.md`.
 
@@ -50,6 +50,7 @@ Browser (React/TS, Vite build) --> FastAPI app (backend/app) --> SQLite (WAL) vi
 - **Schema changes:** edit models, run `cd backend && uv run alembic revision --autogenerate -m "..."`, review the file (delete the duplicate enum CHECK constraints Alembic emits), and keep `tests/test_migrations.py` passing.
 - **Scans (Phase 2):** cover sheets carry `MA1-<token>-<check>` QR codes, never ids (`app/sheets/`). Uploads are streamed raw (`application/pdf`), stored unchanged with SHA-256 (`uploads/<id>/original.pdf`), and rendered by a child process with a timeout (`app/pdf/render_worker.py`, `runner.py`; never import PDFium in the web process). `app/services/splitting.py` is the pure placement logic: never assign by guess; anything uncertain goes to the tray with a reason (`UnassignedReason`, translated under `scans.reason.*`). Processing is idempotent and resumed on start-up (`upload_processor.py`) until Phase 3 moves it to the job table.
 - **AI pipeline (Phase 3):** long work runs only in the worker (`python -m app.worker`, `app/worker/`) from the `job` table (`app/services/jobs.py`); handlers must stay idempotent. Models sit behind `Reader`/`Marker` (`app/ai/types.py`); pick with `MARGIN_AI_BACKEND=mock|ollama`. Prompts are versioned files (`app/ai/prompts/`). Model output is validated strictly (`app/ai/validation.py`); after retries the script is flagged for manual marking, never guessed. Only `app/ai/ollama_client.py` may open network connections (tests enforce it). Measure any model or prompt change with `uv run python -m app.cli evaluate --data <folder> --backend ollama --report r.json`.
+- **Evaluation reports** must give, per subject: exact agreement, agreement within 1 mark, mean absolute difference, and over- versus under-marking counts (owner, 2026-10-15).
 - **Third-party notices:** after any dependency change run `cd backend && uv run python ../scripts/third_party_notices.py`; the check suite verifies it.
 - Request DB transactions commit before the response is sent (`Depends(..., scope="function")`, D-021).
 - Frontend: React + TypeScript strict, plain CSS with tokens (`src/styles.css`), same-origin `fetch` only (`src/api.ts`).
@@ -68,7 +69,9 @@ Run from the repository root. Requires `uv` and Node/npm. Python 3.12 is uv-mana
 | Dev (reload + Vite) | `python scripts/run.py --dev` → Vite at http://localhost:5173 (`make dev`) |
 | Backend tests only | `cd backend && uv run pytest` |
 | Frontend tests only | `cd frontend && npm test` |
+| Browser tests only | `cd frontend && npm run build && npm run e2e` (installed Edge; fresh seeded database from `scripts/e2e_server.py`) |
+| Orientation evaluation | `cd backend && uv run python -m app.cli evaluate --data <folder> --backend ollama --orientation [--orientation-extra chemistry:upside_down:<image>]` |
 
-Checks = ruff format, ruff lint, mypy strict (app, tests, scripts), pytest (warnings are errors); prettier, eslint, tsc, vitest, vite build.
+Checks = ruff format, ruff lint, mypy strict (app, tests, scripts), pytest (warnings are errors); prettier, eslint, tsc, vitest, vite build, Playwright browser tests (Edge).
 
 Note: set `UV_PYTHON_PREFERENCE=only-managed` if running `uv` by hand on the owner's Windows machine (a broken system `python3.12` shim exists); the scripts set it automatically.

@@ -62,6 +62,8 @@ def frontend_steps(fix: bool) -> list[tuple[str, list[str]]]:
         ("frontend: types", [*npm, "typecheck"]),
         ("frontend: tests", [*npm, "test"]),
         ("frontend: build", [*npm, "build"]),
+        # Real-browser tests in the installed Microsoft Edge, against the build above (Phase 4).
+        ("frontend: browser tests", [*npm, "e2e"]),
     ]
     return steps
 

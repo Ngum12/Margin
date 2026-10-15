@@ -51,8 +51,12 @@ class MockReader:
                     "1(a) Metals conduct electricity and they are malleable.\n"
                     "1(b) Hydrogen gas H_2 is given off."
                 )
-            raw = json.dumps({"text": text})  # same path as a real model reply
-            texts.append(PageText(page.page_id, parse_reader_output(raw)))
+            # Same path as a real model reply. The mock always judges the page upright.
+            raw = json.dumps({"text": text, "orientation": "upright", "orientation_confidence": 1})
+            out = parse_reader_output(raw)
+            texts.append(
+                PageText(page.page_id, out.text, out.orientation, out.orientation_confidence)
+            )
         return Transcription(texts, self.model, self.prompt_version, utcnow())
 
 

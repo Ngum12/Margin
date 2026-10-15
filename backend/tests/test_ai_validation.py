@@ -43,7 +43,7 @@ def marker(*points: dict[str, Any]) -> str:
 
 
 def test_reader_output_accepts_text_and_keeps_errors() -> None:
-    assert parse_reader_output('{"text": "H_2O is a elemnt"}') == "H_2O is a elemnt"
+    assert parse_reader_output('{"text": "H_2O is a elemnt"}').text == "H_2O is a elemnt"
 
 
 @pytest.mark.parametrize(
@@ -114,7 +114,7 @@ def test_prompt_version_changes_with_content() -> None:
     reader = load_prompt("reader")
     marker_prompt = load_prompt("marker")
 
-    assert reader.version.startswith("reader-v1#")
+    assert reader.version.startswith("reader-v2#")
     assert marker_prompt.version.startswith("marker-v1#")
     assert len(reader.version.split("#")[1]) == 8
     assert "{subject_hints}" not in reader.render(subject_hints="")
@@ -193,3 +193,24 @@ def test_zero_marks_need_no_lines() -> None:
 
 def test_numbered_answer() -> None:
     assert numbered_answer(answer_lines("a\r\nb")) == "L1: a\nL2: b"
+
+
+def test_reader_output_carries_a_valid_orientation_judgement() -> None:
+    out = parse_reader_output(
+        '{"text": "x", "orientation": "upside_down", "orientation_confidence": 0.93}'
+    )
+    assert (out.text, out.orientation, out.orientation_confidence) == ("x", "upside_down", 0.93)
+
+
+@pytest.mark.parametrize(
+    "judgement",
+    [
+        '"orientation": "sideways", "orientation_confidence": 0.9',
+        '"orientation": "upside_down", "orientation_confidence": 1.5',
+        '"orientation": "upside_down", "orientation_confidence": true',
+        '"orientation": "upside_down"',
+    ],
+)
+def test_invalid_orientation_judgement_keeps_the_text_and_rotates_nothing(judgement: str) -> None:
+    out = parse_reader_output('{"text": "kept", ' + judgement + "}")
+    assert (out.text, out.orientation, out.orientation_confidence) == ("kept", None, None)

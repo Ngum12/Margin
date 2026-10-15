@@ -28,6 +28,8 @@ class Placement:
     reason: UnassignedReason | None  # set when the page goes to the tray
     related_index: int | None = None  # the problem cover that this page follows
     detected_exam_id: int | None = None
+    # Clockwise degrees from the most recent cover's QR orientation (orientation layer b).
+    rotation_stack: int = 0
 
 
 class _Kind(Enum):
@@ -94,9 +96,15 @@ def place_pages(
     seen_in_upload: set[int] = set()
     current_student: int | None = None
     problem_cover: int | None = None  # index of the problem cover the current run follows
+    # A stack is usually fed the same way up, so a cover's orientation applies to the answer
+    # pages after it until the next cover. A cover without a readable code resets it to 0.
+    stack_rotation = 0
 
     for page in sorted(pages, key=lambda p: p.index):
         info = _classify(page, exam_id, lookup)
+        if info.kind is not _Kind.ANSWER:
+            stack_rotation = page.qr_rotation
+        rotation = stack_rotation
 
         if info.kind is _Kind.GOOD_COVER and info.student_id is not None:
             reason: UnassignedReason | None = None
@@ -107,10 +115,14 @@ def place_pages(
             if reason is None:
                 seen_in_upload.add(info.student_id)
                 current_student, problem_cover = info.student_id, None
-                placements.append(Placement(page.index, True, info.student_id, None))
+                placements.append(
+                    Placement(page.index, True, info.student_id, None, rotation_stack=rotation)
+                )
             else:
                 current_student, problem_cover = None, page.index
-                placements.append(Placement(page.index, True, None, reason))
+                placements.append(
+                    Placement(page.index, True, None, reason, rotation_stack=rotation)
+                )
             continue
 
         if info.kind is _Kind.PROBLEM_COVER:
@@ -122,13 +134,16 @@ def place_pages(
                     None,
                     info.reason,
                     detected_exam_id=info.detected_exam_id,
+                    rotation_stack=rotation,
                 )
             )
             continue
 
         # Answer page.
         if current_student is not None:
-            placements.append(Placement(page.index, False, current_student, None))
+            placements.append(
+                Placement(page.index, False, current_student, None, rotation_stack=rotation)
+            )
         elif problem_cover is not None:
             placements.append(
                 Placement(
@@ -137,6 +152,7 @@ def place_pages(
                     None,
                     UnassignedReason.FOLLOWS_UNASSIGNED_COVER,
                     related_index=problem_cover,
+                    rotation_stack=rotation,
                 )
             )
         else:

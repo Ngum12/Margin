@@ -6,6 +6,7 @@ for exactly the shape we accept.
 
 import json
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, ValidationError
@@ -13,10 +14,23 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, Validat
 from app.ai.types import ModelOutputInvalidError, PointProposal, QuestionSpec
 from app.db.models import ErrorCategory
 
+ORIENTATIONS = ("upright", "upside_down", "rotated_clockwise", "rotated_counterclockwise")
+# Clockwise degrees that turn a page the Reader judged this way back upright.
+ORIENTATION_TURN = {
+    "upright": 0,
+    "upside_down": 180,
+    "rotated_clockwise": 270,
+    "rotated_counterclockwise": 90,
+}
+
 READER_SCHEMA: dict[str, Any] = {
     "type": "object",
-    "properties": {"text": {"type": "string"}},
-    "required": ["text"],
+    "properties": {
+        "text": {"type": "string"},
+        "orientation": {"type": "string", "enum": list(ORIENTATIONS)},
+        "orientation_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    },
+    "required": ["text", "orientation", "orientation_confidence"],
     "additionalProperties": False,
 }
 
@@ -78,11 +92,37 @@ def _load_json(raw: str) -> Any:
         raise ModelOutputInvalidError("not_json") from exc
 
 
-def parse_reader_output(raw: str) -> str:
+_ORIENTATION_KEYS = ("orientation", "orientation_confidence")
+
+
+@dataclass(frozen=True)
+class ReaderOutput:
+    text: str
+    # None when the orientation judgement is missing or invalid: then nothing is rotated.
+    orientation: str | None = None
+    orientation_confidence: float | None = None
+
+
+def parse_reader_output(raw: str) -> ReaderOutput:
+    """The transcription must be valid; the orientation judgement is optional (owner change 1:
+    an invalid judgement keeps the read and rotates nothing)."""
+    data = _load_json(raw)
+    if not isinstance(data, dict) or not set(data) <= {"text", *_ORIENTATION_KEYS}:
+        raise ModelOutputInvalidError("reader_schema")
     try:
-        return _ReaderOut.model_validate(_load_json(raw)).text
+        text = _ReaderOut.model_validate({"text": data.get("text")}).text
     except ValidationError as exc:
         raise ModelOutputInvalidError("reader_schema") from exc
+    orientation = data.get("orientation")
+    confidence = data.get("orientation_confidence")
+    if (
+        orientation not in ORIENTATIONS
+        or isinstance(confidence, bool)
+        or not isinstance(confidence, int | float)
+        or not 0 <= confidence <= 1
+    ):
+        return ReaderOutput(text)
+    return ReaderOutput(text, str(orientation), float(confidence))
 
 
 _SPACES = re.compile(r"\s+")

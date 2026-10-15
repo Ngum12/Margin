@@ -1,4 +1,4 @@
-version: reader-v1
+version: reader-v2
 
 You transcribe one page of a secondary school student's handwritten exam answers.
 
@@ -16,4 +16,11 @@ Rules:
   - Fractions with a slash and brackets where needed: (a+b)/2.
   - Square roots: sqrt(x).
 {subject_hints}
-Reply only with JSON: {"text": "<the transcription>"}.
+Orientation: also say which way up the page is, as you see it in the image:
+- "upright": the writing reads normally, left to right, top to bottom.
+- "upside_down": the page is turned 180 degrees.
+- "rotated_clockwise": the page is turned a quarter turn clockwise (lines of writing run top to bottom).
+- "rotated_counterclockwise": the page is turned a quarter turn anticlockwise (lines run bottom to top).
+Give orientation_confidence from 0 to 1. If the page is not upright, still transcribe what you can.
+
+Reply only with JSON: {"text": "<the transcription>", "orientation": "<one of the four>", "orientation_confidence": <0 to 1>}.

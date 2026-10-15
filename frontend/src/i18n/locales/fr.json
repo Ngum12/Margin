@@ -8,7 +8,9 @@
     "optional": "Facultatif",
     "actions": "Actions",
     "save": "Enregistrer",
-    "saved": "Enregistré."
+    "saved": "Enregistré.",
+    "cancel": "Annuler",
+    "close": "Fermer"
   },
   "language": {
     "label": "Langue",
@@ -209,13 +211,31 @@
       "processing_error": "Une erreur s'est produite pendant le traitement de ce fichier. Réessayez."
     },
     "page": {
-      "already_assigned": "Certaines pages sont déjà dans une copie. Remettez-les d'abord dans les pages non attribuées."
+      "already_assigned": "Certaines pages sont déjà dans une copie. Remettez-les d'abord dans les pages non attribuées.",
+      "not_in_script": "Cette page ne fait partie d'aucune copie.",
+      "is_cover": "Les pages de garde ne sont pas transcrites.",
+      "not_auto_rotated": "Cette page n'a pas été tournée automatiquement."
     },
     "script": {
-      "locked": "Cette copie est déjà en cours de correction ; ses pages ne peuvent plus changer."
+      "locked": "Cette copie est déjà en cours de correction ; ses pages ne peuvent plus changer.",
+      "confirmed": "Cette copie est confirmée. Rouvrez-la pour la modifier.",
+      "not_ready": "L'IA n'a pas encore terminé cette copie.",
+      "incomplete": "Donnez une note et une catégorie à chaque critère avant de confirmer.",
+      "not_confirmed": "Cette copie n'est pas confirmée."
     },
     "ai": {
       "no_scripts": "Aucune copie n'a encore été téléversée pour cet examen."
+    },
+    "decision": {
+      "empty": "Choisissez une note ou une catégorie.",
+      "marks_out_of_range": "La note doit être un nombre entier entre 0 et la valeur du critère.",
+      "no_proposal": "L'IA n'a rien proposé pour ce critère."
+    },
+    "comment": {
+      "too_long": "Les commentaires font au plus 300 caractères."
+    },
+    "export": {
+      "not_confirmed": "Seules les copies confirmées peuvent être exportées."
     }
   },
   "issues": {
@@ -256,13 +276,23 @@
       "question_inconsistent": "Ligne {{row}} : la question {{label}} a un énoncé ou un maximum différent de la ligne {{first_row}}.",
       "malformed_csv": "Le fichier n'est pas un fichier CSV valide.",
       "empty": "Le fichier ne contient aucune ligne de barème."
+    },
+    "script": {
+      "point_undecided": "Un critère n'a pas encore de note ou de catégorie finale."
+    },
+    "decision": {
+      "marks_out_of_range": "La note doit être un nombre entier entre 0 et {{max}}."
+    },
+    "comment": {
+      "too_long": "Les commentaires font au plus {{max}} caractères."
     }
   },
   "examTabs": {
     "label": "Sections de l'examen",
     "setup": "Questions et barème",
     "sheets": "Fiches de couverture",
-    "scans": "Copies scannées"
+    "scans": "Copies scannées",
+    "queue": "Correction"
   },
   "sheets": {
     "needReady": "Marquez l'examen comme prêt (après avoir complété le barème) avant d'imprimer les fiches de couverture ou de téléverser les copies.",
@@ -343,6 +373,144 @@
         "marker_invalid_output": "L'IA n'a pas pu proposer de notes valides pour certaines questions.",
         "no_answer_pages": "Cette copie n'a aucune page de réponse."
       }
+    }
+  },
+  "scriptStatus": {
+    "waiting": "En attente de l'IA",
+    "transcribed": "Transcrite",
+    "ai_marked": "Notée par l'IA",
+    "in_review": "En révision",
+    "confirmed": "Confirmée"
+  },
+  "category": {
+    "correct": "Correct",
+    "conceptual_error": "Erreur de concept",
+    "language_expression": "Langue / expression",
+    "transcription_uncertain": "Transcription incertaine",
+    "omitted": "Omis"
+  },
+  "queue": {
+    "title": "File de correction",
+    "help": "Les copies qui demandent le plus d'attention viennent en premier : correction manuelle, transcriptions peu claires, puis la confiance de l'IA la plus basse. Les copies confirmées sont à la fin.",
+    "confirmedCount": "Confirmées : {{confirmed}} sur {{count}}",
+    "empty": "Aucune copie pour l'instant. Téléversez d'abord les scans.",
+    "student": "Élève",
+    "status": "Statut",
+    "checks": "À vérifier",
+    "aiMarks": "Notes de l'IA",
+    "teacherMarks": "Vos notes",
+    "reviewTime": "Temps de révision",
+    "decided": "{{decided}} points décidés sur {{total}}",
+    "review": "Réviser",
+    "open": "Ouvrir",
+    "waitingForAi": "Pas encore prête",
+    "uncertain_one": "{{count}} point avec une transcription peu claire",
+    "uncertain_other": "{{count}} points avec une transcription peu claire",
+    "lowConfidence": "Confiance de l'IA faible ({{percent}} %)",
+    "autoRotated_one": "{{count}} page tournée automatiquement",
+    "autoRotated_other": "{{count}} pages tournées automatiquement",
+    "deductions_one": "L'IA a retiré {{marks}} sur {{count}} point",
+    "deductions_other": "L'IA a retiré {{marks}} sur {{count}} points",
+    "pageFlag": {
+      "no_answer_pages": "Seulement une page de garde, aucune page de réponse",
+      "more_than_usual": "Plus de pages que d'habitude",
+      "fewer_than_usual": "Moins de pages que d'habitude"
+    },
+    "duration": "{{minutes}} min {{seconds}} s",
+    "averageTime_one": "Temps moyen de révision ({{count}} copie confirmée) :",
+    "averageTime_other": "Temps moyen de révision ({{count}} copies confirmées) :",
+    "activeTime": "actif :",
+    "noReviewTime": "Le temps moyen de révision s'affichera ici quand des copies seront confirmées.",
+    "localOnly": "Les temps de révision sont enregistrés uniquement sur le serveur de l'établissement et ne sont jamais envoyés ailleurs."
+  },
+  "review": {
+    "positionOf": "Copie {{position}} sur {{count}}",
+    "totals": "Total : {{final}} / {{max}}",
+    "decided": "{{decided}} points décidés sur {{total}}",
+    "deductionsTotal_one": "L'IA a retiré {{marks}} point(s) de note sur {{count}} critère",
+    "deductionsTotal_other": "L'IA a retiré {{marks}} point(s) de note sur {{count}} critères",
+    "previousScript": "Copie précédente",
+    "nextScript": "Copie suivante",
+    "shortcuts": "Raccourcis clavier",
+    "shortcutsHelp": "Les raccourcis ne font rien pendant la saisie dans une zone de texte. Appuyez sur Échap pour quitter la zone.",
+    "confirm": "Confirmer la copie",
+    "confirmed": "Copie confirmée.",
+    "reopen": "Rouvrir pour modifier",
+    "reopened": "Copie rouverte. Confirmez-la à nouveau quand vous avez terminé.",
+    "cannotConfirm": "Donnez une note et une catégorie à chaque critère avant de confirmer.",
+    "manualMarking": "Corrigez cette copie à la main :",
+    "notReady": "L'IA n'a pas encore terminé cette copie. Vous pouvez la consulter, mais rien modifier.",
+    "lockedNotice": "Cette copie est confirmée. Rouvrez-la pour la modifier.",
+    "markedOnEarlierText": "La transcription a été modifiée après les propositions de l'IA : elles portent sur le texte précédent.",
+    "noPages": "Cette copie n'a aucune page.",
+    "marksTooHigh": "Ce critère vaut au plus {{max}}.",
+    "noProposal": "L'IA n'a rien proposé pour ce critère. Saisissez la note vous-même.",
+    "noProposalShort": "Aucune proposition de l'IA : saisissez la note vous-même.",
+    "noDeductions": "L'IA n'a retiré aucun point sur cette copie.",
+    "acceptedAll_one": "{{count}} proposition de l'IA acceptée.",
+    "acceptedAll_other": "{{count}} propositions de l'IA acceptées.",
+    "acceptAll": "Accepter toutes les propositions restantes de l'IA",
+    "accept": "Accepter",
+    "questionTotal": "{{final}} / {{max}}",
+    "questionDeducted_one": "L'IA a retiré {{marks}} point(s) de note sur {{count}} critère",
+    "questionDeducted_other": "L'IA a retiré {{marks}} point(s) de note sur {{count}} critères",
+    "pointMax": "/ {{max}}",
+    "deductedTitle_one": "L'IA a donné {{count}} point de moins que la valeur de ce critère",
+    "deductedTitle_other": "L'IA a donné {{count}} points de moins que la valeur de ce critère",
+    "alsoAccept": "Accepter aussi : {{alternatives}}",
+    "aiProposal": "IA : {{marks}} / {{max}}",
+    "confidence": "confiance {{percent}} %",
+    "teacherMarks": "Votre note",
+    "teacherCategory": "Catégorie",
+    "chooseCategory": "Catégorie…",
+    "comment": "Commentaire pour cette question",
+    "commentHint": "300 caractères au plus. Enregistré quand vous quittez la zone.",
+    "transcription": "Transcription",
+    "teacherVersion": "Modifiée par un enseignant",
+    "modelVersion": "Lue par l'IA",
+    "editTranscription": "Modifier la transcription",
+    "saveTranscription": "Enregistrer la transcription",
+    "transcriptionSaved": "Transcription enregistrée comme nouvelle version. Les versions précédentes sont conservées.",
+    "editHint": "Ctrl+Entrée enregistre. Échap quitte la zone sans enregistrer.",
+    "noTranscription": "Aucune transcription pour cette page.",
+    "versions": "Toutes les versions ({{count}})",
+    "viewer": {
+      "toolbar": "Affichage de la page",
+      "pageOf": "Page {{page}} sur {{count}}",
+      "zoomIn": "Agrandir",
+      "zoomOut": "Réduire",
+      "fit": "Ajuster",
+      "rotateLeft": "Tourner à gauche",
+      "rotateRight": "Tourner à droite",
+      "resetRotation": "Annuler ma rotation",
+      "autoRotated": "Tournée automatiquement",
+      "autoRotatedHelp": "L'IA a jugé que cette page n'était pas droite et l'a tournée de {{degrees}}° (confiance {{confidence}} %).",
+      "undoAuto": "Annuler",
+      "rotatedAfterTranscription": "Cette page a été tournée après sa transcription. La transcription peut être mauvaise.",
+      "reread": "Demander à l'IA de la relire",
+      "rereadQueued": "La page sera relue en arrière-plan.",
+      "rereadPending": "L'IA va relire cette page sous peu.",
+      "imageAlt": "Page scannée {{page}}",
+      "strip": "Pages",
+      "coverThumb": "Page de garde",
+      "pageThumb": "Page {{page}}"
+    },
+    "keys": {
+      "points": "Critère suivant / précédent",
+      "deduction": "Critère suivant où l'IA a retiré des points",
+      "marks": "Donner ce nombre de points au critère sélectionné",
+      "accept": "Accepter la proposition de l'IA pour le critère sélectionné",
+      "acceptAll": "Accepter toutes les propositions restantes de l'IA",
+      "category": "Changer la catégorie du critère sélectionné",
+      "comment": "Écrire un commentaire sur la question en cours",
+      "edit": "Modifier la transcription de la page affichée",
+      "escape": "Quitter une zone de texte",
+      "pages": "Page précédente / suivante",
+      "zoom": "Agrandir / réduire / ajuster",
+      "rotate": "Tourner la page à droite / à gauche",
+      "scripts": "Copie suivante / précédente",
+      "confirm": "Confirmer la copie",
+      "help": "Afficher ou masquer cette liste"
     }
   }
 }

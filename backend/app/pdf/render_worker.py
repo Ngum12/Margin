@@ -72,11 +72,12 @@ def render(
             page.close()
 
             qr = _read_qr(image)
-            rotation = 0
+            # The stored image is never turned (Phase 4, D-049). A cover sheet's QR orientation
+            # gives the clockwise turn that makes it upright; the app applies it when showing
+            # the page and before transcription, and carries it to the pages that follow.
+            qr_rotation = 0
             if qr["texts"] and qr["orientation"]:
-                # Make a cover sheet upright, using the orientation of its QR code.
-                rotation = int(qr["orientation"]) % 360
-                image = image.rotate(rotation, expand=True)
+                qr_rotation = (-int(qr["orientation"])) % 360
             frame = has_cover_frame(image)
 
             name = f"{index:04d}.jpg"
@@ -91,7 +92,7 @@ def render(
                     "thumb": f"thumb_{name}",
                     "width": image.width,
                     "height": image.height,
-                    "rotation_applied": rotation,
+                    "qr_rotation": qr_rotation,
                     "qr_texts": qr["texts"],
                     "qr_damaged": qr["damaged"],
                     "cover_frame": frame,

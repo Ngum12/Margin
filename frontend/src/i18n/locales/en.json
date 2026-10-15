@@ -8,7 +8,9 @@
     "optional": "Optional",
     "actions": "Actions",
     "save": "Save",
-    "saved": "Saved."
+    "saved": "Saved.",
+    "cancel": "Cancel",
+    "close": "Close"
   },
   "language": {
     "label": "Language",
@@ -209,13 +211,31 @@
       "processing_error": "Something went wrong while processing this file. Try again."
     },
     "page": {
-      "already_assigned": "Some pages are already in a script. Return them to the tray first."
+      "already_assigned": "Some pages are already in a script. Return them to the tray first.",
+      "not_in_script": "This page is not part of a script.",
+      "is_cover": "Cover sheets are not transcribed.",
+      "not_auto_rotated": "This page was not turned automatically."
     },
     "script": {
-      "locked": "This script is already being marked; its pages cannot change."
+      "locked": "This script is already being marked; its pages cannot change.",
+      "confirmed": "This script is confirmed. Reopen it to make changes.",
+      "not_ready": "The AI has not finished with this script yet.",
+      "incomplete": "Give every point a mark and a category before confirming.",
+      "not_confirmed": "This script is not confirmed."
     },
     "ai": {
       "no_scripts": "No scripts have been uploaded for this exam yet."
+    },
+    "decision": {
+      "empty": "Choose marks or a category.",
+      "marks_out_of_range": "Marks must be a whole number from 0 to the point's maximum.",
+      "no_proposal": "The AI made no proposal for this point."
+    },
+    "comment": {
+      "too_long": "Comments can be at most 300 characters."
+    },
+    "export": {
+      "not_confirmed": "Only confirmed scripts can be exported."
     }
   },
   "issues": {
@@ -256,13 +276,23 @@
       "question_inconsistent": "Row {{row}}: question {{label}} has a different text or maximum than on row {{first_row}}.",
       "malformed_csv": "The file is not a valid CSV file.",
       "empty": "The file contains no mark scheme rows."
+    },
+    "script": {
+      "point_undecided": "A mark scheme point has no final mark or category yet."
+    },
+    "decision": {
+      "marks_out_of_range": "Marks must be a whole number from 0 to {{max}}."
+    },
+    "comment": {
+      "too_long": "Comments can be at most {{max}} characters."
     }
   },
   "examTabs": {
     "label": "Exam sections",
     "setup": "Questions and mark scheme",
     "sheets": "Cover sheets",
-    "scans": "Scans"
+    "scans": "Scans",
+    "queue": "Marking"
   },
   "sheets": {
     "needReady": "Mark the exam as ready (after completing the mark scheme) before printing cover sheets or uploading scans.",
@@ -343,6 +373,144 @@
         "marker_invalid_output": "The AI could not propose valid marks for some questions.",
         "no_answer_pages": "This script has no answer pages."
       }
+    }
+  },
+  "scriptStatus": {
+    "waiting": "Waiting for AI",
+    "transcribed": "Transcribed",
+    "ai_marked": "AI marked",
+    "in_review": "In review",
+    "confirmed": "Confirmed"
+  },
+  "category": {
+    "correct": "Correct",
+    "conceptual_error": "Conceptual error",
+    "language_expression": "Language / expression",
+    "transcription_uncertain": "Transcription uncertain",
+    "omitted": "Omitted"
+  },
+  "queue": {
+    "title": "Marking queue",
+    "help": "Scripts that most need your attention come first: manual marking, unclear transcriptions, then the lowest AI confidence. Confirmed scripts are at the end.",
+    "confirmedCount": "Confirmed: {{confirmed}} of {{count}}",
+    "empty": "No scripts yet. Upload scans first.",
+    "student": "Student",
+    "status": "Status",
+    "checks": "Check",
+    "aiMarks": "AI marks",
+    "teacherMarks": "Your marks",
+    "reviewTime": "Review time",
+    "decided": "{{decided}} of {{total}} points decided",
+    "review": "Review",
+    "open": "Open",
+    "waitingForAi": "Not ready yet",
+    "uncertain_one": "{{count}} point with an unclear transcription",
+    "uncertain_other": "{{count}} points with an unclear transcription",
+    "lowConfidence": "Low AI confidence ({{percent}}%)",
+    "autoRotated_one": "{{count}} page turned automatically",
+    "autoRotated_other": "{{count}} pages turned automatically",
+    "deductions_one": "AI deducted {{marks}} on {{count}} point",
+    "deductions_other": "AI deducted {{marks}} on {{count}} points",
+    "pageFlag": {
+      "no_answer_pages": "Only a cover sheet, no answer pages",
+      "more_than_usual": "More pages than usual",
+      "fewer_than_usual": "Fewer pages than usual"
+    },
+    "duration": "{{minutes}} min {{seconds}} s",
+    "averageTime_one": "Average review time ({{count}} confirmed script):",
+    "averageTime_other": "Average review time ({{count}} confirmed scripts):",
+    "activeTime": "active:",
+    "noReviewTime": "Average review time will appear here once scripts are confirmed.",
+    "localOnly": "Review times are stored on the school's own server only and never sent anywhere."
+  },
+  "review": {
+    "positionOf": "Script {{position}} of {{count}}",
+    "totals": "Total: {{final}} / {{max}}",
+    "decided": "{{decided}} of {{total}} points decided",
+    "deductionsTotal_one": "AI deducted {{marks}} mark(s) on {{count}} point",
+    "deductionsTotal_other": "AI deducted {{marks}} mark(s) on {{count}} points",
+    "previousScript": "Previous script",
+    "nextScript": "Next script",
+    "shortcuts": "Keyboard shortcuts",
+    "shortcutsHelp": "Shortcuts do nothing while you are typing in a text box. Press Esc to leave the box.",
+    "confirm": "Confirm script",
+    "confirmed": "Script confirmed.",
+    "reopen": "Reopen for changes",
+    "reopened": "Script reopened. Confirm it again when you are done.",
+    "cannotConfirm": "Give every point a mark and a category before confirming.",
+    "manualMarking": "Mark this script by hand:",
+    "notReady": "The AI has not finished with this script yet. You can look, but not change anything.",
+    "lockedNotice": "This script is confirmed. Reopen it to make changes.",
+    "markedOnEarlierText": "The transcription was changed after the AI proposed its marks: the proposals were made on the earlier text.",
+    "noPages": "This script has no pages.",
+    "marksTooHigh": "This point is worth at most {{max}}.",
+    "noProposal": "The AI made no proposal for this point. Enter the marks yourself.",
+    "noProposalShort": "No AI proposal: enter the marks yourself.",
+    "noDeductions": "The AI did not deduct marks anywhere on this script.",
+    "acceptedAll_one": "Accepted {{count}} AI proposal.",
+    "acceptedAll_other": "Accepted {{count}} AI proposals.",
+    "acceptAll": "Accept all remaining AI proposals",
+    "accept": "Accept",
+    "questionTotal": "{{final}} / {{max}}",
+    "questionDeducted_one": "AI deducted {{marks}} mark(s) on {{count}} point",
+    "questionDeducted_other": "AI deducted {{marks}} mark(s) on {{count}} points",
+    "pointMax": "/ {{max}}",
+    "deductedTitle_one": "The AI gave {{count}} mark fewer than this point is worth",
+    "deductedTitle_other": "The AI gave {{count}} marks fewer than this point is worth",
+    "alsoAccept": "Also accept: {{alternatives}}",
+    "aiProposal": "AI: {{marks}} / {{max}}",
+    "confidence": "confidence {{percent}}%",
+    "teacherMarks": "Your marks",
+    "teacherCategory": "Category",
+    "chooseCategory": "Category…",
+    "comment": "Comment for this question",
+    "commentHint": "At most 300 characters. Saved when you leave the box.",
+    "transcription": "Transcription",
+    "teacherVersion": "Edited by a teacher",
+    "modelVersion": "Read by the AI",
+    "editTranscription": "Edit transcription",
+    "saveTranscription": "Save transcription",
+    "transcriptionSaved": "Transcription saved as a new version. Earlier versions are kept.",
+    "editHint": "Ctrl+Enter saves. Esc leaves the box without saving.",
+    "noTranscription": "No transcription for this page.",
+    "versions": "All versions ({{count}})",
+    "viewer": {
+      "toolbar": "Page view",
+      "pageOf": "Page {{page}} of {{count}}",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fit": "Fit",
+      "rotateLeft": "Rotate left",
+      "rotateRight": "Rotate right",
+      "resetRotation": "Undo my rotation",
+      "autoRotated": "Auto-rotated",
+      "autoRotatedHelp": "The AI judged this page was not upright and turned it {{degrees}}° (confidence {{confidence}}%).",
+      "undoAuto": "Undo",
+      "rotatedAfterTranscription": "This page was turned after it was transcribed. The transcription may be poor.",
+      "reread": "Ask the AI to read it again",
+      "rereadQueued": "The page will be read again in the background.",
+      "rereadPending": "The AI will read this page again shortly.",
+      "imageAlt": "Scanned page {{page}}",
+      "strip": "Pages",
+      "coverThumb": "Cover sheet",
+      "pageThumb": "Page {{page}}"
+    },
+    "keys": {
+      "points": "Next / previous mark scheme point",
+      "deduction": "Next point where the AI deducted marks",
+      "marks": "Give the focused point that many marks",
+      "accept": "Accept the AI's proposal for the focused point",
+      "acceptAll": "Accept all remaining AI proposals",
+      "category": "Change the category of the focused point",
+      "comment": "Write a comment on the current question",
+      "edit": "Edit the transcription of the page shown",
+      "escape": "Leave a text box",
+      "pages": "Previous / next page",
+      "zoom": "Zoom in / out / fit",
+      "rotate": "Rotate the page right / left",
+      "scripts": "Next / previous script",
+      "confirm": "Confirm the script",
+      "help": "Show or hide this list"
     }
   }
 }

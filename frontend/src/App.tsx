@@ -11,6 +11,8 @@ import CoverSheets from "./routes/CoverSheets";
 import ExamSetup from "./routes/ExamSetup";
 import Home from "./routes/Home";
 import NewExam from "./routes/NewExam";
+import Queue from "./routes/Queue";
+import Review from "./routes/Review";
 import Scans from "./routes/Scans";
 import SignIn from "./routes/SignIn";
 
@@ -63,6 +65,22 @@ export default function App() {
           element={
             <RequireAuth>
               <Scans />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/exams/:examId/queue"
+          element={
+            <RequireAuth>
+              <Queue />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/exams/:examId/review/:scriptId"
+          element={
+            <RequireAuth>
+              <Review />
             </RequireAuth>
           }
         />

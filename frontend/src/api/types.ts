@@ -200,3 +200,147 @@ export interface AiStatus {
   jobs_failed: number;
   system: SystemStatus;
 }
+
+// --- teacher review (Phase 4) -------------------------------------------------------------
+
+export type ScriptStatus = "waiting" | "transcribed" | "ai_marked" | "in_review" | "confirmed";
+
+export type ErrorCategory =
+  "correct" | "conceptual_error" | "language_expression" | "transcription_uncertain" | "omitted";
+
+export const ERROR_CATEGORIES: readonly ErrorCategory[] = [
+  "correct",
+  "conceptual_error",
+  "language_expression",
+  "transcription_uncertain",
+  "omitted",
+];
+
+export type Rotation = 0 | 90 | 180 | 270;
+
+export interface QueueItem {
+  script_id: number;
+  student_code: string;
+  student_name: string | null;
+  status: ScriptStatus;
+  manual_reason: string | null;
+  reviewable: boolean;
+  page_count: number;
+  page_count_flag: PageCountFlag | null;
+  auto_rotated_pages: number;
+  min_confidence: number | null;
+  uncertain_points: number;
+  deductions: number;
+  marks_deducted: number;
+  decided_points: number;
+  total_points: number;
+  proposed_total: number | null;
+  final_total: number | null;
+  max_total: number;
+  review_seconds: number | null;
+  active_seconds: number | null;
+}
+
+export interface Queue {
+  exam_id: number;
+  exam_title: string;
+  exam_status: ExamStatus;
+  items: QueueItem[];
+  typical_page_count: number | null;
+  confirmed_count: number;
+  timed_count: number;
+  average_review_seconds: number | null;
+  average_active_seconds: number | null;
+}
+
+export interface TranscriptionVersion {
+  id: number;
+  text: string;
+  source: "model" | "teacher";
+  model_name: string | null;
+  prompt_version: string | null;
+  rotation: number;
+  created_at: string;
+}
+
+export interface ReviewPage {
+  id: number;
+  position: number | null;
+  is_cover: boolean;
+  width: number;
+  height: number;
+  rotation: number;
+  rotation_teacher: number | null;
+  rotation_auto: number;
+  auto_rotated: boolean;
+  auto_rotation_confidence: number | null;
+  rotated_after_transcription: boolean;
+  retranscribe_pending: boolean;
+  transcription: TranscriptionVersion | null;
+  versions: TranscriptionVersion[];
+  edited_after_marking: boolean;
+}
+
+export interface ReviewPoint {
+  id: number;
+  position: number;
+  description: string;
+  alternatives: string[];
+  max_marks: number;
+  decision_id: number | null;
+  proposed_marks: number | null;
+  evidence: string;
+  confidence: number | null;
+  error_category: ErrorCategory | null;
+  deducted: number;
+  final_marks: number | null;
+  final_category: ErrorCategory | null;
+  decided_at: string | null;
+}
+
+export interface ReviewQuestion {
+  id: number;
+  label: string;
+  prompt_text: string;
+  max_marks: number;
+  points: ReviewPoint[];
+  comment: string;
+  proposed_total: number | null;
+  final_total: number | null;
+  deductions: number;
+  marks_deducted: number;
+}
+
+export interface ScriptReview {
+  script: {
+    id: number;
+    status: ScriptStatus;
+    manual_reason: string | null;
+    student_code: string;
+    student_name: string | null;
+    reviewed_at: string | null;
+    confirmed_at: string | null;
+  };
+  exam: { id: number; title: string; subject_code: string };
+  ready: boolean;
+  locked: boolean;
+  can_confirm: boolean;
+  pages: ReviewPage[];
+  questions: ReviewQuestion[];
+  totals: {
+    max_total: number;
+    proposed_total: number | null;
+    final_total: number | null;
+    decided_points: number;
+    total_points: number;
+    deductions: number;
+    marks_deducted: number;
+  };
+  navigation: {
+    previous_id: number | null;
+    next_id: number | null;
+    position: number;
+    count: number;
+  };
+  marked_on_earlier_text: boolean;
+}

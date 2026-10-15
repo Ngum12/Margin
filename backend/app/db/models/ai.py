@@ -14,6 +14,8 @@ class JobType(StrEnum):
     PROCESS_UPLOAD = "process_upload"
     TRANSCRIBE_SCRIPT = "transcribe_script"
     MARK_SCRIPT = "mark_script"
+    # A teacher asked for a fresh read of one page after correcting its orientation (Phase 4).
+    TRANSCRIBE_PAGE = "transcribe_page"
 
 
 class JobStatus(StrEnum):
@@ -82,7 +84,9 @@ class Transcription(IdMixin, Base):
 
     __tablename__ = "transcription"
     __table_args__ = (
-        UniqueConstraint("page_id", "source", "model_name", "model_version", "prompt_version"),
+        UniqueConstraint(
+            "page_id", "source", "model_name", "model_version", "prompt_version", "rotation"
+        ),
     )
 
     script_id: Mapped[int] = mapped_column(ForeignKey("script.id"), index=True)
@@ -97,6 +101,9 @@ class Transcription(IdMixin, Base):
     prompt_version: Mapped[str | None] = mapped_column(String(100))
     created_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    # Clockwise degrees the page was turned when the model read it (Phase 4). A teacher can ask
+    # for a fresh read after correcting the orientation; it is stored beside the first read.
+    rotation: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class ErrorCategory(StrEnum):
@@ -119,15 +126,18 @@ class MarkDecision(IdMixin, Base):
 
     script_id: Mapped[int] = mapped_column(ForeignKey("script.id"), index=True)
     mark_scheme_point_id: Mapped[int] = mapped_column(ForeignKey("mark_scheme_point.id"))
-    # Half-mark units (D-018).
-    proposed_half_marks: Mapped[int] = mapped_column(Integer)
+    # The AI's proposal, in half-mark units (D-018). All proposal fields are empty for points a
+    # teacher marks without an AI proposal (scripts flagged for manual marking).
+    proposed_half_marks: Mapped[int | None] = mapped_column(Integer)
     evidence: Mapped[str] = mapped_column(Text, default="")
-    confidence: Mapped[float] = mapped_column(Float)
-    error_category: Mapped[ErrorCategory] = mapped_column(str_enum(ErrorCategory, "error_category"))
-    model_name: Mapped[str] = mapped_column(String(100))
-    model_version: Mapped[str] = mapped_column(String(100))
-    prompt_version: Mapped[str] = mapped_column(String(100))
-    proposed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    confidence: Mapped[float | None] = mapped_column(Float)
+    error_category: Mapped[ErrorCategory | None] = mapped_column(
+        str_enum(ErrorCategory, "error_category")
+    )
+    model_name: Mapped[str | None] = mapped_column(String(100))
+    model_version: Mapped[str | None] = mapped_column(String(100))
+    prompt_version: Mapped[str | None] = mapped_column(String(100))
+    proposed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=utcnow)
     # Teacher's decision (Phase 4). Null until decided.
     final_half_marks: Mapped[int | None] = mapped_column(Integer)
     final_category: Mapped[ErrorCategory | None] = mapped_column(
@@ -135,3 +145,30 @@ class MarkDecision(IdMixin, Base):
     )
     decided_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
     decided_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+
+
+class QuestionComment(IdMixin, Base):
+    """A teacher's short comment on one question of one script."""
+
+    __tablename__ = "question_comment"
+    __table_args__ = (UniqueConstraint("script_id", "question_id"),)
+
+    script_id: Mapped[int] = mapped_column(ForeignKey("script.id"), index=True)
+    question_id: Mapped[int] = mapped_column(ForeignKey("question.id"))
+    text: Mapped[str] = mapped_column(String(300))
+    updated_by_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
+class ReviewSession(IdMixin, Base):
+    """Time a teacher spends reviewing a script (owner change 2, Phase 4). Local data only."""
+
+    __tablename__ = "review_session"
+
+    script_id: Mapped[int] = mapped_column(ForeignKey("script.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    opened_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    confirmed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    # Seconds the review screen was visible and in use (idle gaps over 5 minutes excluded).
+    active_seconds: Mapped[float] = mapped_column(Float, default=0.0)
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(UTCDateTime())

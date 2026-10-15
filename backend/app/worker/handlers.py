@@ -15,8 +15,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.ai.factory import build_marker, build_reader
-from app.ai.types import ModelInfo, ModelOutputInvalidError, PageImage, PageText
+from app.ai.types import ModelInfo, ModelOutputInvalidError, PageImage, PageText, Reader
 from app.ai.types import Transcription as AiTranscription
+from app.ai.validation import ORIENTATION_TURN
 from app.clock import utcnow
 from app.config import Settings
 from app.db.models import (
@@ -34,9 +35,9 @@ from app.db.models import (
     TranscriptionSource,
 )
 from app.marks import to_half_marks
-from app.services import audit, jobs, uploads
+from app.services import audit, jobs, transcripts, uploads
 from app.services.ai_marking import exam_spec, mark_key, update_exam_progress
-from app.subjects.registry import get_registry
+from app.subjects.registry import SubjectConfig, get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -132,12 +133,8 @@ def transcribe_script(
             )
             if done is not None:
                 continue  # resumed after a restart
-            image = settings.data_dir / page.image_path
-            sidecar = image.with_suffix(".txt")
             try:
-                result = reader.transcribe(
-                    [PageImage(page.id, image, sidecar if sidecar.is_file() else None)], subject
-                )
+                result = _read_page(db, reader, settings, page, subject)
             except ModelOutputInvalidError:
                 _flag_manual(db, script, "ai.reader_invalid_output")
                 db.commit()
@@ -154,6 +151,7 @@ def transcribe_script(
                     model_version=result.model.version,
                     prompt_version=result.prompt_version,
                     created_at=result.created_at,
+                    rotation=page.effective_rotation,
                 )
             )
             try:
@@ -173,20 +171,130 @@ def transcribe_script(
         db.commit()
 
 
+def _read_page(
+    db: Session, reader: Reader, settings: Settings, page: Page, subject: SubjectConfig
+) -> AiTranscription:
+    """Read one answer page; if the Reader judges it not upright with enough confidence, turn it
+    and read it once more, keeping the second read (orientation layer c, owner change 1)."""
+    image = settings.data_dir / page.image_path
+    sidecar = image.with_suffix(".txt")
+
+    def read() -> AiTranscription:
+        return reader.transcribe(
+            [
+                PageImage(
+                    page.id,
+                    image,
+                    sidecar if sidecar.is_file() else None,
+                    rotation=page.effective_rotation,
+                )
+            ],
+            subject,
+        )
+
+    result = read()
+    if settings.orientation_check != "reader" or page.rotation_teacher is not None:
+        return result
+    judged = result.pages[0]
+    turn = ORIENTATION_TURN.get(judged.orientation or "", 0)
+    confidence = judged.orientation_confidence or 0.0
+    if turn == 0 or confidence < settings.orientation_min_confidence:
+        return result
+    old = page.effective_rotation
+    page.rotation_auto = (page.rotation_auto + turn) % 360
+    page.auto_rotation_confidence = confidence
+    page.auto_rotation_model = result.model.name
+    page.auto_rotation_prompt_version = result.prompt_version
+    audit.record(
+        db,
+        actor=None,
+        entity_type="page",
+        entity_id=page.id,
+        action="auto_rotate",
+        old_value={"rotation": old},
+        new_value={
+            "rotation": page.effective_rotation,
+            "orientation": judged.orientation,
+            "confidence": confidence,
+        },
+    )
+    logger.info(
+        "Page %s judged %s (%.2f); read again turned", page.id, judged.orientation, confidence
+    )
+    # The second read's own judgement is kept in the logs only: never a further rotation.
+    return read()
+
+
 def _latest_texts(db: Session, pages: list[Page]) -> list[PageText]:
-    """Per page, the newest teacher transcription if any, otherwise the newest model one."""
+    """Per page, the current transcription (see services.transcripts.current)."""
     texts = []
     for page in pages:
-        rows = db.scalars(
-            select(Transcription)
-            .where(Transcription.page_id == page.id)
-            .order_by(Transcription.created_at.desc(), Transcription.id.desc())
-        ).all()
-        if not rows:
+        found = transcripts.current(transcripts.page_versions(db, page.id))
+        if found is None:
             raise MissingTranscriptionError(f"page {page.id}")
-        teacher = [r for r in rows if r.source == TranscriptionSource.TEACHER]
-        texts.append(PageText(page.id, (teacher or rows)[0].text))
+        texts.append(PageText(page.id, found.text))
     return texts
+
+
+def transcribe_page(
+    factory: sessionmaker[Session], settings: Settings, payload: dict[str, int]
+) -> None:
+    """A fresh read of one page that a teacher asked for after correcting its orientation. The
+    teacher's orientation is final, so the Reader's own judgement is not acted on here."""
+    reader = build_reader(settings)
+    with factory() as db:
+        page = db.get(Page, payload["page_id"])
+        if page is None or page.script_id is None:
+            return
+        script = db.get(Script, page.script_id)
+        exam = db.get(Exam, script.exam_id) if script else None
+        if script is None or exam is None or script.status == ScriptStatus.CONFIRMED:
+            return
+        subject = get_registry().get(_curriculum(db, exam), exam.subject_code)
+        if subject is None:  # pragma: no cover
+            return
+        _register_model(db, reader.model, ModelRole.READER)
+        rotation = page.effective_rotation
+        done = db.scalar(
+            select(Transcription.id).where(
+                Transcription.page_id == page.id,
+                Transcription.source == TranscriptionSource.MODEL,
+                Transcription.model_name == reader.model.name,
+                Transcription.model_version == reader.model.version,
+                Transcription.prompt_version == reader.prompt_version,
+                Transcription.rotation == rotation,
+            )
+        )
+        if done is None:
+            image = settings.data_dir / page.image_path
+            try:
+                result = reader.transcribe([PageImage(page.id, image, rotation=rotation)], subject)
+            except ModelOutputInvalidError:
+                logger.warning("Fresh read of page %s failed validation", page.id)
+                audit.record(
+                    db,
+                    actor=None,
+                    entity_type="page",
+                    entity_id=page.id,
+                    action="retranscribe_failed",
+                )
+                db.commit()
+                return
+            db.add(
+                Transcription(
+                    script_id=script.id,
+                    page_id=page.id,
+                    text=result.pages[0].text,
+                    source=TranscriptionSource.MODEL,
+                    model_name=result.model.name,
+                    model_version=result.model.version,
+                    prompt_version=result.prompt_version,
+                    created_at=result.created_at,
+                    rotation=rotation,
+                )
+            )
+        page.rotated_after_transcription = False
+        db.commit()
 
 
 def mark_script(
@@ -247,4 +355,5 @@ HANDLERS = {
     JobType.PROCESS_UPLOAD: process_upload,
     JobType.TRANSCRIBE_SCRIPT: transcribe_script,
     JobType.MARK_SCRIPT: mark_script,
+    JobType.TRANSCRIBE_PAGE: transcribe_page,
 }

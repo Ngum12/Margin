@@ -76,12 +76,13 @@ def test_cover_sheets_are_not_transcribed_and_outputs_carry_versions(
     for t in transcriptions:
         assert (t.model_name, t.model_version) == ("mock-reader", "mock-1")
         assert t.prompt_version is not None
-        assert t.prompt_version.startswith("reader-v1#")
+        assert t.prompt_version.startswith("reader-v2#")
         assert t.created_at is not None
     decisions = db.scalars(select(MarkDecision)).all()
     assert len(decisions) == 2 * 3  # 3 mark scheme points per script
     for d in decisions:
         assert (d.model_name, d.model_version) == ("mock-marker", "mock-1")
+        assert d.prompt_version is not None
         assert d.prompt_version.startswith("marker-v1#")
         assert d.final_half_marks is None  # the AI never finalises a mark
     assert {(m.name, m.role.value) for m in db.scalars(select(ModelVersion))} == {

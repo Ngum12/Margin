@@ -7,7 +7,7 @@ import { useLoad } from "../components/useLoad";
 
 const POLL_MS = 5000;
 
-/** Start AI marking and follow its progress. The full marking queue is Phase 4 (screen 6). */
+/** Start AI marking and follow its progress (on the marking queue, screen 6). */
 export function AiPanel({ examId, onProgress }: { examId: number; onProgress: () => void }) {
   const { t } = useTranslation();
   const { state, reload } = useLoad(() => api.aiStatus(examId), [examId]);

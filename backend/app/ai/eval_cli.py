@@ -27,7 +27,13 @@ from app.ai.marking_evaluation import (
     find_mark_scheme,
     load_expected,
 )
+from app.ai.orientation_evaluation import (
+    OrientationPage,
+    OrientationSummary,
+    evaluate_orientation,
+)
 from app.ai.types import ExamSpec
+from app.ai.validation import ORIENTATIONS
 from app.config import Settings, get_settings
 from app.subjects.registry import SubjectConfig, get_registry
 
@@ -64,6 +70,23 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         default=None,
         help='marker evidence designs to compare, e.g. "quote,lines" (default: the setting)',
     )
+    parser.add_argument(
+        "--orientation",
+        action="store_true",
+        help="also measure the Reader's orientation judgement (pages fed turned in memory)",
+    )
+    parser.add_argument(
+        "--orientation-turns",
+        default="0,90,180,270",
+        help="clockwise turns to feed each labelled page (default: 0,90,180,270)",
+    )
+    parser.add_argument(
+        "--orientation-extra",
+        action="append",
+        default=[],
+        metavar="SUBJECT:ORIENTATION:IMAGE",
+        help="an extra page with a known orientation, e.g. chemistry:upside_down:page.jpg",
+    )
     parser.add_argument("--report", type=Path, help="write a JSON report here")
     parser.add_argument(
         "--cache",
@@ -81,6 +104,7 @@ class ModelRun:
     marking: dict[str, MarkingSummary]  # "reader" / "truth" -> summary
     evidence: str = "quote"
     marker_prompt_version: str = ""
+    orientation: OrientationSummary | None = None
 
     @property
     def label(self) -> str:
@@ -157,6 +181,38 @@ def _print_tables(runs: list[ModelRun]) -> None:
                     f"{m.exact_agreement(True):>12.0%}{m.mean_absolute_difference(True):>10.2f}"
                     f"{m.marks_lost(True):>11}{m.seconds_per_script:>10.1f}"
                 )
+    if any(run.marking for run in runs):
+        print("\nMarking by subject (failed questions count as disagreements)")
+        print(
+            f"{'model [evidence]':<36}{'input':<8}{'subject':<14}{'exact':>7}{'within 1':>10}"
+            f"{'MAD':>6}{'over':>6}{'under':>7}{'failed':>8}"
+        )
+        for run in runs:
+            for source, m in run.marking.items():
+                for subject, row in m.by_subject().items():
+                    print(
+                        f"{run.label:<36}{source:<8}{subject:<14}{row['exact_agreement']:>7.0%}"
+                        f"{row['within_one_mark']:>10.0%}{row['mean_absolute_difference']:>6.2f}"
+                        f"{row['over_marked_questions']:>6}{row['under_marked_questions']:>7}"
+                        f"{row['failed']:>8}"
+                    )
+    oriented = [run for run in runs if run.orientation is not None]
+    if oriented:
+        print("\nOrientation judgement (fixed / left alone / WRONG turn / missed)")
+        print(
+            f"{'model':<28}{'calls':>6}{'fixed':>7}{'left':>6}{'wrong':>7}{'missed':>8}"
+            f"{'judged right':>14}{'s/call':>8}"
+        )
+        for run in oriented:
+            o = run.orientation
+            if o is None:  # pragma: no cover - filtered above
+                continue
+            print(
+                f"{run.model:<28}{len(o.cases):>6}{o.count('fixed'):>7}{o.count('left'):>6}"
+                f"{o.count('wrong'):>7}{o.count('missed'):>8}"
+                f"{o.judged_right / len(o.cases) if o.cases else 0:>14.0%}"
+                f"{o.seconds_per_call:>8.1f}"
+            )
 
 
 def _report(runs: list[ModelRun], settings: Settings) -> dict[str, Any]:
@@ -175,6 +231,7 @@ def _report(runs: list[ModelRun], settings: Settings) -> dict[str, Any]:
                 "labelled_conceptual_error": m.language_called_conceptual(),
             },
             "seconds_per_script": m.seconds_per_script,
+            "by_subject": m.by_subject(),
             "comparisons": [
                 vars(c) | {"proposed_categories": list(c.proposed_categories)}
                 for c in m.comparisons
@@ -214,10 +271,31 @@ def _report(runs: list[ModelRun], settings: Settings) -> dict[str, Any]:
                     for r in run.reading
                 ],
                 "marking": {source: marking_json(m) for source, m in run.marking.items()},
+                "orientation": run.orientation.as_json() if run.orientation else None,
             }
             for run in runs
         ],
     }
+
+
+def _orientation_pages(
+    args: argparse.Namespace, scripts: dict[str, list[Any]]
+) -> list[OrientationPage]:
+    pages = [
+        OrientationPage(image, subject)
+        for subject, items in scripts.items()
+        for script in items
+        for image in script.images
+    ]
+    for extra in args.orientation_extra:
+        subject, _, rest = extra.partition(":")
+        appears, _, image = rest.partition(":")
+        if appears not in ORIENTATIONS or not Path(image).is_file():
+            raise SystemExit(
+                f"--orientation-extra: expected SUBJECT:ORIENTATION:IMAGE, got {extra}"
+            )
+        pages.append(OrientationPage(Path(image), subject, appears))
+    return pages
 
 
 def run(args: argparse.Namespace) -> int:
@@ -258,6 +336,8 @@ def run(args: argparse.Namespace) -> int:
         print(f"Resume file: {cache_path} ({len(cache)} finished calls)", flush=True)
 
     modes = [m.strip() for m in (args.evidence or settings.marker_evidence).split(",") if m.strip()]
+    orientation_pages = _orientation_pages(args, scripts) if args.orientation else []
+    turns = tuple(int(t) % 360 for t in args.orientation_turns.split(",") if t.strip())
     if not set(modes) <= {"quote", "lines"}:
         raise SystemExit("--evidence takes quote, lines or both")
 
@@ -278,6 +358,19 @@ def run(args: argparse.Namespace) -> int:
             cache=cache,
             cache_prefix=read_prefix,
         )
+        orientation = None
+        if orientation_pages:
+            print("-- orientation judgement", flush=True)
+            orientation = evaluate_orientation(
+                reader,
+                orientation_pages,
+                subject_config,
+                turns=turns,
+                threshold=settings.orientation_min_confidence,
+                progress=lambda m: print(m, flush=True),
+                cache=cache,
+                cache_prefix=read_prefix,
+            )
         for index, mode in enumerate(modes):
             marker = build_marker(model_settings.model_copy(update={"marker_evidence": mode}))
             mark_prefix = (
@@ -319,6 +412,7 @@ def run(args: argparse.Namespace) -> int:
                     marking,
                     evidence=mode,
                     marker_prompt_version=marker.prompt_version,
+                    orientation=orientation if index == 0 else None,
                 )
             )
 

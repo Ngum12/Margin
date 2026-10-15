@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     model_context_tokens: int = Field(default=8192, ge=2048)
     # Page images are shrunk to at most this many pixels on the long side before sending.
     reader_max_image_px: int = Field(default=1600, ge=512, le=4000)
+    # Orientation layer c (Phase 4, owner change 1): the Reader judges which way up each answer
+    # page is in the same call; a page judged not upright with at least this confidence is
+    # turned and read once more. "off" ignores the judgement.
+    orientation_check: Literal["reader", "off"] = "reader"
+    orientation_min_confidence: float = Field(default=0.8, ge=0.5, le=1.0)
     # Mock models only: artificial delay per call in seconds (demos and tests).
     mock_delay_seconds: float = Field(default=0.0, ge=0)
 

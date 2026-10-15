@@ -5,13 +5,17 @@ import type {
   ExamDetail,
   ExamStatus,
   ExamSummary,
+  ErrorCategory,
   ImportPreview,
   Language,
   MarkSchemeInput,
   Me,
+  Queue,
+  Rotation,
   Role,
   SchoolClass,
   ScanPage,
+  ScriptReview,
   ScriptsOverview,
   Student,
   Subject,
@@ -89,6 +93,56 @@ export const api = {
     request<{ scripts_queued: number }>("POST", `/api/exams/${String(examId)}/ai-marking`),
   pageImageUrl: (pageId: number, size: "thumb" | "full" = "thumb") =>
     `/api/pages/${String(pageId)}/image?size=${size}`,
+
+  // Teacher review (Phase 4). Every edit returns the whole updated review.
+  queue: (examId: number) => request<Queue>("GET", `/api/exams/${String(examId)}/queue`),
+  review: (scriptId: number) =>
+    request<ScriptReview>("GET", `/api/scripts/${String(scriptId)}/review`),
+  reviewHeartbeat: (scriptId: number) =>
+    request<{ session_open: boolean; active_seconds: number }>(
+      "POST",
+      `/api/scripts/${String(scriptId)}/review-heartbeat`,
+    ),
+  setDecision: (
+    scriptId: number,
+    pointId: number,
+    data: { marks?: number; category?: ErrorCategory },
+  ) =>
+    request<ScriptReview>("PUT", `/api/scripts/${String(scriptId)}/decisions/${String(pointId)}`, {
+      json: data,
+    }),
+  acceptPoint: (scriptId: number, pointId: number) =>
+    request<ScriptReview>(
+      "POST",
+      `/api/scripts/${String(scriptId)}/decisions/${String(pointId)}/accept`,
+    ),
+  acceptAll: (scriptId: number) =>
+    request<{ accepted: number; review: ScriptReview }>(
+      "POST",
+      `/api/scripts/${String(scriptId)}/accept-all`,
+    ),
+  setComment: (scriptId: number, questionId: number, text: string) =>
+    request<ScriptReview>(
+      "PUT",
+      `/api/scripts/${String(scriptId)}/questions/${String(questionId)}/comment`,
+      { json: { text } },
+    ),
+  confirmScript: (scriptId: number) =>
+    request<ScriptReview>("POST", `/api/scripts/${String(scriptId)}/confirm`),
+  reopenScript: (scriptId: number) =>
+    request<ScriptReview>("POST", `/api/scripts/${String(scriptId)}/reopen`),
+  editTranscription: (pageId: number, text: string) =>
+    request<ScriptReview>("POST", `/api/pages/${String(pageId)}/transcription`, {
+      json: { text },
+    }),
+  rotatePage: (pageId: number, rotation: Rotation | null) =>
+    request<ScriptReview>("POST", `/api/pages/${String(pageId)}/rotation`, {
+      json: { rotation },
+    }),
+  undoAutoRotation: (pageId: number) =>
+    request<ScriptReview>("POST", `/api/pages/${String(pageId)}/undo-auto-rotation`),
+  retranscribePage: (pageId: number) =>
+    request<ScriptReview>("POST", `/api/pages/${String(pageId)}/retranscribe`),
 
   classes: () => request<SchoolClass[]>("GET", "/api/classes"),
   createClass: (data: { name: string; academic_year: string; teacher_id: number }) =>

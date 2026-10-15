@@ -195,7 +195,7 @@ def test_cli_evaluates_reading_and_marking_and_writes_report(
     result = json.loads(report.read_text(encoding="utf-8"))
     model = result["models"][0]
     assert model["model"] == "mock"
-    assert model["prompt_version"].startswith("reader-v1#")
+    assert model["prompt_version"].startswith("reader-v2#")
     scripts = model["reading"][0]["scripts"]
     assert scripts[0]["cer"] == 0  # identical to what MockReader returns
     assert scripts[1]["cer"] == pytest.approx(1 / len(MOCK_TEXT))
@@ -203,6 +203,16 @@ def test_cli_evaluates_reading_and_marking_and_writes_report(
     assert set(marking) == {"reader", "truth"}
     assert marking["truth"]["questions"] == 4
     assert marking["truth"]["language_expression"]["questions"] == 1
+    chemistry = marking["truth"]["by_subject"]["chemistry"]
+    assert chemistry["questions"] == 4
+    assert set(chemistry) >= {
+        "exact_agreement",
+        "within_one_mark",
+        "mean_absolute_difference",
+        "over_marked_questions",
+        "under_marked_questions",
+    }
+    assert "Marking by subject" in out
 
 
 def test_cli_rejects_unknown_subject_folder(tmp_path: Path) -> None:
@@ -310,3 +320,26 @@ def test_both_evidence_designs_share_one_reading(
     lines_marking = models[1]["marking"]["truth"]
     assert lines_marking["questions"] == 1
     assert lines_marking["failed"] == 0
+
+
+def test_by_subject_reports_agreement_within_one_and_direction() -> None:
+    """Owner, 2026-10-15: every evaluation report gives these per subject."""
+    summary = MarkingSummary(
+        [
+            QuestionComparison("chemistry", "s1", "1a", 2, "correct", 2),
+            QuestionComparison("chemistry", "s1", "1b", 3, "correct", 1),
+            QuestionComparison("chemistry", "s2", "1a", 1, "correct", 2),
+            QuestionComparison("chemistry", "s2", "1b", 2, "correct", None),
+            QuestionComparison("economics", "s1", "1", 4, "correct", 3),
+        ]
+    )
+    rows = summary.by_subject()
+    chemistry = rows["chemistry"]
+    assert chemistry["questions"] == 4
+    assert chemistry["failed"] == 1
+    assert chemistry["exact_agreement"] == 0.25
+    assert chemistry["within_one_mark"] == 0.5  # 1a s1 exact, 1a s2 off by one
+    assert chemistry["mean_absolute_difference"] == 1.0  # (0 + 2 + 1) / 3 answered
+    assert (chemistry["over_marked_questions"], chemistry["under_marked_questions"]) == (1, 1)
+    assert (chemistry["marks_over"], chemistry["marks_under"]) == (1, 2)
+    assert rows["economics"]["under_marked_questions"] == 1
