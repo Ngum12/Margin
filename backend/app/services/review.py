@@ -58,7 +58,9 @@ from app.schemas.review import (
 from app.services import audit, jobs, transcripts
 from app.services.access import get_visible_exam, get_visible_script
 from app.services.ai_marking import script_is_done
+from app.services.decisions import current_decisions, exam_questions
 from app.services.page_counts import page_count_flag, typical_page_count
+from app.services.provenance import test_model_scripts
 from app.services.uploads import get_visible_page
 
 # Review time (owner change 2): a heartbeat arrives every 30 s while the screen is in use.
@@ -104,27 +106,6 @@ def _touch(script: Script) -> None:
         script.status = ScriptStatus.IN_REVIEW
 
 
-def exam_questions(db: Session, exam_id: int) -> list[Question]:
-    return list(
-        db.scalars(select(Question).where(Question.exam_id == exam_id).order_by(Question.position))
-    )
-
-
-def current_decisions(
-    db: Session, script_ids: Iterable[int]
-) -> dict[tuple[int, int], MarkDecision]:
-    """(script id, point id) -> the decision row the teacher works on: the newest row per point.
-    A teacher-only row is created only when no row exists, so the newest row is always the
-    latest AI proposal when there is one."""
-    ids = list(script_ids)
-    if not ids:
-        return {}
-    rows = db.scalars(
-        select(MarkDecision).where(MarkDecision.script_id.in_(ids)).order_by(MarkDecision.id)
-    )
-    return {(d.script_id, d.mark_scheme_point_id): d for d in rows}
-
-
 def _point_of_exam(db: Session, exam_id: int, point_id: int) -> MarkSchemePoint:
     point = db.scalar(
         select(MarkSchemePoint)
@@ -141,7 +122,10 @@ def _decision_for(db: Session, script: Script, point: MarkSchemePoint) -> MarkDe
     if decision is None:
         # Manual marking (or a question the AI failed): a row with no AI proposal.
         decision = MarkDecision(
-            script_id=script.id, mark_scheme_point_id=point.id, proposed_at=None
+            script_id=script.id,
+            mark_scheme_point_id=point.id,
+            proposed_at=None,
+            ai_run=script.ai_run,
         )
         db.add(decision)
         db.flush()
@@ -699,6 +683,7 @@ def _queue_items(db: Session, exam: Exam) -> tuple[list[QueueItemOut], int | Non
     typical = typical_page_count([page_counts.get(s.id, 0) for s in scripts])
     summaries = _summaries(db, scripts, questions)
     times = review_times(db, [s.id for s in scripts])
+    tested = test_model_scripts(db, [s.id for s in scripts])
 
     items = []
     for script in scripts:
@@ -727,6 +712,7 @@ def _queue_items(db: Session, exam: Exam) -> tuple[list[QueueItemOut], int | Non
                 max_total=from_half_marks(max_half),
                 review_seconds=time.wall_seconds if time else None,
                 active_seconds=time.active_seconds if time else None,
+                test_model=script.id in tested,
             )
         )
     items.sort(key=_queue_order)
@@ -773,6 +759,7 @@ def queue(db: Session, actor: User, exam_id: int) -> QueueOut:
         average_active_seconds=(
             sum(i.active_seconds or 0 for i in timed) / len(timed) if timed else None
         ),
+        test_model_count=sum(1 for i in items if i.test_model),
     )
 
 
@@ -785,6 +772,7 @@ def _version_out(t: Transcription) -> TranscriptionVersionOut:
         text=t.text,
         source=t.source,
         model_name=t.model_name,
+        model_version=t.model_version,
         prompt_version=t.prompt_version,
         rotation=t.rotation,
         created_at=t.created_at,
@@ -890,6 +878,9 @@ def script_review(db: Session, actor: User, script_id: int) -> ScriptReviewOut:
                     final_marks=_marks(d.final_half_marks) if d else None,
                     final_category=d.final_category if d else None,
                     decided_at=d.decided_at if d else None,
+                    model_name=d.model_name if d else None,
+                    model_version=d.model_version if d else None,
+                    prompt_version=d.prompt_version if d else None,
                 )
             )
         proposed_capped = None if proposed is None else min(proposed, question.max_half_marks)
@@ -953,4 +944,6 @@ def script_review(db: Session, actor: User, script_id: int) -> ScriptReviewOut:
             count=len(order),
         ),
         marked_on_earlier_text=edited_after,
+        test_model=bool(test_model_scripts(db, [script.id])),
+        ai_run=script.ai_run,
     )

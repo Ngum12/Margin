@@ -679,6 +679,7 @@ def _item(code: str, **overrides: Any) -> QueueItemOut:
         "max_total": 3,
         "review_seconds": None,
         "active_seconds": None,
+        "test_model": False,
     }
     values.update(overrides)
     return QueueItemOut(**values)

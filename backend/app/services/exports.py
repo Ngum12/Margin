@@ -34,8 +34,8 @@ from app.exports.marked_pdf import write_marked_pdf
 from app.exports.results_csv import results_csv
 from app.services import audit, jobs
 from app.services.access import get_visible_exam, get_visible_script, require_admin, visible_exams
+from app.services.decisions import exam_questions
 from app.services.results import script_results
-from app.services.review import exam_questions
 
 logger = logging.getLogger(__name__)
 

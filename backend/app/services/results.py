@@ -26,7 +26,9 @@ from app.db.models import (
 )
 from app.services import transcripts
 from app.services.access import get_visible_exam
-from app.services.review import ReviewTime, current_decisions, exam_questions, review_times
+from app.services.decisions import current_decisions, exam_questions
+from app.services.provenance import marker_models, test_model_scripts
+from app.services.review import ReviewTime, review_times
 
 
 @dataclass(frozen=True)
@@ -62,6 +64,9 @@ class ScriptResult:
     script: Script
     questions: list[QuestionResult]
     pages: list[ResultPage] = field(default_factory=list)
+    # Output from a test model (Mock): labelled in every export (owner, 2026-10-15).
+    test_model: bool = False
+    models: list[str] = field(default_factory=list)
 
     @property
     def confirmed(self) -> bool:
@@ -106,6 +111,8 @@ def script_results(
             select(QuestionComment).where(QuestionComment.script_id.in_([s.id for s in scripts]))
         )
     }
+    tested = test_model_scripts(db, [s.id for s in scripts])
+    models = marker_models(db, [s.id for s in scripts])
     results = []
     for script in scripts:
         question_results = []
@@ -126,7 +133,12 @@ def script_results(
             question_results.append(
                 QuestionResult(question, points, comments.get((script.id, question.id), ""))
             )
-        result = ScriptResult(script, question_results)
+        result = ScriptResult(
+            script,
+            question_results,
+            test_model=script.id in tested,
+            models=models.get(script.id, []),
+        )
         if with_pages:
             for page in script.pages:
                 if page.state != PageState.ASSIGNED:

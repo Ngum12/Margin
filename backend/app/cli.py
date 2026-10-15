@@ -22,10 +22,11 @@ from sqlalchemy import select
 
 from app.ai import eval_cli
 from app.config import get_settings
-from app.db.models import Language, Role, School
+from app.db.models import Exam, Language, Role, School
 from app.db.session import make_engine, make_sessionmaker
 from app.errors import ConflictError
 from app.schemas.accounts import UserCreateIn
+from app.services import ai_marking
 from app.services.users import create_user_unchecked
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -92,6 +93,33 @@ def create_user(
     return 0
 
 
+def rerun_ai(exam_id: int) -> int:
+    """Re-run AI marking for an exam's unconfirmed scripts (an administrator's tool, for
+    example after switching from the test models to a real one). Audited as the system."""
+    settings = get_settings()
+    if settings.ai_backend == "mock":
+        print(
+            "MARGIN_AI_BACKEND is mock: the re-run would use the test models. "
+            "Set MARGIN_AI_BACKEND=ollama first.",
+            file=sys.stderr,
+        )
+        return 1
+    factory = make_sessionmaker(make_engine(settings))
+    with factory() as db:
+        exam = db.get(Exam, exam_id)
+        if exam is None:
+            print(f"No exam with id {exam_id}", file=sys.stderr)
+            return 1
+        try:
+            count = ai_marking.rerun_exam(db, None, exam, settings)
+        except ConflictError as exc:
+            print(exc.message, file=sys.stderr)
+            return 1
+        db.commit()
+    print(f"Re-running AI marking for {count} script(s) of exam {exam_id}. The worker does it.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
@@ -117,6 +145,9 @@ def main(argv: list[str] | None = None) -> int:
     ev = sub.add_parser("evaluate", help="measure Readers and Markers against labelled data")
     eval_cli.add_arguments(ev)
 
+    rerun = sub.add_parser("rerun-ai", help="re-run AI marking for an exam's unconfirmed scripts")
+    rerun.add_argument("--exam", type=int, required=True, help="exam id")
+
     args = parser.parse_args(argv)
     if args.command == "evaluate":
         return eval_cli.run(args)
@@ -125,6 +156,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "init-school":
         return init_school(args.name, args.country, args.curriculum)
+    if args.command == "rerun-ai":
+        return rerun_ai(args.exam)
     return create_user(
         args.username, args.display_name, args.role, args.language, args.password_env
     )

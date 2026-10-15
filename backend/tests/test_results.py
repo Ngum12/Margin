@@ -166,6 +166,7 @@ def test_csv_totals_match_the_stored_marks_for_confirmed_scripts_only(
         "Maximum",
         "Percentage",
         "Confirmed at",
+        "AI model",
     ]
     assert [r[0] for r in rows] == ["AAAAAA", "CCCCCC"]  # BBBBBB is not confirmed
     for row in rows:

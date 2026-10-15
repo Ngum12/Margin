@@ -13,6 +13,8 @@ LABELS: dict[str, dict[str, str]] = {
         "comments": "Comments",
         "marks_here": "Marks for this page",
         "not_marked": "No question marked on this page",
+        "ai_model": "AI model",
+        "test_model": "Test model: not real AI marking",
     },
     "fr": {
         "student_code": "Code élève",
@@ -26,6 +28,8 @@ LABELS: dict[str, dict[str, str]] = {
         "comments": "Commentaires",
         "marks_here": "Notes de cette page",
         "not_marked": "Aucune question notée sur cette page",
+        "ai_model": "Modèle d'IA",
+        "test_model": "Modèle de test : pas une vraie correction par IA",
     },
 }
 

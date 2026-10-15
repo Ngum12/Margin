@@ -62,6 +62,99 @@ def exam_spec(exam: Exam, curriculum: str) -> ExamSpec:
     )
 
 
+def _ai_in_progress(script: Script) -> bool:
+    return script.manual_reason is None and script.status in (
+        ScriptStatus.WAITING,
+        ScriptStatus.TRANSCRIBED,
+    )
+
+
+def _rerun(db: Session, actor: User | None, script: Script, settings: Settings) -> None:
+    """Start a new AI run for one script. Earlier proposals and decisions stay as history; the
+    review shows only the new run. Pages are read again only by a different reader model or
+    prompt (an unchanged reader reuses its reads, so a teacher's later edit is what is marked)."""
+    old = {
+        "ai_run": script.ai_run,
+        "status": script.status.value,
+        "manual_reason": script.manual_reason,
+    }
+    script.ai_run += 1
+    script.status = ScriptStatus.WAITING
+    script.manual_reason = None
+    script.ai_started_at = None
+    jobs.enqueue(
+        db,
+        JobType.TRANSCRIBE_SCRIPT,
+        {"script_id": script.id},
+        transcribe_key(script.id),
+        max_attempts=settings.job_max_attempts,
+        requeue=True,
+    )
+    audit.record(
+        db,
+        actor=actor,
+        entity_type="script",
+        entity_id=script.id,
+        action="rerun_ai",
+        old_value=old,
+        new_value={"ai_run": script.ai_run, "status": script.status.value},
+    )
+
+
+def _require_rerunnable(script: Script) -> None:
+    if script.status == ScriptStatus.CONFIRMED:
+        raise ConflictError("Script is confirmed; reopen it first", code="script.confirmed")
+    if _ai_in_progress(script):
+        raise ConflictError("AI marking is still running for this script", code="ai.in_progress")
+
+
+def _back_to_marking(exam: Exam) -> None:
+    if exam.status in (ExamStatus.REVIEWING, ExamStatus.COMPLETED):
+        exam.status = ExamStatus.MARKING
+
+
+def rerun_script(db: Session, actor: User | None, script: Script, settings: Settings) -> None:
+    """Re-run AI marking for one unconfirmed script (access already checked)."""
+    _require_rerunnable(script)
+    exam = db.get(Exam, script.exam_id)
+    if exam is None:  # pragma: no cover
+        raise ConflictError("Exam missing", code="conflict")
+    _rerun(db, actor, script, settings)
+    _back_to_marking(exam)
+
+
+def rerun_visible_script(db: Session, actor: User, script_id: int, settings: Settings) -> None:
+    rerun_script(db, actor, get_visible_script(db, actor, script_id), settings)
+
+
+def rerun_exam(db: Session, actor: User | None, exam: Exam, settings: Settings) -> int:
+    """Re-run AI marking for every unconfirmed script of an exam that the AI is not already
+    working on. Confirmed scripts are never touched. Returns the number of scripts re-run."""
+    scripts = [
+        s
+        for s in db.scalars(select(Script).where(Script.exam_id == exam.id).order_by(Script.id))
+        if s.status != ScriptStatus.CONFIRMED and not _ai_in_progress(s)
+    ]
+    if not scripts:
+        raise ConflictError("No unconfirmed scripts to re-run", code="ai.nothing_to_rerun")
+    for script in scripts:
+        _rerun(db, actor, script, settings)
+    _back_to_marking(exam)
+    audit.record(
+        db,
+        actor=actor,
+        entity_type="exam",
+        entity_id=exam.id,
+        action="rerun_ai",
+        new_value={"scripts": len(scripts)},
+    )
+    return len(scripts)
+
+
+def rerun_visible_exam(db: Session, actor: User, exam_id: int, settings: Settings) -> int:
+    return rerun_exam(db, actor, get_visible_exam(db, actor, exam_id), settings)
+
+
 def start_ai_marking(db: Session, actor: User, exam_id: int, settings: Settings) -> int:
     """Queue transcription for every waiting script and re-queue failed AI jobs. Returns the
     number of scripts queued."""

@@ -211,7 +211,7 @@ def test_password_never_echoed_in_validation_errors(client: TestClient, world: W
 
 
 def test_production_cookie_is_secure(settings: Settings) -> None:
-    app = create_app(settings.model_copy(update={"env": "production"}))
+    app = create_app(settings.model_copy(update={"env": "production", "ai_backend": "ollama"}))
     Base.metadata.create_all(app.state.engine)
     with app.state.sessionmaker() as db:
         factory = Factory(db)

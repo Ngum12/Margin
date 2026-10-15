@@ -75,6 +75,9 @@ class Script(IdMixin, TimestampMixin, Base):
     ai_started_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     # First teacher edit during review.
     reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    # AI marking run: 0 for the first, +1 for every re-run. Only the current run's mark
+    # decisions are shown and used; earlier runs stay in the database as history.
+    ai_run: Mapped[int] = mapped_column(Integer, default=0)
 
     student: Mapped[Student] = relationship()
     pages: Mapped[list["Page"]] = relationship(

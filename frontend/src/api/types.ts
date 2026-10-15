@@ -239,6 +239,7 @@ export interface QueueItem {
   max_total: number;
   review_seconds: number | null;
   active_seconds: number | null;
+  test_model: boolean;
 }
 
 export interface Queue {
@@ -251,6 +252,7 @@ export interface Queue {
   timed_count: number;
   average_review_seconds: number | null;
   average_active_seconds: number | null;
+  test_model_count: number;
 }
 
 export interface TranscriptionVersion {
@@ -258,6 +260,7 @@ export interface TranscriptionVersion {
   text: string;
   source: "model" | "teacher";
   model_name: string | null;
+  model_version: string | null;
   prompt_version: string | null;
   rotation: number;
   created_at: string;
@@ -296,6 +299,9 @@ export interface ReviewPoint {
   final_marks: number | null;
   final_category: ErrorCategory | null;
   decided_at: string | null;
+  model_name: string | null;
+  model_version: string | null;
+  prompt_version: string | null;
 }
 
 export interface ReviewQuestion {
@@ -343,6 +349,9 @@ export interface ScriptReview {
     count: number;
   };
   marked_on_earlier_text: boolean;
+  // Output from a test model (Mock): never real AI marking.
+  test_model: boolean;
+  ai_run: number;
 }
 
 // --- results and exports (Phase 5) --------------------------------------------------------
@@ -375,6 +384,7 @@ export interface Results {
     marks: (number | null)[];
     total: number | null;
     percentage: number | null;
+    test_model: boolean;
   }[];
   max_total: number;
   average_total: number | null;
@@ -384,6 +394,7 @@ export interface Results {
   average_review_seconds: number | null;
   average_active_seconds: number | null;
   class_pdfs: ExportJob[];
+  test_model_count: number;
 }
 
 export interface TrainingExport {

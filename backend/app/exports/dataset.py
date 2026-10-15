@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 from app.db.models import Exam, MarkDecision, School, Script, TranscriptionSource
 from app.marks import from_half_marks
 from app.services import transcripts
+from app.services.decisions import current_decisions
 from app.services.results import script_results
-from app.services.review import current_decisions
 
 FORMAT_VERSION = 1
 

@@ -13,6 +13,7 @@ import { flatPoints, nextDeduction, step } from "../review/focus";
 import type { FlatPoint } from "../review/focus";
 import { actionForKey, isTypingTarget, SHORTCUTS } from "../review/keyboard";
 import type { ReviewAction } from "../review/keyboard";
+import { ConfirmButton, ModelLabel, TestModelBanner } from "../review/ModelLabel";
 import { PageViewer } from "../review/PageViewer";
 import { useHeartbeat } from "../review/useHeartbeat";
 import { FIT, nextCategory, rotate, zoomIn, zoomOut } from "../review/viewer";
@@ -388,6 +389,16 @@ function ReviewScreen({
           >
             {t("review.shortcuts")}
           </button>
+          {review.ready && !review.locked && (
+            <ConfirmButton
+              label={t("rerun.script")}
+              question={t("rerun.scriptQuestion")}
+              disabled={busy}
+              onConfirm={() => {
+                run(() => api.rerunScript(scriptId), t("rerun.scriptStarted"));
+              }}
+            />
+          )}
           {review.locked ? (
             <button
               type="button"
@@ -411,6 +422,7 @@ function ReviewScreen({
         </div>
       </div>
 
+      {review.test_model && <TestModelBanner />}
       {review.script.manual_reason && (
         <p className="notice notice-warning" role="status">
           {t("review.manualMarking")}{" "}
@@ -663,6 +675,11 @@ function PointRow({
             </span>
           )}
           {point.evidence && <q className="evidence">{point.evidence}</q>}
+          <ModelLabel
+            name={point.model_name}
+            version={point.model_version}
+            prompt={point.prompt_version}
+          />
         </div>
       ) : (
         <p className="muted small">{t("review.noProposalShort")}</p>
@@ -758,6 +775,15 @@ function TranscriptionPanel({
           </span>
         )}
       </div>
+      {page.transcription?.source === "model" && (
+        <p>
+          <ModelLabel
+            name={page.transcription.model_name}
+            version={page.transcription.model_version}
+            prompt={page.transcription.prompt_version}
+          />
+        </p>
+      )}
       {editing ? (
         <>
           <textarea
@@ -822,7 +848,12 @@ function TranscriptionPanel({
                   {version.source === "teacher"
                     ? t("review.teacherVersion")
                     : t("review.modelVersion")}
-                </span>
+                </span>{" "}
+                <ModelLabel
+                  name={version.model_name}
+                  version={version.model_version}
+                  prompt={version.prompt_version}
+                />
                 <pre className="transcription-text">{version.text}</pre>
               </li>
             ))}

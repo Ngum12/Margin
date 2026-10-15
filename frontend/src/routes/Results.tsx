@@ -9,6 +9,7 @@ import { useLoad } from "../components/useLoad";
 import { ExamHeader } from "../exam/ExamHeader";
 import { ExportJobList } from "../exam/ExportJobs";
 import { minutesSeconds } from "../review/focus";
+import { TestModelBadge, TestModelBanner } from "../review/ModelLabel";
 
 /** Screen 8: class results and exports. Only confirmed scripts are ever exported. */
 export default function Results() {
@@ -37,6 +38,7 @@ export default function Results() {
             {t("results.notIncluded", { count: data.script_count - data.confirmed_count })}
           </p>
         )}
+        {data.test_model_count > 0 && <TestModelBanner count={data.test_model_count} />}
         <ReviewTime data={data} />
         {data.rows.length === 0 ? (
           <p className="muted">{t("results.empty")}</p>
@@ -67,6 +69,12 @@ export default function Results() {
                   <tr key={row.script_id} className={row.confirmed ? undefined : "inactive"}>
                     <td>
                       {row.student_name ?? "—"} <span className="code">{row.student_code}</span>
+                      {row.test_model && (
+                        <>
+                          {" "}
+                          <TestModelBadge />
+                        </>
+                      )}
                       {!row.confirmed && (
                         <span className="muted small"> · {t(`scriptStatus.${row.status}`)}</span>
                       )}

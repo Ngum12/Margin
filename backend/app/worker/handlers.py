@@ -333,6 +333,7 @@ def mark_script(
                 MarkDecision.model_name == marker.model.name,
                 MarkDecision.model_version == marker.model.version,
                 MarkDecision.prompt_version == marker.prompt_version,
+                MarkDecision.ai_run == script.ai_run,
             )
             .limit(1)
         )
@@ -354,6 +355,7 @@ def mark_script(
                             model_version=proposal.model.version,
                             prompt_version=proposal.prompt_version,
                             proposed_at=proposal.created_at,
+                            ai_run=script.ai_run,
                         )
                     )
             if proposal.failed_question_ids:

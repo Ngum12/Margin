@@ -108,6 +108,13 @@ def draw_script(
             PAGE_H - MARGIN - 5 * mm,
             _text(f"{exam_title} · {code} · {words['page']} {number}/{len(pages)}"),
         )
+        if result.test_model:
+            canvas.setFillColorRGB(0.75, 0.1, 0.1)
+            canvas.setFont(BOLD, 11)
+            canvas.drawRightString(
+                PAGE_W - MARGIN, PAGE_H - MARGIN - 5 * mm, _text(words["test_model"].upper())
+            )
+            canvas.setFillColorRGB(0, 0, 0)
         _draw_image(canvas, data_dir / page.image_path, page.effective_rotation, image_box)
         column = _Column(canvas)
         canvas.setStrokeColorRGB(0.6, 0.6, 0.6)

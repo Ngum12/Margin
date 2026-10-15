@@ -24,6 +24,13 @@ INSECURE_COOKIES_MESSAGE = (
 )
 
 
+MOCK_IN_PRODUCTION_MESSAGE = (
+    "Refusing to start: production mode with the test AI backend (MARGIN_AI_BACKEND=mock). "
+    "The test models do not read or mark scripts; their output is not real AI marking. "
+    "Set MARGIN_AI_BACKEND=ollama in the .env file and start again."
+)
+
+
 PUBLIC_MODEL_HOST_MESSAGE = (
     "Refusing to start: the model server ({host}) is not on this computer or the school's "
     "private network, so student work would leave the school. Use a local Ollama address "
@@ -46,6 +53,8 @@ def model_host_is_local(base_url: str) -> bool:
 
 
 def check_startup_safety(settings: Settings) -> None:
+    if settings.env == "production" and settings.ai_backend == "mock":
+        raise UnsafeConfigurationError(MOCK_IN_PRODUCTION_MESSAGE)
     if not settings.allow_public_model_host and not model_host_is_local(settings.model_base_url):
         host = urlsplit(settings.model_base_url).hostname or settings.model_base_url
         raise UnsafeConfigurationError(PUBLIC_MODEL_HOST_MESSAGE.format(host=host))

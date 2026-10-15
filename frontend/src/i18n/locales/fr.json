@@ -10,7 +10,8 @@
     "save": "Enregistrer",
     "saved": "Enregistré.",
     "cancel": "Annuler",
-    "close": "Fermer"
+    "close": "Fermer",
+    "yes": "Oui"
   },
   "language": {
     "label": "Langue",
@@ -225,7 +226,9 @@
       "not_confirmed": "Cette copie n'est pas confirmée."
     },
     "ai": {
-      "no_scripts": "Aucune copie n'a encore été téléversée pour cet examen."
+      "no_scripts": "Aucune copie n'a encore été téléversée pour cet examen.",
+      "in_progress": "L'IA travaille encore sur cette copie.",
+      "nothing_to_rerun": "Il n'y a aucune copie non confirmée à relancer."
     },
     "decision": {
       "empty": "Choisissez une note ou une catégorie.",
@@ -575,5 +578,22 @@
     "export_one": "Exporter {{count}} copie",
     "export_other": "Exporter {{count}} copies",
     "privacy": "Chaque export est enregistré dans le journal d'audit. Vérifiez les fichiers avant de les partager hors de l'établissement : un élève a pu écrire son nom sur une page de réponse."
+  },
+  "testModel": {
+    "short": "Modèle de test : pas une vraie correction par IA",
+    "model": "Modèle : {{model}}",
+    "script": "Cette copie a été lue ou notée par le modèle de test, qui ne lit pas l'écriture manuscrite. Ses transcriptions et ses notes proposées ne sont pas une vraie correction par IA. Relancez la correction par IA avec le vrai modèle avant de réviser.",
+    "scripts_one": "{{count}} copie a été lue ou notée par le modèle de test, qui ne lit pas l'écriture manuscrite. Relancez la correction par IA avec le vrai modèle avant de réviser.",
+    "scripts_other": "{{count}} copies ont été lues ou notées par le modèle de test, qui ne lit pas l'écriture manuscrite. Relancez la correction par IA avec le vrai modèle avant de réviser."
+  },
+  "rerun": {
+    "script": "Relancer la correction par IA",
+    "scriptQuestion": "Relire et renoter cette copie ? Vos décisions sur les propositions actuelles sont conservées dans l'historique, et vous révisez les nouvelles propositions.",
+    "scriptStarted": "La correction par IA a été relancée pour cette copie.",
+    "exam_one": "Relancer la correction par IA ({{count}} copie non confirmée)",
+    "exam_other": "Relancer la correction par IA ({{count}} copies non confirmées)",
+    "examQuestion": "Relire et renoter toutes les copies non confirmées ? Les copies confirmées ne changent pas. Les résultats précédents sont conservés dans l'historique.",
+    "examStarted_one": "La correction par IA a été relancée pour {{count}} copie.",
+    "examStarted_other": "La correction par IA a été relancée pour {{count}} copies."
   }
 }

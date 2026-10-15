@@ -28,6 +28,7 @@ function results(overrides: Partial<Results> = {}): Results {
         marks: [1, 1],
         total: 2,
         percentage: 66.7,
+        test_model: false,
       },
       {
         script_id: 6,
@@ -38,6 +39,7 @@ function results(overrides: Partial<Results> = {}): Results {
         marks: [null, null],
         total: null,
         percentage: null,
+        test_model: false,
       },
     ],
     max_total: 3,
@@ -48,6 +50,7 @@ function results(overrides: Partial<Results> = {}): Results {
     average_review_seconds: 125,
     average_active_seconds: 90,
     class_pdfs: [],
+    test_model_count: 0,
     ...overrides,
   };
 }
@@ -192,5 +195,21 @@ describe("admin models and training data", () => {
       expect(call?.body).toEqual({ exam_ids: [7] });
     });
     expect(await screen.findByText(en.exports.preparing)).toBeInTheDocument();
+  });
+});
+
+describe("results screen with test-model output", () => {
+  it("labels the scripts marked by the test model", async () => {
+    const api = fakeApi();
+    api.on("GET /api/auth/me", [200, me()]);
+    const data = results({ test_model_count: 1 });
+    data.rows = data.rows.map((row, index) => (index === 0 ? { ...row, test_model: true } : row));
+    api.on("GET /api/exams/7/results", [200, data]);
+    renderApp("/exams/7/results");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(en.testModel.short);
+    const rows = screen.getAllByRole("row");
+    expect(within(at(rows, 1)).getByText(en.testModel.short)).toBeInTheDocument();
+    expect(within(at(rows, 2)).queryByText(en.testModel.short)).not.toBeInTheDocument();
   });
 });

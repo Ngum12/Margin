@@ -936,3 +936,29 @@ kbd {
 .facts dd {
   margin: 0;
 }
+
+/* Test-model output (owner, 2026-10-15): impossible to miss. */
+.badge-test-model {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: #ffffff;
+  font-weight: 700;
+}
+.notice-test-model {
+  background: var(--color-error-bg);
+  border: 2px solid var(--color-error);
+  color: var(--color-text);
+}
+.model-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: baseline;
+  flex-basis: 100%;
+}
+.confirm-inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}

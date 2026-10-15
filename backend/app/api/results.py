@@ -64,6 +64,7 @@ def exam_results(exam_id: int, db: DbSession, user: CurrentUser) -> ResultsOut:
                 marks=[_marks(q.final_half) if confirmed else None for q in script.questions],
                 total=from_half_marks(total) if confirmed else None,
                 percentage=round(100 * total / max_half, 1) if confirmed and max_half else None,
+                test_model=script.test_model,
             )
         )
     timed = [
@@ -99,6 +100,7 @@ def exam_results(exam_id: int, db: DbSession, user: CurrentUser) -> ResultsOut:
         average_review_seconds=sum(t.wall_seconds for t in timed) / len(timed) if timed else None,
         average_active_seconds=sum(t.active_seconds for t in timed) / len(timed) if timed else None,
         class_pdfs=[ExportOut.model_validate(e) for e in class_pdfs],
+        test_model_count=sum(1 for s in found.scripts if s.test_model),
     )
 
 

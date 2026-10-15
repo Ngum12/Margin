@@ -300,3 +300,25 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Exam completion:** an exam becomes `completed` when every script is confirmed, and returns to `reviewing` when one is reopened. Both changes are audited like other exam status changes.
 - **Admin screen:** read-only model configuration and status (brief screen 9); models are changed in the configuration file.
 - **Browser tests:** the e2e server now runs the real worker in a thread, so background exports are tested end to end.
+
+### D-056 · 2026-10-15 · Test-model output is labelled everywhere; production refuses it
+- **Finding (owner's manual review):** the owner's installation had no `.env` file, so it ran with the default `MARGIN_AI_BACKEND=mock`. The chemistry exam was read and marked by the Mock models, whose fixed transcription and keyword matching produced a wrong-looking review (every point 0, "Omitted"). Nothing on screen said so.
+- **Decision (owner):**
+  - **Labels:** output from a test model (model names starting `mock-`) is labelled "Test model: not real AI marking" wherever it appears:
+    - a banner on the review, queue and results screens;
+    - a badge on each queue and results row;
+    - the model label on every proposal and transcription;
+    - an "AI model" column in the CSV;
+    - a red line on every page of a marked PDF.
+
+    A script is flagged when any current mark decision, or the current transcription of any page, came from a test model.
+  - **Production refusal:** the web app and the worker refuse to start in production mode with `MARGIN_AI_BACKEND=mock`.
+  - **Model details:** the review screen shows the model name, version and prompt version for every proposal and every transcription version.
+- **Unchanged:** the code default stays `mock`, so that development and tests never call a model by accident. `.env.example` now sets `ollama` and explains the choice.
+- **Owner's installation:** a `.env` file was created with `MARGIN_AI_BACKEND=ollama` (models `qwen3-vl:4b-instruct`, D-048).
+
+### D-057 · 2026-10-15 · Re-run AI marking
+- **Decision (owner):** "Re-run AI marking" for one script or for a whole exam, only for unconfirmed scripts that the AI is not already working on. It is available in the review screen and on the queue, and for administrators as `python -m app.cli rerun-ai --exam <id>` (audited as the system).
+- **Runs:** every script has a run number (`script.ai_run`), and every mark decision records its run (`mark_decision.ai_run`; part of its uniqueness key). A re-run increments the number and queues the script from the start. Only the current run's decisions are shown, used in results and exported. Earlier runs, including the teacher's decisions on them, stay in the database as history. Teacher comments are kept.
+- **Reading:** pages are read again only when the reading model or prompt has changed, so a re-run with the same reader marks the teacher's edited text. A new reader's reads become the current transcription.
+- **Audit:** one `rerun_ai` event per script (old and new run, status), and one per exam with the number of scripts.

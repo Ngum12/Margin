@@ -1,13 +1,15 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
 import { api } from "../api/endpoints";
-import type { QueueItem } from "../api/types";
+import type { Queue as QueueData, QueueItem } from "../api/types";
 import { ErrorMessage, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
 import { AiPanel } from "../exam/AiPanel";
 import { ExamHeader } from "../exam/ExamHeader";
 import { minutesSeconds } from "../review/focus";
+import { ConfirmButton, TestModelBadge, TestModelBanner } from "../review/ModelLabel";
 
 const LOW_CONFIDENCE = 0.6;
 
@@ -33,6 +35,8 @@ export default function Queue() {
           <div className="card">
             <h2>{t("queue.title")}</h2>
             <p className="muted">{t("queue.help")}</p>
+            {queue.test_model_count > 0 && <TestModelBanner count={queue.test_model_count} />}
+            <RerunExam examId={examId} queue={queue} onDone={reload} />
             <p>
               {t("queue.confirmedCount", {
                 confirmed: queue.confirmed_count,
@@ -72,6 +76,43 @@ export default function Queue() {
         </>
       )}
     </section>
+  );
+}
+
+function RerunExam({
+  examId,
+  queue,
+  onDone,
+}: {
+  examId: number;
+  queue: QueueData;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation();
+  const [error, setError] = useState<unknown>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  // Unconfirmed scripts the AI has finished with (or flagged): the ones a re-run would redo.
+  const candidates = queue.items.filter((i) => i.reviewable && i.status !== "confirmed").length;
+  if (candidates === 0) return null;
+  return (
+    <div className="actions">
+      <ConfirmButton
+        label={t("rerun.exam", { count: candidates })}
+        question={t("rerun.examQuestion")}
+        onConfirm={() => {
+          setError(null);
+          api
+            .rerunExam(examId)
+            .then((result) => {
+              setMessage(t("rerun.examStarted", { count: result.scripts_queued }));
+              onDone();
+            })
+            .catch(setError);
+        }}
+      />
+      {message && <span role="status">{message}</span>}
+      <ErrorMessage error={error} />
+    </div>
   );
 }
 
@@ -130,6 +171,12 @@ function QueueRow({ examId, item }: { examId: number; item: QueueItem }) {
         <span className={`badge badge-script-${item.status}`}>
           {t(`scriptStatus.${item.status}`)}
         </span>
+        {item.test_model && (
+          <>
+            {" "}
+            <TestModelBadge />
+          </>
+        )}
       </td>
       <td>
         {checks.length > 0 ? (

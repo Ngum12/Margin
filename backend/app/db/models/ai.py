@@ -123,12 +123,19 @@ class MarkDecision(IdMixin, Base):
     __tablename__ = "mark_decision"
     __table_args__ = (
         UniqueConstraint(
-            "script_id", "mark_scheme_point_id", "model_name", "model_version", "prompt_version"
+            "script_id",
+            "mark_scheme_point_id",
+            "model_name",
+            "model_version",
+            "prompt_version",
+            "ai_run",
         ),
     )
 
     script_id: Mapped[int] = mapped_column(ForeignKey("script.id"), index=True)
     mark_scheme_point_id: Mapped[int] = mapped_column(ForeignKey("mark_scheme_point.id"))
+    # The script's AI run this row belongs to (Script.ai_run when it was created).
+    ai_run: Mapped[int] = mapped_column(Integer, default=0)
     # The AI's proposal, in half-mark units (D-018). All proposal fields are empty for points a
     # teacher marks without an AI proposal (scripts flagged for manual marking).
     proposed_half_marks: Mapped[int | None] = mapped_column(Integer)

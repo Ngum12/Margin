@@ -132,6 +132,10 @@ export const api = {
       `/api/scripts/${String(scriptId)}/questions/${String(questionId)}/comment`,
       { json: { text } },
     ),
+  rerunScript: (scriptId: number) =>
+    request<ScriptReview>("POST", `/api/scripts/${String(scriptId)}/rerun-ai`),
+  rerunExam: (examId: number) =>
+    request<{ scripts_queued: number }>("POST", `/api/exams/${String(examId)}/rerun-ai`),
   confirmScript: (scriptId: number) =>
     request<ScriptReview>("POST", `/api/scripts/${String(scriptId)}/confirm`),
   reopenScript: (scriptId: number) =>

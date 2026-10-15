@@ -26,6 +26,9 @@ test("the queue shows the most uncertain script first", async ({ page }) => {
   await page.goto("/exams/1/queue");
   const rows = page.locator("tbody tr");
   await expect(rows).toHaveCount(3);
+  // The seed is marked by the Mock: labelled as test-model output (owner, 2026-10-15).
+  await expect(page.getByRole("alert")).toContainText("read or marked by the test model");
+  await expect(rows.nth(0)).toContainText("Test model: not real AI marking");
   await expect(rows.nth(0)).toContainText("CCCCCC");
   await expect(rows.nth(0)).toContainText("could not propose valid marks");
   // Then by lowest confidence (equal here), then by student code.
@@ -122,6 +125,7 @@ test("results, CSV and marked PDFs for the confirmed scripts", async ({ page }) 
   expect(text).toContain("AAAAAA");
   expect(text).toContain("CCCCCC");
   expect(text).not.toContain("BBBBBB"); // not confirmed
+  expect(text).toContain("Test model: not real AI marking");
 
   const [pdf] = await Promise.all([
     page.waitForEvent("download"),

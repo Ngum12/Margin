@@ -25,6 +25,9 @@ function point(overrides: Partial<ReviewPoint>): ReviewPoint {
     final_marks: null,
     final_category: null,
     decided_at: null,
+    model_name: "qwen3-vl:4b-instruct",
+    model_version: "ee4b975b58c1",
+    prompt_version: "marker-v2#6bf69283",
     ...overrides,
   };
 }
@@ -80,6 +83,7 @@ function review(overrides: Partial<ScriptReview> = {}): ScriptReview {
           text: "1(a) Metals conduct electricity.\n1(b) Hydrogen",
           source: "model",
           model_name: "qwen3-vl:4b-instruct",
+          model_version: "ee4b975b58c1",
           prompt_version: "reader-v2#abc",
           rotation: 180,
           created_at: "2026-10-15T08:00:00Z",
@@ -126,6 +130,8 @@ function review(overrides: Partial<ScriptReview> = {}): ScriptReview {
     },
     navigation: { previous_id: null, next_id: 6, position: 1, count: 2 },
     marked_on_earlier_text: false,
+    test_model: false,
+    ai_run: 0,
     ...overrides,
   };
 }
@@ -389,6 +395,7 @@ function queue(overrides: Partial<Queue> = {}): Queue {
     max_total: 3,
     review_seconds: null,
     active_seconds: null,
+    test_model: false,
   };
   return {
     exam_id: 7,
@@ -420,6 +427,7 @@ function queue(overrides: Partial<Queue> = {}): Queue {
     timed_count: 1,
     average_review_seconds: 754,
     average_active_seconds: 300,
+    test_model_count: 0,
     ...overrides,
   };
 }
@@ -469,5 +477,110 @@ describe("marking queue screen", () => {
     );
     expect(screen.getByText(en.queue.localOnly)).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: en.ai.start })).toBeInTheDocument();
+  });
+});
+
+describe("test-model output and re-running AI marking (owner, 2026-10-15)", () => {
+  it("labels a script read and marked by the test model, and names every model", async () => {
+    const testPoint = point({ model_name: "mock-marker", model_version: "mock-1" });
+    setup(
+      review({
+        test_model: true,
+        questions: [{ ...at(review().questions, 0), points: [testPoint] }],
+      }),
+    );
+    renderApp("/exams/7/review/5");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(en.testModel.short);
+    expect(
+      screen.getByText(/Model: mock-marker · mock-1 · marker-v2#6bf69283/),
+    ).toBeInTheDocument();
+    // The transcription names its model and version too.
+    expect(
+      screen.getByText(/Model: qwen3-vl:4b-instruct · ee4b975b58c1 · reader-v2#abc/),
+    ).toBeInTheDocument();
+  });
+
+  it("names the real model on proposals without a test label", async () => {
+    setup();
+    renderApp("/exams/7/review/5");
+    expect(
+      (await screen.findAllByText(/Model: qwen3-vl:4b-instruct · ee4b975b58c1 · marker-v2/)).length,
+    ).toBe(2);
+    expect(screen.queryByText(en.testModel.short)).not.toBeInTheDocument();
+  });
+
+  it("re-runs AI marking for the script after asking once more", async () => {
+    const api = setup();
+    api.on("POST /api/scripts/5/rerun-ai", [
+      202,
+      review({ ready: false, script: { ...review().script, status: "waiting" } }),
+    ]);
+    const user = userEvent.setup();
+    renderApp("/exams/7/review/5");
+
+    await user.click(await screen.findByRole("button", { name: en.rerun.script }));
+    expect(screen.getByText(en.rerun.scriptQuestion)).toBeInTheDocument();
+    expect(api.calls.some((c) => c.path === "/api/scripts/5/rerun-ai")).toBe(false);
+    await user.click(screen.getByRole("button", { name: en.common.yes }));
+
+    await waitFor(() => {
+      expect(api.calls.filter((c) => c.path === "/api/scripts/5/rerun-ai")).toHaveLength(1);
+    });
+    expect(await screen.findByText(en.rerun.scriptStarted)).toBeInTheDocument();
+    expect(screen.getByText(en.review.notReady)).toBeInTheDocument();
+  });
+
+  it("offers no re-run on a confirmed script", async () => {
+    setup(review({ locked: true, script: { ...review().script, status: "confirmed" } }));
+    renderApp("/exams/7/review/5");
+    await screen.findByRole("button", { name: en.review.reopen });
+    expect(screen.queryByRole("button", { name: en.rerun.script })).not.toBeInTheDocument();
+  });
+
+  it("labels test-model scripts in the queue and re-runs the exam's unconfirmed scripts", async () => {
+    const api = fakeApi();
+    api.on("GET /api/auth/me", [200, me()]);
+    const data = queue({ test_model_count: 1 });
+    data.items = data.items.map((item, index) =>
+      index === 0 ? { ...item, test_model: true } : item,
+    );
+    api.on("GET /api/exams/7/queue", [200, data]);
+    api.on("GET /api/exams/7/ai-status", [
+      200,
+      {
+        scripts: {},
+        flagged: [],
+        jobs_queued: 0,
+        jobs_running: 0,
+        jobs_failed: 0,
+        system: {
+          worker_online: true,
+          ai_backend: "ollama",
+          model_server_reachable: true,
+          reader_model: "m",
+          reader_model_installed: true,
+          marker_model: "m",
+          marker_model_installed: true,
+        },
+      },
+    ]);
+    api.on("POST /api/exams/7/rerun-ai", [202, { scripts_queued: 1 }]);
+    const user = userEvent.setup();
+    renderApp("/exams/7/queue");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /1 script was read or marked by the test model/,
+    );
+    const rows = screen.getAllByRole("row");
+    expect(within(at(rows, 1)).getByText(en.testModel.short)).toBeInTheDocument();
+    expect(within(at(rows, 2)).queryByText(en.testModel.short)).not.toBeInTheDocument();
+
+    // One unconfirmed script the AI has finished with: the confirmed and waiting ones are not counted.
+    await user.click(
+      screen.getByRole("button", { name: "Re-run AI marking (1 unconfirmed script)" }),
+    );
+    await user.click(screen.getByRole("button", { name: en.common.yes }));
+    expect(await screen.findByText("AI marking started again for 1 script.")).toBeInTheDocument();
   });
 });

@@ -27,6 +27,7 @@ class ResultRowOut(ApiModel):
     marks: list[Marks | None]
     total: Marks | None
     percentage: float | None
+    test_model: bool
 
 
 class ExportOut(ApiModel):
@@ -55,6 +56,7 @@ class ResultsOut(ApiModel):
     average_review_seconds: float | None
     average_active_seconds: float | None
     class_pdfs: list[ExportOut]
+    test_model_count: int
 
 
 class TrainingExamOut(ApiModel):

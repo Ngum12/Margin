@@ -11,11 +11,12 @@ from app.schemas.review import (
     DecisionIn,
     HeartbeatOut,
     QueueOut,
+    RerunOut,
     RotationIn,
     ScriptReviewOut,
     TranscriptionIn,
 )
-from app.services import review
+from app.services import ai_marking, review
 from app.services.uploads import get_visible_page
 
 router = APIRouter(tags=["review"])
@@ -73,6 +74,21 @@ def set_comment(
 ) -> ScriptReviewOut:
     review.set_comment(db, user, script_id, question_id, body.text)
     return review.script_review(db, user, script_id)
+
+
+@router.post("/scripts/{script_id}/rerun-ai", status_code=202)
+def rerun_script(
+    script_id: int, db: DbSession, user: CurrentUser, settings: AppSettings
+) -> ScriptReviewOut:
+    """Start a new AI run for one unconfirmed script; earlier results stay as history."""
+    ai_marking.rerun_visible_script(db, user, script_id, settings)
+    return review.script_review(db, user, script_id)
+
+
+@router.post("/exams/{exam_id}/rerun-ai", status_code=202)
+def rerun_exam(exam_id: int, db: DbSession, user: CurrentUser, settings: AppSettings) -> RerunOut:
+    """Re-run AI marking for every unconfirmed script of the exam."""
+    return RerunOut(scripts_queued=ai_marking.rerun_visible_exam(db, user, exam_id, settings))
 
 
 @router.post("/scripts/{script_id}/confirm")

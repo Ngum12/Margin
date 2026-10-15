@@ -66,6 +66,7 @@ class QueueItemOut(ApiModel):
     # Review time over finished (confirmed) sessions. Local data only, never sent anywhere.
     review_seconds: float | None
     active_seconds: float | None
+    test_model: bool
 
 
 class QueueOut(ApiModel):
@@ -79,6 +80,11 @@ class QueueOut(ApiModel):
     timed_count: int
     average_review_seconds: float | None
     average_active_seconds: float | None
+    test_model_count: int
+
+
+class RerunOut(ApiModel):
+    scripts_queued: int
 
 
 # --- script review (screen 7) ----------------------------------------------------------------
@@ -89,6 +95,7 @@ class TranscriptionVersionOut(ApiModel):
     text: str
     source: TranscriptionSource
     model_name: str | None
+    model_version: str | None
     prompt_version: str | None
     rotation: int
     created_at: datetime
@@ -131,6 +138,10 @@ class ReviewPointOut(ApiModel):
     final_marks: Marks | None
     final_category: ErrorCategory | None
     decided_at: datetime | None
+    # Which model made the proposal (None for a point without one).
+    model_name: str | None
+    model_version: str | None
+    prompt_version: str | None
 
 
 class ReviewQuestionOut(ApiModel):
@@ -191,6 +202,9 @@ class ScriptReviewOut(ApiModel):
     totals: ReviewTotalsOut
     navigation: ReviewNavigationOut
     marked_on_earlier_text: bool
+    # Output from a test model (Mock): never real AI marking (owner, 2026-10-15).
+    test_model: bool
+    ai_run: int
 
 
 class HeartbeatOut(ApiModel):

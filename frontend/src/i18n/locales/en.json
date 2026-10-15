@@ -10,7 +10,8 @@
     "save": "Save",
     "saved": "Saved.",
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "yes": "Yes"
   },
   "language": {
     "label": "Language",
@@ -225,7 +226,9 @@
       "not_confirmed": "This script is not confirmed."
     },
     "ai": {
-      "no_scripts": "No scripts have been uploaded for this exam yet."
+      "no_scripts": "No scripts have been uploaded for this exam yet.",
+      "in_progress": "The AI is still working on this script.",
+      "nothing_to_rerun": "There are no unconfirmed scripts to re-run."
     },
     "decision": {
       "empty": "Choose marks or a category.",
@@ -575,5 +578,22 @@
     "export_one": "Export {{count}} script",
     "export_other": "Export {{count}} scripts",
     "privacy": "Every export is recorded in the audit log. Check the files before sharing them outside the school: a student may have written a name on an answer page."
+  },
+  "testModel": {
+    "short": "Test model: not real AI marking",
+    "model": "Model: {{model}}",
+    "script": "This script was read or marked by the test model, which does not read handwriting. Its transcriptions and proposed marks are not real AI marking. Re-run AI marking with the real model before reviewing.",
+    "scripts_one": "{{count}} script was read or marked by the test model, which does not read handwriting. Re-run AI marking with the real model before reviewing.",
+    "scripts_other": "{{count}} scripts were read or marked by the test model, which does not read handwriting. Re-run AI marking with the real model before reviewing."
+  },
+  "rerun": {
+    "script": "Re-run AI marking",
+    "scriptQuestion": "Read and mark this script again? Your decisions on the current proposals are kept as history, and you review the new proposals.",
+    "scriptStarted": "AI marking started again for this script.",
+    "exam_one": "Re-run AI marking ({{count}} unconfirmed script)",
+    "exam_other": "Re-run AI marking ({{count}} unconfirmed scripts)",
+    "examQuestion": "Read and mark every unconfirmed script again? Confirmed scripts are not changed. Earlier results are kept as history.",
+    "examStarted_one": "AI marking started again for {{count}} script.",
+    "examStarted_other": "AI marking started again for {{count}} scripts."
   }
 }

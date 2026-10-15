@@ -30,6 +30,7 @@ def results_csv(questions: list[Question], scripts: list[ScriptResult], language
             words["max"],
             words["percentage"],
             words["confirmed_at"],
+            words["ai_model"],
         ]
     )
     for result in scripts:
@@ -46,6 +47,7 @@ def results_csv(questions: list[Question], scripts: list[ScriptResult], language
                 from_half_marks(result.max_half),
                 round(100 * total / result.max_half, 1) if result.max_half else "",
                 result.confirmed_at.isoformat(timespec="minutes") if result.confirmed_at else "",
+                words["test_model"] if result.test_model else ", ".join(result.models),
             ]
         )
     return ("﻿" + buffer.getvalue()).encode("utf-8")
