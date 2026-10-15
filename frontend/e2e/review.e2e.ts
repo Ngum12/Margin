@@ -14,6 +14,13 @@ async function signIn(page: Page, username: string) {
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
+  const heading = page.getByRole("heading", { level: 1, name: /^(Your exams|Vos examens)$/ });
+  await expect(heading).toBeVisible();
+  // A test that stopped part-way (the French one) may have left the teacher in French: start
+  // every test in English so one failure cannot cascade into the next.
+  if ((await heading.textContent()) === "Vos examens") {
+    await page.getByLabel("Langue").selectOption("en");
+  }
   await expect(page.getByRole("heading", { name: "Your exams" })).toBeVisible();
 }
 

@@ -173,6 +173,7 @@
       "invalid_credentials": "The username or password is incorrect.",
       "too_many_attempts": "Too many failed attempts. Wait 15 minutes, or ask your administrator to reset your password.",
       "csrf_failed": "Your session could not be verified. Reload the page and try again.",
+      "session_changed": "Someone else signed in on this computer in another tab. Reload the page to continue as them, or sign in again.",
       "admin_required": "Only administrators can do this."
     },
     "user": {

@@ -173,6 +173,7 @@
       "invalid_credentials": "L'identifiant ou le mot de passe est incorrect.",
       "too_many_attempts": "Trop de tentatives échouées. Attendez 15 minutes ou demandez à l'administrateur de réinitialiser votre mot de passe.",
       "csrf_failed": "Votre session n'a pas pu être vérifiée. Rechargez la page et réessayez.",
+      "session_changed": "Quelqu'un d'autre s'est connecté sur cet ordinateur dans un autre onglet. Rechargez la page pour continuer avec ce compte, ou reconnectez-vous.",
       "admin_required": "Seuls les administrateurs peuvent faire cela."
     },
     "user": {

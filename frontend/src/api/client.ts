@@ -14,9 +14,11 @@ export class ApiError extends Error {
 }
 
 let csrfToken: string | null = null;
+let sessionUserId: number | null = null;
 
-export function setCsrfToken(token: string | null): void {
+export function setCsrfToken(token: string | null, userId: number | null = null): void {
   csrfToken = token;
+  sessionUserId = userId;
 }
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -37,10 +39,54 @@ function isErrorBody(value: unknown): value is { code: string; issues?: Issue[] 
   );
 }
 
+/**
+ * A tab opened before signing in again (in another tab, or after a restart) still holds the old
+ * session's CSRF token, so every change it sends is refused although pages still load. Fetch the
+ * current token once and retry, but only when the cookie still belongs to the same user: if
+ * someone else signed in, never act as them.
+ */
+async function refreshCsrfToken(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/auth/me", {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+    if (!response.ok) return false;
+    const me = (await response.json()) as { csrf_token?: string; user?: { id?: number } };
+    if (typeof me.csrf_token !== "string") return false;
+    if (sessionUserId !== null && me.user?.id !== sessionUserId) {
+      throw new ApiError(403, "auth.session_changed");
+    }
+    csrfToken = me.csrf_token;
+    return true;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    return false;
+  }
+}
+
 export async function request<T>(
   method: Method,
   path: `/api/${string}`,
   options: RequestOptions = {},
+): Promise<T> {
+  try {
+    return await send<T>(method, path, options);
+  } catch (err) {
+    const stale =
+      err instanceof ApiError &&
+      err.code === "auth.csrf_failed" &&
+      method !== "GET" &&
+      !path.startsWith("/api/auth/");
+    if (stale && (await refreshCsrfToken())) return send<T>(method, path, options);
+    throw err;
+  }
+}
+
+async function send<T>(
+  method: Method,
+  path: `/api/${string}`,
+  options: RequestOptions,
 ): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...options.headers };
   let body: string | Blob | undefined;

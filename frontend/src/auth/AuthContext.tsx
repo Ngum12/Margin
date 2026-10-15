@@ -15,7 +15,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySession = useCallback(
     (me: Me) => {
-      setCsrfToken(me.csrf_token);
+      setCsrfToken(me.csrf_token, me.user.id);
       setState({ status: "signed_in", me });
       void i18n.changeLanguage(me.user.preferred_language);
       rememberLanguage(me.user.preferred_language);
