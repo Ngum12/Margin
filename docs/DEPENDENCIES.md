@@ -106,3 +106,15 @@ The owner's redesign brief asked for these, bundled locally with their licences.
 
 - They are downloaded once from the official repositories above, and only the files listed are kept.
 - `scripts/third_party_notices.py` lists them in `THIRD_PARTY_NOTICES.md` from the manifest.
+
+## Deployment: container images and HTTPS (Phase 6, approved by the owner 2026-10-16)
+
+| Item | Version (exact) | Licence | Purpose | Notes |
+|---|---|---|---|---|
+| `python:3.12.15-slim` | 3.12.15 on Debian slim | PSF-2.0 (Python); Debian packages under their free licences | Runtime image for the web app and worker | Python packages are installed from `backend/requirements.lock.txt` (exported from `uv.lock`, exact versions with hashes, `pip --require-hashes`) |
+| `node:22.23.3-slim` | 22.23.3 | MIT (Node.js) | Build stage only: builds the web app; not in the final image | `npm ci --ignore-scripts` from `package-lock.json` |
+| `ollama/ollama:0.40.5` | 0.40.5 | MIT | Local AI model server in Docker Compose | Models are pulled on the school box (`qwen3-vl:4b-instruct`) |
+| `caddy:2.11.7` | 2.11.7 | Apache-2.0 | HTTPS on the school network with its own local certificate authority (`tls internal`) | Also used without Docker: the official `caddy_2.11.7_windows_amd64.zip` / `linux_amd64.tar.gz` release from github.com/caddyserver/caddy |
+
+- Pins are checked by `backend/tests/test_deploy_files.py`: no `latest`, the same versions as this table, and `requirements.lock.txt` matching `uv.lock`.
+- After any backend dependency change, regenerate with `cd backend && uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.lock.txt`.

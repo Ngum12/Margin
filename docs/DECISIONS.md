@@ -433,3 +433,16 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Found for going live:** in production the session cookie is secure, so teachers on other computers need HTTPS. Two options are documented: a local HTTPS reverse proxy (a new program, awaiting owner approval), or `MARGIN_COOKIE_SECURE=false` on a trusted closed network.
 - **Waiting for approval before building:** Docker images for the Compose setup, and the HTTPS proxy.
 - **Demo seed** (`python -m app.cli seed-demo`, `app/demo.py`): a teacher `demo`, a class of six students, and a ready chemistry exam with its cover sheets prepared, all created through the normal audited services. It refuses to run twice or without an administrator.
+
+### D-066 · 2026-10-16 · Phase 6, part 3: HTTPS with Caddy and Docker Compose
+- **Decision (owner):**
+  - Caddy 2.11.7 (Apache-2.0) provides HTTPS with its own local certificate (`tls internal`, `deploy/Caddyfile`). Margin listens on 127.0.0.1 only, and Caddy faces the network.
+  - `docs/INSTALL.md` explains how to install Caddy's root certificate on each teacher computer (Windows, macOS, Android/ChromeOS, Firefox).
+  - `MARGIN_COOKIE_SECURE=false` stays a documented fallback for a closed network only. It is off by default, refused unless `MARGIN_ALLOW_INSECURE_COOKIES_IN_PRODUCTION=true` is also set, and logged as a warning at every start (existing behaviour, D-040).
+- **Docker** (approved images pinned exactly: `python:3.12.15-slim`, `node:22.23.3-slim`, `ollama/ollama:0.40.5`, `caddy:2.11.7`):
+  - `Dockerfile`: the web app is built in the Node stage. The runtime installs Python packages from `backend/requirements.lock.txt` (exported from `uv.lock`, exact versions with hashes, `pip --require-hashes`) and runs as a non-root user.
+  - `docker-compose.yml`: services `web`, `worker`, `ollama` and `caddy`, with named volumes for data, models and certificates. Compose refuses to start without `MARGIN_SITE`.
+  - `backend/tests/test_deploy_files.py` checks the pins, their record in DEPENDENCIES and that the requirements match the lockfile.
+  - The non-Docker install stays the main path in `docs/INSTALL.md`, because many school Windows laptops cannot run Docker.
+- **Verified:** `docker compose config` validates the Compose file. **Not verified here:** building and running the images. The Docker engine is not running on the development machine. The first `docker compose up --build` on a school box is the test.
+- **Test failures while writing the pin test:** test errors, all fixed. The word "latest" in a comment matched the check, which now looks for `:latest`. A regex had an escaping slip. DEPENDENCIES.md was not yet updated.

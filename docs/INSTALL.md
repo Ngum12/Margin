@@ -32,7 +32,7 @@ Copy `.env.example` to `.env` (in the `Margin` folder) and change only these lin
 
 ```
 MARGIN_ENV=production
-MARGIN_HOST=0.0.0.0            # teachers' computers can reach it; 127.0.0.1 = this computer only
+MARGIN_HOST=127.0.0.1          # only Caddy (HTTPS, below) talks to Margin directly
 MARGIN_PORT=8000
 MARGIN_AI_BACKEND=ollama
 MARGIN_MODEL_BASE_URL=http://127.0.0.1:11434
@@ -40,18 +40,58 @@ MARGIN_MODEL_BASE_URL=http://127.0.0.1:11434
 
 `.env` is private to this computer and is never uploaded anywhere.
 
-### Sign-in over the school network (important)
+### Sign-in over the school network: HTTPS with Caddy
 
-In production, Margin's sign-in cookie is marked "secure", so browsers send it **only over
-HTTPS**. On the school box itself (`http://127.0.0.1:8000`) this works as it is. For teachers on
-other computers or tablets, choose one:
+In production, Margin's sign-in cookie is "secure": browsers send it only over HTTPS. Caddy
+(Apache-2.0, approved) adds HTTPS on the school box with its **own local certificate**. It never
+contacts the internet.
 
-- **Recommended:** put HTTPS in front of Margin with a local reverse proxy that has a
-  certificate for the school box. This needs a small extra program, which must be approved
-  first.
-- **Trusted closed network only:** add `MARGIN_COOKIE_SECURE=false` to `.env`. Teachers then use
-  `http://<school-box-address>:8000`. Anyone on the same network can read traffic, so use this
-  only on a network the school controls.
+1. Download `caddy_2.11.7_windows_amd64.zip` (or the Linux `.tar.gz`) from
+   https://github.com/caddyserver/caddy/releases/tag/v2.11.7, and unzip `caddy.exe` into the
+   `Margin` folder.
+2. Keep `MARGIN_HOST=127.0.0.1` in `.env`, so only Caddy can reach Margin.
+3. Decide the address teachers will type: the school box's fixed IP address (for example
+   `192.168.1.20`), or a name your network knows (for example `margin.lan`).
+4. Start Caddy from the `Margin` folder (PowerShell):
+   ```
+   $env:MARGIN_SITE = "192.168.1.20"
+   .\caddy.exe run --config deploy\Caddyfile
+   ```
+   The first time, run `.\caddy.exe trust` once, as administrator, so the school box itself
+   trusts the certificate.
+5. Teachers open `https://192.168.1.20`.
+
+### Trust the certificate on each teacher computer (once per computer)
+
+Caddy's root certificate is in
+`%AppData%\Caddy\pki\authorities\local\root.crt` on the school box. With Docker, get it with
+`docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt .`. Copy it to a USB drive
+or a shared folder, then:
+
+- **Windows:** double-click `root.crt`, choose Install Certificate, then Local Machine, then
+  "Place all certificates in the following store": Trusted Root Certification Authorities. Or,
+  as administrator: `certutil -addstore -f Root root.crt`.
+- **macOS:** open `root.crt` in Keychain Access (System keychain), then set Trust to Always
+  Trust.
+- **Android or ChromeOS tablets:** Settings, then Security, then Install a certificate, then CA
+  certificate.
+- **Firefox:** Settings, then Privacy & Security, then Certificates, then View certificates,
+  then Authorities, then Import.
+
+Without this step browsers show a warning. Do not ask teachers to click through it; install the
+certificate instead. The certificate stays valid while the `caddy` data folder is kept, so back
+it up with Margin's backups.
+
+### Fallback for a closed network only (not recommended)
+
+If HTTPS is impossible, add both lines to `.env`:
+```
+MARGIN_COOKIE_SECURE=false
+MARGIN_ALLOW_INSECURE_COOKIES_IN_PRODUCTION=true
+```
+Margin refuses to start with the first line alone, and logs a warning at every start while the
+fallback is on. Anyone on the network can then read sign-in traffic, so use it only on a network
+the school controls, and switch to HTTPS as soon as you can.
 
 ## 4. First start
 
@@ -89,6 +129,30 @@ colleagues) write answers, scan the stack and upload it, then start AI marking. 
   not reachable, model not installed.
 - **Settings → Models and training data** shows the models in use. It must say `ollama`, never
   "Test model".
+
+## Alternative: Docker (computers that can run it)
+
+Many school Windows laptops cannot run Docker; the steps above work without it. Where Docker
+Desktop (Windows/macOS) or Docker Engine (Linux) runs:
+
+```
+git clone https://github.com/Ngum12/Margin.git
+cd Margin
+copy deploy\compose.env.example .env      # Linux/macOS: cp deploy/compose.env.example .env
+# edit .env: MARGIN_SITE = the address teachers will type
+docker compose up -d --build
+docker compose exec ollama ollama pull qwen3-vl:4b-instruct
+docker compose exec web python -m app.cli init-school --name "GBHS Example" --country Cameroon
+docker compose exec web python -m app.cli create-user --username admin --display-name "Administrator" --role admin
+```
+
+Teachers open `https://<MARGIN_SITE>`, after installing Caddy's certificate (above).
+
+- **Backups:** `docker compose exec web python -m app.cli backup --out /data/backups/latest.zip`,
+  then `docker compose cp web:/data/backups/latest.zip .`
+- **Updates:** back up, `git pull`, then `docker compose up -d --build`.
+
+The images are pinned to exact versions (`docs/DEPENDENCIES.md`).
 
 ## 6. Backups (do this every week, and before every update)
 
@@ -135,5 +199,6 @@ uv run python -m app.cli migrate
 | "The background worker is not running" | Margin was started without the worker: start it with `python scripts/run.py`. |
 | "The AI model server (Ollama) cannot be reached" | Start Ollama; check `MARGIN_MODEL_BASE_URL`. |
 | "The AI model … is not installed" | `ollama pull qwen3-vl:4b-instruct` |
-| Teachers on other computers are sent back to sign-in | The sign-in cookie needs HTTPS: see section 3. |
+| Teachers on other computers are sent back to sign-in | Use the HTTPS address (Caddy, section 3), not `http://`. |
+| The browser warns about the certificate | Install Caddy's root certificate on that computer (section 3). |
 | A page took too long | It is retried once, then the script is flagged for marking by hand. |

@@ -1,0 +1,63 @@
+# Margin on one school computer with Docker (D-066): web app, worker, local AI model and HTTPS.
+# Usage: copy deploy/compose.env.example to .env, set MARGIN_SITE, then `docker compose up -d`.
+# Images are pinned to exact versions (docs/DEPENDENCIES.md); never use "latest".
+
+services:
+  web:
+    build: .
+    image: margin:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MARGIN_MODEL_BASE_URL: http://ollama:11434
+    volumes:
+      - margin-data:/data
+    depends_on:
+      - ollama
+    expose:
+      - "8000"
+
+  worker:
+    image: margin:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MARGIN_MODEL_BASE_URL: http://ollama:11434
+    command: ["python", "-m", "app.worker"]
+    volumes:
+      - margin-data:/data
+    depends_on:
+      - web
+      - ollama
+
+  ollama:
+    image: ollama/ollama:0.40.5
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    # For an NVIDIA GPU, uncomment (needs the NVIDIA Container Toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+
+  caddy:
+    image: caddy:2.11.7
+    restart: unless-stopped
+    environment:
+      MARGIN_SITE: ${MARGIN_SITE:?Set MARGIN_SITE in .env to this computer's name or address}
+      MARGIN_UPSTREAM: web:8000
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - web
+
+volumes:
+  margin-data:
+  ollama-models:
+  caddy-data:

@@ -1,0 +1,17 @@
+# HTTPS in front of Margin on the school network (D-066). Caddy makes its own local certificate
+# authority ("tls internal"); install its root certificate on each teacher computer once
+# (docs/INSTALL.md) so browsers trust it. Nothing here contacts the internet.
+{
+	# Local certificate authority only: no public certificates are requested.
+	auto_https disable_redirects
+}
+
+{$MARGIN_SITE} {
+	tls internal
+	encode gzip
+	reverse_proxy {$MARGIN_UPSTREAM:127.0.0.1:8000}
+}
+
+http://{$MARGIN_SITE} {
+	redir https://{host}{uri} permanent
+}
