@@ -431,4 +431,5 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
   - `docs/INSTALL.md` for the school box.
 - **Test failure investigated:** the first backup test failed on Windows with PermissionError. The test's own `with sqlite3.connect(...)` commits but does not close the connection, so the file stayed locked. The tests now use `closing()`.
 - **Found for going live:** in production the session cookie is secure, so teachers on other computers need HTTPS. Two options are documented: a local HTTPS reverse proxy (a new program, awaiting owner approval), or `MARGIN_COOKIE_SECURE=false` on a trusted closed network.
-- **Waiting for approval before building:** Docker images for the Compose setup, and the HTTPS proxy. Next: the demo seed.
+- **Waiting for approval before building:** Docker images for the Compose setup, and the HTTPS proxy.
+- **Demo seed** (`python -m app.cli seed-demo`, `app/demo.py`): a teacher `demo`, a class of six students, and a ready chemistry exam with its cover sheets prepared, all created through the normal audited services. It refuses to run twice or without an administrator.

@@ -17,7 +17,7 @@ APP_DIR = REPO / "backend" / "app"
 LOCALES = REPO / "frontend" / "src" / "i18n" / "locales"
 
 _CODE_PATTERNS = [
-    re.compile(r'code="([a-z_.]+)"'),  # DomainError(..., code="x.y")
+    re.compile(r'\bcode="([a-z_.]+)"'),  # DomainError(..., code="x.y"); not subject_code=
     re.compile(r'Issue\(\s*"([a-z_.]+)"'),  # Issue("x.y", ...)
     re.compile(r'_row_issue\(\s*"([a-z_.]+)"'),
 ]

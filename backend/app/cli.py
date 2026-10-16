@@ -20,7 +20,7 @@ from alembic.config import Config
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from app import backup
+from app import backup, demo
 from app.ai import eval_cli
 from app.config import get_settings
 from app.db.models import Exam, Language, Role, School
@@ -121,6 +121,20 @@ def rerun_ai(exam_id: int) -> int:
     return 0
 
 
+def seed_demo(password_env: str | None) -> int:
+    password = _read_password(password_env)
+    factory = make_sessionmaker(make_engine(get_settings()))
+    with factory() as db:
+        try:
+            username, exam_id = demo.seed_demo(db, password)
+        except (LookupError, demo.DemoExistsError, ConflictError) as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        db.commit()
+    print(f"Demo ready: sign in as '{username}'. Exam {exam_id} has cover sheets to print.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
@@ -156,7 +170,12 @@ def main(argv: list[str] | None = None) -> int:
     rs.add_argument("--archive", type=Path, required=True)
     rs.add_argument("--force", action="store_true", help="replace the current data")
 
+    sd = sub.add_parser("seed-demo", help="add a demo teacher, class and ready exam (once)")
+    sd.add_argument("--password-env", help="read the demo password from this environment variable")
+
     args = parser.parse_args(argv)
+    if args.command == "seed-demo":
+        return seed_demo(args.password_env)
     if args.command == "backup":
         print(f"Backup written to {backup.backup(get_settings(), args.out)}")
         return 0

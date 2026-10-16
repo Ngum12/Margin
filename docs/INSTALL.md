@@ -72,6 +72,17 @@ Open http://127.0.0.1:8000 and sign in as `admin`. Then, under Settings:
 `python scripts/run.py` starts the web app and the AI worker together, and applies any database
 updates first. Keep that window open, or run it as a service (section 7).
 
+### Demo data (optional, for showing Margin)
+
+```
+cd backend
+uv run python -m app.cli seed-demo
+```
+
+This creates a teacher `demo` (you choose the password), the class "Form 5 Demo" with six students, and a
+ready chemistry exam with its cover sheets prepared. Print the cover sheets, have students (or
+colleagues) write answers, scan the stack and upload it, then start AI marking. It runs once.
+
 ## 5. Check it works
 
 - On the exam's **Marking** tab, the AI panel shows any problem: worker not running, model server
