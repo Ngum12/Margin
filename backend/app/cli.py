@@ -20,6 +20,7 @@ from alembic.config import Config
 from pydantic import ValidationError
 from sqlalchemy import select
 
+from app import backup
 from app.ai import eval_cli
 from app.config import get_settings
 from app.db.models import Exam, Language, Role, School
@@ -148,7 +149,25 @@ def main(argv: list[str] | None = None) -> int:
     rerun = sub.add_parser("rerun-ai", help="re-run AI marking for an exam's unconfirmed scripts")
     rerun.add_argument("--exam", type=int, required=True, help="exam id")
 
+    bk = sub.add_parser("backup", help="back up the database and stored files to a zip")
+    bk.add_argument("--out", type=Path, help="zip to write (default: data/backups/)")
+
+    rs = sub.add_parser("restore", help="restore a backup zip (stop Margin first)")
+    rs.add_argument("--archive", type=Path, required=True)
+    rs.add_argument("--force", action="store_true", help="replace the current data")
+
     args = parser.parse_args(argv)
+    if args.command == "backup":
+        print(f"Backup written to {backup.backup(get_settings(), args.out)}")
+        return 0
+    if args.command == "restore":
+        try:
+            backup.restore(get_settings(), args.archive, force=args.force)
+        except (FileExistsError, ValueError) as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        print("Restored. Run `python -m app.cli migrate`, then start Margin.")
+        return 0
     if args.command == "evaluate":
         return eval_cli.run(args)
     if args.command == "migrate":

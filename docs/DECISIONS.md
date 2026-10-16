@@ -423,3 +423,12 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
   - A first version of the new layout remounted the sign-in form when loading finished, losing what had been typed. Loading and signed-out now share one layout.
   - Opening a script scrolled the window to the focused point and hid the student's name. The first focus no longer scrolls.
 - **Not done (the API gives no dates):** the dashboard shows all confirmed scripts rather than those "confirmed this week" (backlog).
+
+### D-065 · 2026-10-16 · Phase 6, part 1: backup, restore and the install guide
+- **Built:**
+  - `python -m app.cli backup [--out file.zip]` and `restore --archive file.zip [--force]` (`app/backup.py`, standard library only). A backup holds the database, copied with SQLite's online backup so it is safe while Margin runs, plus every stored file; logs and earlier backups are left out.
+  - Restore refuses to overwrite existing data without `--force`, refuses a zip that is not a Margin backup, and refuses any path that would land outside the data folder.
+  - `docs/INSTALL.md` for the school box.
+- **Test failure investigated:** the first backup test failed on Windows with PermissionError. The test's own `with sqlite3.connect(...)` commits but does not close the connection, so the file stayed locked. The tests now use `closing()`.
+- **Found for going live:** in production the session cookie is secure, so teachers on other computers need HTTPS. Two options are documented: a local HTTPS reverse proxy (a new program, awaiting owner approval), or `MARGIN_COOKIE_SECURE=false` on a trusted closed network.
+- **Waiting for approval before building:** Docker images for the Compose setup, and the HTTPS proxy. Next: the demo seed.
