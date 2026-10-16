@@ -1,6 +1,5 @@
-/* "Marking desk" (docs/DESIGN.md). Colours, type and spacing come from styles/tokens.css only.
- * Rules of the system: mark-red only for marks and the margin line; confirmed-green only for
- * "confirmed by the teacher"; shadows only on overlays; no gradients, blur or decorative motion. */
+/* Functional component layouts. Editorial presentation is in styles/studio.css;
+ * palette and typography are centralized in styles/tokens.css (docs/DESIGN.md). */
 @import "./styles/tokens.css";
 
 /* ---------- Base -------------------------------------------------------------------------- */
@@ -141,7 +140,7 @@ details[open] > summary {
   margin-bottom: var(--space-3);
 }
 
-/* ---------- App shell: ink side rail, light top bar --------------------------------------- */
+/* ---------- Shared shell primitives --------------------------------------- */
 
 .skip-link {
   position: absolute;
@@ -157,100 +156,6 @@ details[open] > summary {
 
 .skip-link:focus {
   top: var(--space-2);
-}
-
-.shell {
-  display: grid;
-  grid-template-columns: var(--rail-width) minmax(0, 1fr);
-  min-height: 100vh;
-}
-
-.rail {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  background: var(--ink);
-  color: var(--rail-text);
-  padding: var(--space-4) var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-
-.rail a {
-  color: var(--rail-text);
-  text-decoration: none;
-}
-
-.rail :focus-visible {
-  outline-color: var(--rail-focus);
-}
-
-.rail-school {
-  display: flex;
-  gap: var(--space-2);
-  align-items: flex-start;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-control);
-}
-
-.rail-school .icon {
-  margin-top: 2px;
-}
-
-.rail-school-name {
-  display: block;
-  font-weight: 650;
-  line-height: 1.3;
-}
-
-.rail-app {
-  display: block;
-  font-size: var(--text-sm);
-  color: var(--rail-muted);
-}
-
-.rail-nav {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.rail-link {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-control);
-  color: var(--rail-text);
-  min-height: 40px;
-}
-
-.rail-link:hover {
-  background: var(--rail-active);
-}
-
-.rail-link.active {
-  background: var(--rail-active);
-  color: var(--surface);
-  font-weight: 650;
-}
-
-/* The current item: a white bar on the rail's edge as well as the lighter fill and bold text. */
-.rail-link.active::before {
-  content: "";
-  position: absolute;
-  left: calc(-1 * var(--space-3));
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-  background: var(--surface);
 }
 
 .workspace {
@@ -358,40 +263,8 @@ details[open] > summary {
   padding: var(--space-4) var(--space-5);
 }
 
-/* School laptops (1024–1279 px): the rail keeps its icons; labels stay for screen readers. */
+/* Compact context and review controls on school laptops. */
 @media (width < 1280px) {
-  .shell {
-    grid-template-columns: var(--rail-width-compact) minmax(0, 1fr);
-  }
-
-  .rail {
-    padding: var(--space-4) var(--space-2);
-    align-items: center;
-  }
-
-  .rail .rail-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
-  .rail-link {
-    justify-content: center;
-    padding: var(--space-2);
-    width: 44px;
-  }
-
-  .rail-link.active::before {
-    left: calc(-1 * var(--space-2));
-  }
-
-  .rail-school {
-    padding: var(--space-2);
-  }
-
   .content {
     padding: var(--space-5);
   }
@@ -2560,7 +2433,6 @@ ol.points {
     background: var(--surface);
   }
 
-  .rail,
   .topbar,
   .skip-link,
   .exam-tabs,
@@ -2568,10 +2440,6 @@ ol.points {
   button,
   .button {
     display: none !important;
-  }
-
-  .shell {
-    display: block;
   }
 
   .content {

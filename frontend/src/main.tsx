@@ -6,6 +6,7 @@ import App from "./App";
 import { AuthProvider } from "./auth/AuthContext";
 import "./i18n";
 import "./styles.css";
+import "./styles/studio.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element #root not found");

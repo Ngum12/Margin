@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../auth/useAuth";
+import { MarkingPreview } from "../components/MarkingPreview";
+import { Icon } from "../components/Icon";
 import { ErrorMessage, Field } from "../components/ui";
 
 export default function SignIn() {
@@ -35,39 +37,85 @@ export default function SignIn() {
   }
 
   return (
-    <section className="card narrow">
-      <h1>{t("signIn.title")}</h1>
-      <p className="muted">{t("signIn.intro")}</p>
-      <form onSubmit={(e) => void submit(e)} className="form">
-        <Field label={t("signIn.username")}>
-          <input
-            name="username"
-            autoComplete="username"
-            autoCapitalize="none"
-            required
-            value={username}
-            onChange={(e) => {
-              setUsername(e.target.value);
-            }}
-          />
-        </Field>
-        <Field label={t("signIn.password")}>
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-            }}
-          />
-        </Field>
-        <ErrorMessage error={error} />
-        <button type="submit" disabled={busy}>
-          {busy ? t("signIn.submitting") : t("signIn.submit")}
-        </button>
-      </form>
-    </section>
+    <div className="signin-experience">
+      <section className="signin-story" aria-labelledby="story-title">
+        <div className="story-intro">
+          <p className="eyebrow story-eyebrow">
+            <span />
+            {t("studio.forTeachers")}
+          </p>
+          <h2 id="story-title">
+            {t("studio.heroLine1")}
+            <br />
+            <em>{t("studio.heroLine2")}</em>
+          </h2>
+          <p className="story-description">{t("studio.heroDescription")}</p>
+        </div>
+        <MarkingPreview />
+        <div className="story-footer">
+          <span>{t("studio.privateByDesign")}</span>
+          <span>{t("studio.youDecide")}</span>
+        </div>
+      </section>
+      <section className="signin-panel">
+        <div className="signin-form-wrap">
+          <p className="eyebrow signin-kicker">{t("studio.yourWorkspace")}</p>
+          <h1>{t("signIn.title")}</h1>
+          <p className="signin-intro">{t("signIn.intro")}</p>
+          <form onSubmit={(e) => void submit(e)} className="form">
+            <Field label={t("signIn.username")}>
+              <input
+                name="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                required
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                }}
+              />
+            </Field>
+            <Field label={t("signIn.password")}>
+              <input
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                }}
+              />
+            </Field>
+            <ErrorMessage error={error} />
+            <button type="submit" disabled={busy}>
+              {busy ? t("signIn.submitting") : t("signIn.submit")}
+              <Icon name="next" size={20} />
+            </button>
+          </form>
+          <p className="signin-help">{t("studio.accessHelp")}</p>
+          <div className="signin-assurance">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z" />
+              <path d="m8 12 3 3 5-6" />
+            </svg>
+            <div>
+              <strong>{t("studio.localTitle")}</strong>
+              <span>{t("studio.localDescription")}</span>
+            </div>
+          </div>
+        </div>
+        <footer className="signin-footer">
+          <span>{t("studio.builtFor")}</span>
+          <span>© {new Date().getFullYear()} Margin</span>
+        </footer>
+      </section>
+    </div>
   );
 }

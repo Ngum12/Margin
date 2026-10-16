@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../auth/useAuth";
+import { Brand } from "./Brand";
 import { useCrumbs } from "./breadcrumb";
 import { BreadcrumbProvider } from "./BreadcrumbProvider";
 import { Icon } from "./Icon";
@@ -29,7 +30,9 @@ function Shell({ children }: { children: ReactNode }) {
     return (
       <div className="shell-public">
         <header className="public-header">
-          <span className="public-brand">{t("app.title")}</span>
+          <Link to="/signin" className="public-brand" aria-label={t("app.title")}>
+            <Brand />
+          </Link>
           {state.status !== "loading" && <LanguageSwitch />}
         </header>
         <main className="public-main">{children}</main>
@@ -45,25 +48,25 @@ function Shell({ children }: { children: ReactNode }) {
       <a className="skip-link" href="#main">
         {t("nav.skip")}
       </a>
-      <aside className="rail">
-        <Link to="/" className="rail-school">
-          <Icon name="school" size={20} />
-          <span className="rail-label">
-            <span className="rail-school-name">{me.school.name}</span>
-            <span className="rail-app">{t("app.title")}</span>
-          </span>
+      <header className="studio-header">
+        <Link to="/" className="studio-brand" aria-label={t("app.title")}>
+          <Brand />
         </Link>
-        <nav aria-label={t("nav.label")}>
-          <ul className="rail-nav">
+        <nav className="studio-navigation" aria-label={t("nav.label")}>
+          <ul>
+            <WorkspaceLink to="/" icon="exams" label={t("nav.exams")} active={examsActive} />
+            <WorkspaceLink to="/queue" icon="queue" label={t("nav.queue")} />
             {me.user.role === "admin" && (
-              <RailLink to="/admin/classes" icon="classes" label={t("nav.classes")} />
+              <WorkspaceLink to="/admin/classes" icon="classes" label={t("nav.classes")} />
             )}
-            <RailLink to="/" icon="exams" label={t("nav.exams")} active={examsActive} />
-            <RailLink to="/queue" icon="queue" label={t("nav.queue")} />
-            <RailLink to="/settings" icon="settings" label={t("nav.settings")} />
+            <WorkspaceLink to="/settings" icon="settings" label={t("nav.settings")} />
           </ul>
         </nav>
-      </aside>
+        <div className="studio-institution">
+          <Icon name="school" size={17} />
+          <span>{me.school.name}</span>
+        </div>
+      </header>
       <div className="workspace">
         <TopBar />
         <main id="main" className={wide ? "content content-wide" : "content"} tabIndex={-1}>
@@ -74,7 +77,7 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-function RailLink({
+function WorkspaceLink({
   to,
   icon,
   label,
@@ -91,11 +94,13 @@ function RailLink({
         to={to}
         end
         title={label}
-        className={({ isActive }) => ((active ?? isActive) ? "rail-link active" : "rail-link")}
+        className={({ isActive }) =>
+          (active ?? isActive) ? "studio-nav-link active" : "studio-nav-link"
+        }
         aria-current={active ? "page" : undefined}
       >
         <Icon name={icon} size={20} />
-        <span className="rail-label">{label}</span>
+        <span>{label}</span>
       </NavLink>
     </li>
   );
@@ -131,7 +136,12 @@ function TopBar() {
       </nav>
       <div className="topbar-actions">
         <LanguageSwitch />
-        <span className="topbar-user">{me.user.display_name}</span>
+        <span className="topbar-user">
+          <span className="user-monogram" aria-hidden="true">
+            {me.user.display_name.slice(0, 1)}
+          </span>
+          {me.user.display_name}
+        </span>
         <button
           type="button"
           className="button-quiet"

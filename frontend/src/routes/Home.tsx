@@ -28,8 +28,9 @@ export default function Home() {
     <section className="dashboard">
       <header className="page-header">
         <div>
+          <p className="eyebrow dashboard-date">{today}</p>
           <h1>{t("home.title")}</h1>
-          <p className="page-lede">{today}</p>
+          <p className="page-lede">{t("studio.deskIntro")}</p>
         </div>
         <Link className="button" to="/exams/new">
           <Icon name="plus" />
@@ -41,14 +42,23 @@ export default function Home() {
       {state.status === "ready" && (
         <>
           <WorkList exams={state.data} />
-          <section className="panel" aria-labelledby="exams-heading">
+          <section className="panel exam-ledger" aria-labelledby="exams-heading">
             <div className="panel-header">
-              <h2 id="exams-heading">{t("home.examsTitle")}</h2>
+              <div>
+                <p className="eyebrow">{t("studio.collection")}</p>
+                <h2 id="exams-heading">{t("home.examsTitle")}</h2>
+              </div>
+              <span className="ledger-count">{String(state.data.length).padStart(2, "0")}</span>
             </div>
             {state.data.length === 0 ? (
               <p className="empty-state">{t("home.empty")}</p>
             ) : (
-              <div className="table-wrap">
+              <div
+                className="table-wrap"
+                role="region"
+                aria-label={t("home.examsTitle")}
+                tabIndex={0}
+              >
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -173,9 +183,10 @@ function WorkItem({
 }) {
   return (
     <li className={count > 0 && !done ? "work-item work-item-active" : "work-item"}>
-      <p className="work-step" aria-hidden="true">
-        {step}
-      </p>
+      <div className="work-step" aria-hidden="true">
+        <span>0{step}</span>
+        <Icon name={step === 1 ? "upload" : step === 2 ? "queue" : "check"} size={20} />
+      </div>
       <div className="work-body">
         <p className="work-count">
           <span className="work-number">{count}</span> <span className="work-title">{title}</span>

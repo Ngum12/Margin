@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Marking Assistant"
+    "title": "Margin"
   },
   "common": {
     "loading": "Loading…",
@@ -711,5 +711,45 @@
     "usersHelp": "Add teachers, reset passwords and deactivate accounts.",
     "classesHelp": "Create classes, assign teachers and add students.",
     "trainingHelp": "See which AI models are in use and export training data."
+  },
+  "studio": {
+    "forTeachers": "A little intelligence. A human touch.",
+    "heroLine1": "Less marking.",
+    "heroLine2": "More possibility.",
+    "heroDescription": "From the first handwritten answer to the final mark. Thoughtful assistance, with you in control.",
+    "privateByDesign": "Private by design.",
+    "youDecide": "The teacher always decides.",
+    "yourWorkspace": "Welcome to your marking studio",
+    "accessHelp": "Need access? Your school administrator can help.",
+    "localTitle": "Your school. Your data.",
+    "localDescription": "Scripts and marks stay on your school’s server.",
+    "builtFor": "Made for the art of teaching.",
+    "sampleSubject": "CHEMISTRY · FORM 5",
+    "sampleCode": "SCRIPT AAAAAA",
+    "sampleQuestion": "1. State two properties of metals.",
+    "sampleAnswer1": "Metals conduct electricity",
+    "sampleAnswer2": "because electrons move freely.",
+    "sampleAnswer3": "They are also malleable.",
+    "sampleNote": "Well explained.",
+    "samplePaper": "Answer sheet",
+    "scan": "Scan",
+    "read": "Read",
+    "propose": "Propose",
+    "review": "Review",
+    "scanTag": "Every page, in its place",
+    "readTag": "Handwriting becomes evidence",
+    "proposeTag": "A mark, with a reason",
+    "reviewTag": "Your judgement comes first",
+    "scanDetail": "Start with the original script.",
+    "readDetail": "Read the answer, line by line.",
+    "proposeDetail": "Match evidence to your mark scheme.",
+    "reviewDetail": "Review. Adjust. Make it yours.",
+    "illustration": "THE MARKING JOURNEY · ILLUSTRATION",
+    "teacherControl": "ASSISTED BY MARGIN",
+    "pause": "Pause animation",
+    "play": "Play animation",
+    "previewLabel": "Explore the marking journey",
+    "deskIntro": "A clear desk. A little more room to teach.",
+    "collection": "THE EXAM COLLECTION"
   }
 }

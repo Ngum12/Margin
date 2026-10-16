@@ -1,111 +1,60 @@
-# Design: "Marking desk"
+# Design: Margin editorial studio
 
-Margin is a serious academic tool for teachers. Its visual language comes from the exam script,
-the teacher's red pen and the red margin line of an exercise book: calm, professional and
-distinctive, never playful and never a generic software template. This file is the reference for
-anyone changing the interface. Decision: D-064.
+Margin feels like a carefully composed academic publication and a teacher’s working desk.
+Its identity comes from warm paper, aubergine ink, generous literary headings, a restrained
+citron accent and the red pen. Decision D-067 supersedes the sidebar and motion restrictions
+of D-064, following the owner’s request for a distinctive, animated product experience.
 
-## Rules
+## Visual system
 
-- **One source of truth.** Colours, type sizes, spacing, radii and shadows are CSS custom
-  properties in `frontend/src/styles/tokens.css`. `styles.css` uses only those tokens: no colour
-  is written anywhere else.
-- **Marking red (`--mark-red`) only for marks:** ticks, crosses, scores, deductions, red-pen
-  annotations and the margin line. Never for buttons, errors or decoration. The marked PDF uses
-  the same red (`app/redpen/draw_pdf.py`).
-- **Confirmed green (`--confirmed`) only for "confirmed by the teacher":** the confirmed badge,
-  the confirmed total and the "Marks confirmed." message.
-- **Problems have their own tones.** Errors and destructive actions use `--danger` text on
-  `--danger-bg`, with explicit wording. Warnings use `--warn` on `--warn-bg`.
-- **Shape and depth.** Radius 4 px for controls, 6 px for panels and 0 on the scanned page.
-  Shadows only on overlays (dialogs, the skip link). No gradients, no blur or glass, no emoji.
-- **Colour is never the only signal.** Every state also has a word or a shape:
-  - exam tab states are written out ("Done", "Needs action");
-  - ✓ and ✗ carry spoken labels;
-  - the current rail item is bold, filled and marked with a bar;
-  - "worth reteaching" has an icon and screen-reader text.
-- **Motion.** Confirming a script is the one animated moment: the total settles in green with a
-  260 ms stamp. Otherwise there are only short transitions that show what changed. Everything is
-  turned off under `prefers-reduced-motion`.
-- **Offline.** Fonts and icons are bundled. Nothing is loaded from another host.
+- **Palette:** aubergine `--ink` (#302833), warm `--paper` (#F4F1E9), ivory `--surface`
+  (#FFFEFA) and citron `--accent` (#D9E5A2). Muted plum and warm grey define secondary surfaces.
+  Colours are centralized in `frontend/src/styles/tokens.css`.
+- **Meaning:** marking red stays exclusive to marks, annotations and the paper margin.
+  Confirmed green means teacher confirmation. Citron draws attention to assisted work; it
+  never means a mark has been confirmed. Errors and warnings retain distinct labelled states.
+- **Typography:** bundled Literata provides the wordmark and editorial headings; bundled
+  Atkinson Hyperlegible Next handles controls and reading; Caveat represents handwriting in
+  the illustrative script and red-pen feedback. Small uppercase labels organize secondary
+  metadata. Core form text stays readable. No remote fonts or assets.
+- **Depth:** paper layers and small annotation cards cast soft shadows in the sign-in
+  demonstration. Working surfaces remain flat, with fine warm rules and restrained corners.
+- **Contrast:** `src/styles/tokens.test.ts` checks text/background pairs at 4.5:1 and control
+  borders/focus at 3:1, including the citron and plum surfaces. Colour always has a word,
+  icon, border or position alongside it.
 
-## Colour and contrast (WCAG AA)
+## Sign-in experience
 
-Every pair below is checked by `src/styles/tokens.test.ts`, which reads `tokens.css`, so a token
-change that breaks contrast fails the check suite. The minimum is 4.5:1 for text and 3:1 for
-control borders and focus rings.
+A split composition pairs a dark editorial story with a quiet ivory form. An original
+open-book/margin monogram accompanies the Margin wordmark. The story is “Less marking.
+More possibility.” The form keeps the existing sign-in behavior and administrator guidance.
 
-| Foreground | Background | Ratio | Minimum | Used for |
-|---|---|---|---|---|
-| `--ink` #1B2A41 | `--surface` #FFFFFF | 14.44:1 | 4.5:1 | Body text on panels |
-| `--ink` #1B2A41 | `--paper` #F4F6F8 | 13.33:1 | 4.5:1 | Body text on the app background |
-| `--ink-2` #44546A | `--surface` #FFFFFF | 7.71:1 | 4.5:1 | Secondary text on panels |
-| `--ink-2` #44546A | `--paper` #F4F6F8 | 7.12:1 | 4.5:1 | Secondary text on the background |
-| `--ink-3` #5C6B80 | `--surface` #FFFFFF | 5.43:1 | 4.5:1 | Disabled and line-number text |
-| `--ink-3` #5C6B80 | `--paper` #F4F6F8 | 5.01:1 | 4.5:1 | Disabled text in disabled fields |
-| `--ink` #1B2A41 | `--info-bg` #EAF0F7 | 12.59:1 | 4.5:1 | Notices |
-| `--ink` #1B2A41 | `--selected` #DCE6F1 | 11.44:1 | 4.5:1 | Selected rows, evidence lines |
-| `--link` #24538F | `--surface` #FFFFFF | 7.75:1 | 4.5:1 | Links |
-| `--link` #24538F | `--paper` #F4F6F8 | 7.16:1 | 4.5:1 | Links on the background |
-| `--surface` #FFFFFF | `--ink` #1B2A41 | 14.44:1 | 4.5:1 | Primary buttons; active exam tab number |
-| `--rail-text` #E8EDF3 | `--ink` #1B2A41 | 12.27:1 | 4.5:1 | Side rail items |
-| `--rail-muted` #A9B6C6 | `--ink` #1B2A41 | 7.01:1 | 4.5:1 | Side rail secondary text |
-| `--rail-text` #E8EDF3 | `--rail-active` #2A3B57 | 9.58:1 | 4.5:1 | Current side rail item |
-| `--mark-red` #B3261E | `--surface` #FFFFFF | 6.54:1 | 4.5:1 | Marks, ticks, crosses, deductions |
-| `--mark-red` #B3261E | `--paper` #F4F6F8 | 6.03:1 | 4.5:1 | Marks on the background |
-| `--confirmed` #2F5D4A | `--surface` #FFFFFF | 7.54:1 | 4.5:1 | Confirmed state text |
-| `--confirmed` #2F5D4A | `--confirmed-bg` #E7F0EB | 6.48:1 | 4.5:1 | Confirmed badge and total |
-| `--danger` #8C2F14 | `--danger-bg` #FBEDE8 | 7.26:1 | 4.5:1 | Errors, test-model warnings |
-| `--danger` #8C2F14 | `--surface` #FFFFFF | 8.29:1 | 4.5:1 | Destructive buttons |
-| `--warn` #8A5A00 | `--warn-bg` #FFF6E0 | 5.51:1 | 4.5:1 | Warnings |
-| `--warn` #8A5A00 | `--surface` #FFFFFF | 5.93:1 | 4.5:1 | "Needs action" tab state |
-| `--field-border` #7D8DA3 | `--surface` #FFFFFF | 3.38:1 | 3:1 | Form control borders (non-text) |
-| `--focus` #2F6FB3 | `--surface` #FFFFFF | 5.19:1 | 3:1 | Focus ring (non-text) |
-| `--focus` #2F6FB3 | `--paper` #F4F6F8 | 4.79:1 | 3:1 | Focus ring on the background |
-| `--rail-focus` #9CC3F0 | `--ink` #1B2A41 | 7.89:1 | 3:1 | Focus ring on the side rail |
+The animated document is explicitly labelled as an illustration. It moves through Scan,
+Read, Propose and Review, showing a scanning line, selected evidence, proposed ticks and a
+teacher’s annotation. It contains only synthetic copy, never real student data, and does not
+claim that an actual job is running. Stage buttons are keyboard accessible; selecting a stage
+pauses playback. Pause/play controls stop automatic changes. Reduced-motion preferences
+stop automatic progression and CSS animation while preserving manual exploration.
 
-`--rule` (#C9D6E3) is used only for decorative dividers and, at 35 % opacity, for the evidence
-bands on the page. Neither carries meaning on its own.
+On phones, the sign-in form comes first and the illustrative story follows. On larger
+screens, both sit beside one another. English and French have identical translation coverage.
 
-## Type
+## Workspace and dashboard
 
-| Role | Font | Use |
-|---|---|---|
-| Titles | Literata SemiBold (serif) | Page titles, exam titles and student names only |
-| Interface | Atkinson Hyperlegible Next (variable weight) | All other text, tables and numbers |
-| Fallback | Noto Sans | Any glyph the interface font lacks (downloaded only when needed) |
-| Red pen | Caveat | Red-pen annotations on screen and in the marked PDF, nowhere else |
-
-- **Scale:** 13 / 15 (body) / 17 / 21 / 28 px. Body line height is 1.5, and prose is limited to
-  76 characters per line.
-- **Numbers:** marks, totals and all tables use tabular figures (`font-variant-numeric:
-  tabular-nums`).
-- **Case:** sentence case everywhere. No all-caps labels and no letter-spaced "eyebrow" labels.
-
-## Layout
-
-- **Shell.** A narrow ink side rail holds the school name, Classes (administrators), Exams,
-  Marking queue and Settings. A light top bar holds the breadcrumb (School / Class / Exam), the
-  language menu and the user.
-  - From 1280 px wide the rail shows labels.
-  - From 1024 to 1279 px the rail shows icons only; the labels stay for screen readers and
-    tooltips.
-  - Tested at 1366×768 and 1024×768, in English and French.
-- **Dashboard, "What needs you today".** Three steps in the order of the work, with real counts
-  and links: exams waiting for scans, scripts waiting for review, scripts confirmed. There are no
-  charts. "Confirmed this week" needs a confirmation date in the exam list, which the API does not
-  give, so the dashboard shows all confirmed scripts (see the backlog).
-- **Exam page.** Tabs in the order of the work: Mark scheme, Cover sheets, Scans, Marking,
-  Results. Each tab states, in words and with a small icon, whether it is done, needs action, is
-  in progress or comes later (`src/exam/workflow.ts`).
-- **Mark scheme.** Laid out like a printed mark scheme: question, points, and marks on the right.
-  Fields look like the dotted lines of a form and show their box on hover or focus.
-- **Scans and page check.** One script per row with its page thumbnails (lazy-loaded). Unplaced
-  pages show their reason and a one-click fix (Discard, Restore, Unassign).
-- **Results.** A sortable class table with one column per question. Two footer rows: the class
-  average, and the share of confirmed scripts that scored zero. Questions where 40 % or more
-  scored zero are flagged as worth reteaching. A print style shows the table without the app
-  around it.
+- A horizontal workspace bar places Exams, Marking queue, administrator-only Classes and
+  Settings in a compact navigation group, with the wordmark and school identity at its edges.
+- A quiet context strip holds breadcrumbs, language, identity and sign-out. Keyboard users
+  retain a skip link and clear focus states. Narrow screens wrap navigation without hiding
+  feature labels or relying on hover.
+- The dashboard opens with a large editorial heading and the date. Three work trays hold
+  real counts and links for scans, review and confirmed scripts. The dark middle tray gives
+  teacher review visual priority. No invented activity, progress or statistics.
+- The exam collection remains a semantic table with real class, subject, status and counts;
+  it scrolls horizontally on narrow screens. Page titles and shared controls inherit the
+  same palette and typography across setup, scanning, review, results and administration.
+- Exam workflow tabs remain in the order of the work, with their states in words.
+- `styles.css` supplies functional component layouts; `styles/studio.css` supplies the
+  editorial shell and responsive presentation. The latter is imported after the base styles.
 
 ## The marking desk (review)
 

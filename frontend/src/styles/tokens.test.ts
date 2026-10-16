@@ -6,6 +6,10 @@ import tokens from "./tokens.css?raw";
 // text, 3:1 for control borders and focus rings (docs/DESIGN.md lists the measured ratios).
 const PAIRS: [foreground: string, background: string, minimum: number][] = [
   ["ink", "surface", 4.5],
+  ["ink", "accent", 4.5],
+  ["accent", "ink", 4.5],
+  ["ink", "plum-soft", 4.5],
+  ["rail-muted", "rail-active", 4.5],
   ["ink", "paper", 4.5],
   ["ink-2", "surface", 4.5],
   ["ink-2", "paper", 4.5],
@@ -30,6 +34,7 @@ const PAIRS: [foreground: string, background: string, minimum: number][] = [
   ["warn", "warn-bg", 4.5],
   ["warn", "surface", 4.5],
   ["field-border", "surface", 3],
+  ["field-border", "paper", 3],
   ["focus", "surface", 3],
   ["focus", "paper", 3],
   ["rail-focus", "ink", 3],

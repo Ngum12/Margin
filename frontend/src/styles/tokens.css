@@ -27,7 +27,7 @@
   font-display: swap;
 }
 
-/* Red pen annotations only (overlay and marked PDF). */
+/* Handwriting in the illustrative script and red-pen annotations. */
 @font-face {
   font-family: "Caveat";
   src: url("../assets/fonts/Caveat-Regular.ttf") format("truetype");
@@ -36,21 +36,21 @@
 
 :root {
   /* Colour */
-  --ink: #1b2a41; /* primary text, side rail */
-  --ink-2: #44546a; /* secondary text */
-  --ink-3: #5c6b80; /* disabled text */
-  --paper: #f4f6f8; /* app background */
-  --surface: #ffffff; /* working panels */
-  --rule: #c9d6e3; /* borders, dividers, evidence bands */
-  --field-border: #7d8da3; /* form controls: 3:1 against the surface */
-  --selected: #dce6f1; /* selected row or item */
-  --info-bg: #eaf0f7;
-  --link: #24538f;
-  --focus: #2f6fb3;
-  --rail-text: #e8edf3;
-  --rail-muted: #a9b6c6;
-  --rail-active: #2a3b57;
-  --rail-focus: #9cc3f0;
+  --ink: #302833; /* primary text, editorial dark surfaces */
+  --ink-2: #605761; /* secondary text */
+  --ink-3: #746b73; /* disabled text */
+  --paper: #f4f1e9; /* app background */
+  --surface: #fffefa; /* working panels */
+  --rule: #dcd6cf; /* borders, dividers, evidence bands */
+  --field-border: #91858c; /* form controls: 3:1 against the surface */
+  --selected: #e6e1d9; /* selected row or item */
+  --info-bg: #eeebe5;
+  --link: #594262;
+  --focus: #715581;
+  --rail-text: #f2eee8;
+  --rail-muted: #c1b6c4;
+  --rail-active: #493e4d;
+  --rail-focus: #d9e5a2;
   /* Marks, ticks, crosses, annotations and the margin line: nothing else. */
   --mark-red: #b3261e;
   /* "Confirmed by the teacher": nothing else. */
@@ -64,6 +64,16 @@
   --warn-border: #f0d9a6;
   --scrim: rgb(27 42 65 / 40%); /* behind dialogs */
   --evidence: rgb(201 214 227 / 35%); /* --rule at 35 % */
+
+  /* Editorial studio surfaces and accents. */
+  --accent: #d9e5a2;
+  --accent-ink: #3e492b;
+  --plum-soft: #e8e0ea;
+  --paper-line: #e1dcd4;
+  --studio-shadow: 0 24px 60px rgb(25 17 28 / 18%);
+  --paper-shadow: 0 16px 36px rgb(25 17 28 / 16%);
+  --hero-glow: rgb(217 229 162 / 6%);
+  --hero-rule: rgb(242 238 232 / 12%);
 
   /* Type */
   --font-ui: "Atkinson Hyperlegible Next", "Noto Sans Margin", system-ui, "Segoe UI", sans-serif;
@@ -87,12 +97,12 @@
   --space-6: 32px;
 
   /* Shape */
-  --radius-control: 4px;
-  --radius-panel: 6px;
+  --radius-control: 8px;
+  --radius-panel: 14px;
   --shadow-overlay: 0 8px 24px rgb(27 42 65 / 18%), 0 2px 6px rgb(27 42 65 / 12%);
 
   /* Layout */
   --rail-width: 200px;
   --rail-width-compact: 64px;
-  --topbar-height: 52px;
+  --topbar-height: 56px;
 }

@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Assistant de correction"
+    "title": "Margin"
   },
   "common": {
     "loading": "Chargement…",
@@ -711,5 +711,45 @@
     "usersHelp": "Ajouter des enseignants, réinitialiser des mots de passe et désactiver des comptes.",
     "classesHelp": "Créer des classes, attribuer les enseignants et ajouter les élèves.",
     "trainingHelp": "Voir les modèles d'IA utilisés et exporter les données d'entraînement."
+  },
+  "studio": {
+    "forTeachers": "Un peu d’intelligence. Une touche humaine.",
+    "heroLine1": "Moins de corrections.",
+    "heroLine2": "Plus de possibilités.",
+    "heroDescription": "De la première réponse manuscrite à la note finale. Une aide attentive, sous votre contrôle.",
+    "privateByDesign": "La confidentialité, par principe.",
+    "youDecide": "L’enseignant décide toujours.",
+    "yourWorkspace": "Bienvenue dans votre atelier de correction",
+    "accessHelp": "Besoin d’un accès ? Contactez l’administrateur de votre école.",
+    "localTitle": "Votre école. Vos données.",
+    "localDescription": "Copies et notes restent sur le serveur de votre école.",
+    "builtFor": "Au service de l’art d’enseigner.",
+    "sampleSubject": "CHIMIE · FORM 5",
+    "sampleCode": "COPIE AAAAAA",
+    "sampleQuestion": "1. Citez deux propriétés des métaux.",
+    "sampleAnswer1": "Les métaux conduisent l’électricité",
+    "sampleAnswer2": "car les électrons circulent librement.",
+    "sampleAnswer3": "Ils sont aussi malléables.",
+    "sampleNote": "Bien expliqué.",
+    "samplePaper": "Feuille de réponses",
+    "scan": "Numériser",
+    "read": "Lire",
+    "propose": "Proposer",
+    "review": "Vérifier",
+    "scanTag": "Chaque page à sa place",
+    "readTag": "L’écriture devient une preuve",
+    "proposeTag": "Une note, une raison",
+    "reviewTag": "Votre jugement avant tout",
+    "scanDetail": "Partir de la copie originale.",
+    "readDetail": "Lire la réponse, ligne par ligne.",
+    "proposeDetail": "Relier les preuves à votre barème.",
+    "reviewDetail": "Vérifier. Ajuster. Décider.",
+    "illustration": "LE PARCOURS DE CORRECTION · ILLUSTRATION",
+    "teacherControl": "AVEC L’AIDE DE MARGIN",
+    "pause": "Mettre en pause",
+    "play": "Animer",
+    "previewLabel": "Explorer le parcours de correction",
+    "deskIntro": "Un bureau dégagé. Plus de place pour enseigner.",
+    "collection": "LA COLLECTION D’EXAMENS"
   }
 }
