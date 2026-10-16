@@ -150,7 +150,8 @@
   },
   "roles": {
     "teacher": "Teacher",
-    "admin": "Administrator"
+    "admin": "Administrator",
+    "head_of_department": "Head of department"
   },
   "classes": {
     "title": "Classes",
@@ -282,7 +283,8 @@
       "print_uncertain": "Some pages may have printed. Check the output before retrying.",
       "print_failed": "The document could not be prepared. Check the confirmed marks and retry.",
       "print_busy": "A print is being sent. Wait for its status before reopening.",
-      "absent_has_scan": "Resolve the absence or received pages before continuing."
+      "absent_has_scan": "Resolve the absence or received pages before continuing.",
+      "printer_missing": "Configure the school printer or download the private slips."
     },
     "sheets": {
       "pages_locked": "Page counts cannot be reduced after scanning. Resolve the existing pages first.",
@@ -303,6 +305,13 @@
       "image_unreadable": "This photograph could not be prepared. Retake it with the whole page visible.",
       "duplicate": "This photograph has already been received.",
       "not_ready": "Wait for the preview. A page already sent to marking cannot be cropped again here."
+    },
+    "portal": {
+      "not_ready": "Confirm all scripts or record absences first.",
+      "change_pin": "Change your initial PIN first.",
+      "remark_closed": "The remark window has closed.",
+      "remark_limit": "The request limit has been reached.",
+      "reason_required": "Give a reason for changing released marks."
     }
   },
   "issues": {
@@ -968,5 +977,89 @@
       "quarantine": "Needs attention",
       "removed": "Discarded"
     }
+  },
+  "portal": {
+    "title": "Student space",
+    "signin": "Student sign in",
+    "signinHint": "Use the code and PIN on your private school slip.",
+    "school": "School",
+    "code": "Student code",
+    "pin": "PIN",
+    "disabled": "The school has not enabled student access.",
+    "changePin": "Choose your own PIN",
+    "oldPin": "Current PIN",
+    "newPin": "New PIN (6–12 digits)",
+    "back": "All my exams",
+    "myExams": "My exams",
+    "noExams": "Your teacher has not released any results yet.",
+    "newReply": "New reply",
+    "progress": "My progress",
+    "revise": "What to revise",
+    "reviewQuestion": "Review this question and your feedback.",
+    "overlay": "Show teacher marks",
+    "zoom": "Zoom",
+    "page": "Page {{number}}",
+    "scheme": "Mark scheme",
+    "askRemark": "Ask for a remark",
+    "reason": "Reason",
+    "pageChoice": "Page (optional)",
+    "message": "Your message (500 characters maximum)",
+    "send": "Send request",
+    "remarkUnavailable": "The request window or limit has been reached.",
+    "totalCorrect": "The total was recalculated: {{total}}. It is correct.",
+    "markRead": "Mark reply as read",
+    "escalate": "Ask the head of department",
+    "settings": "Student portal settings",
+    "enabled": "Enable student portal",
+    "escalation": "Allow one escalation to the head of department",
+    "class_average": "Show the class average",
+    "remark_days": "Days to request a remark after release",
+    "remark_max": "Maximum requests per exam",
+    "idle_minutes": "Session inactivity timeout (minutes)",
+    "releaseTitle": "Return results to students",
+    "releaseHint": "Confirmation keeps marks private. Release only when every script is confirmed or the student is recorded absent.",
+    "visibility": "Students can see",
+    "release": "Release results",
+    "updateRelease": "Update visibility",
+    "unrelease": "Unrelease results",
+    "releasedAt": "Released {{date}}",
+    "access": "Student sign-in slips",
+    "slipsHint": "Print private code and one-time PIN slips. Resetting a PIN signs the student out.",
+    "openStudent": "Open student portal",
+    "class": "Class",
+    "resetPins": "Reset existing PINs and revoke sessions",
+    "printSlips": "Print class sign-in slips",
+    "issueSlip": "Issue sign-in slip",
+    "slipPdf": "Download private slips (PDF)",
+    "printQueue": "View print queue",
+    "remarks": "Remark requests",
+    "remarkStats": "{{count}} requests · {{changed}} with marks changed",
+    "openReview": "Open question at the marking desk",
+    "replyHint": "Keep the current marks or change the points below. Your reply saves the reason and confirms the revised script. Print a new slip if marks change.",
+    "reply": "Reply and reason",
+    "sendReply": "Send reply",
+    "startLooking": "Being looked at",
+    "department": "Department subject codes (comma separated)",
+    "reopenReason": "Reason for changing released marks",
+    "reasons": {
+      "missing_mark": "A mark was missed",
+      "total_error": "Marks added up wrong",
+      "unmarked_answer": "An answer or page was not marked",
+      "other": "Other"
+    },
+    "status": {
+      "sent": "Sent",
+      "looking": "Being looked at",
+      "answered": "Answered"
+    },
+    "visibilityOptions": {
+      "marks": "Marks only",
+      "notes": "Marks and feedback",
+      "scheme": "Marks, feedback and mark scheme"
+    },
+    "signout": "Sign out",
+    "average": "Class average: {{marks}}",
+    "pointOnPage": "Tap the place on your page (optional)",
+    "examNumber": "Exam {{number}}"
   }
 }

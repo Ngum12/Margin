@@ -3,13 +3,29 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Job, JobStatus, PageState, PrintJob, Script, ScriptStatus
+from app.db.models import (
+    Exam,
+    Job,
+    JobStatus,
+    PageState,
+    PrintJob,
+    RemarkRequest,
+    Script,
+    ScriptStatus,
+)
 from app.services.answer_sheets import readiness
 
 
 def state(db: Session, script: Script) -> str:
+    if db.scalar(
+        select(RemarkRequest.id)
+        .where(RemarkRequest.script_id == script.id, RemarkRequest.status != "answered")
+        .limit(1)
+    ):
+        return "remark_requested"
     if script.status == ScriptStatus.CONFIRMED:
-        return "confirmed"
+        exam = db.get(Exam, script.exam_id)
+        return "released" if exam and exam.released_at else "confirmed"
     missing, problems = readiness(db, script.exam_id, script.student_id)
     if missing or problems or script.manual_reason:
         return "needs_attention"

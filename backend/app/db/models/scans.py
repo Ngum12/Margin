@@ -68,6 +68,7 @@ class Script(IdMixin, TimestampMixin, Base):
     status: Mapped[ScriptStatus] = mapped_column(
         str_enum(ScriptStatus, "script_status"), default=ScriptStatus.WAITING
     )
+    reopen_reason: Mapped[str | None] = mapped_column(String(500))
     confirmed_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
     confirmed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     # Set when the AI could not produce valid output: the teacher marks this script by hand.

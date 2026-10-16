@@ -3,6 +3,8 @@ import { ScanInbox } from "../components/ScanInbox";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { request } from "../api/client";
+import type { Remark } from "../api/student";
 import { api } from "../api/endpoints";
 import type { ExamSummary } from "../api/types";
 import { Icon } from "../components/Icon";
@@ -18,13 +20,20 @@ function scriptCount(exam: ExamSummary): number {
  * confirmed. Real counts only, each linking to the work. */
 export default function Home() {
   const { t, i18n } = useTranslation();
+  const { state: remarkState, reload: reloadRemarks } = useLoad(
+    () => request<Remark[]>("GET", "/api/remarks"),
+    [],
+  );
   const { state, reload } = useLoad(() => api.exams(), []);
   useEffect(() => {
-    const timer = setInterval(reload, 5000);
+    const timer = setInterval(() => {
+      reload();
+      reloadRemarks();
+    }, 5000);
     return () => {
       clearInterval(timer);
     };
-  }, [reload]);
+  }, [reload, reloadRemarks]);
   const subjectName = useSubjectName();
   const today = new Intl.DateTimeFormat(i18n.language, {
     weekday: "long",
@@ -41,6 +50,17 @@ export default function Home() {
           <h1>{t("home.title")}</h1>
           <p className="page-lede">{t("studio.deskIntro")}</p>
         </div>
+        <Link className="button button-secondary" to="/student-access">
+          {t("portal.access")}
+        </Link>
+        <Link className="button button-secondary" to="/remarks">
+          {t("portal.remarks")}{" "}
+          {remarkState.status === "ready" && (
+            <span className="badge">
+              {remarkState.data.filter((r) => r.status !== "answered").length}
+            </span>
+          )}
+        </Link>
         <Link className="button button-secondary" to="/capture">
           {t("capture.title")}
         </Link>

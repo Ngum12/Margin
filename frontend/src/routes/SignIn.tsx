@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, useLocation, useNavigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../auth/useAuth";
 import { MarkingPreview } from "../components/MarkingPreview";
@@ -38,6 +38,9 @@ export default function SignIn() {
 
   return (
     <div className="signin-experience">
+      <Link to="/student" className="student-entry">
+        {t("portal.signin")}
+      </Link>
       <section className="signin-story" aria-labelledby="story-title">
         <div className="story-intro">
           <p className="eyebrow story-eyebrow">

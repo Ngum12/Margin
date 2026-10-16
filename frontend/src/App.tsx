@@ -20,6 +20,9 @@ import Scans from "./routes/Scans";
 import Settings from "./routes/Settings";
 import SignIn from "./routes/SignIn";
 
+const StudentPortal = lazy(() => import("./routes/StudentPortal"));
+const Remarks = lazy(() => import("./routes/Remarks"));
+const StudentAccess = lazy(() => import("./routes/StudentAccess"));
 const Capture = lazy(() => import("./routes/Capture"));
 const Review = lazy(() => import("./routes/Review"));
 
@@ -41,6 +44,23 @@ export default function App() {
         }
       >
         <Routes>
+          <Route path="/student/*" element={<StudentPortal />} />
+          <Route
+            path="/remarks"
+            element={
+              <RequireAuth>
+                <Remarks />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/student-access"
+            element={
+              <RequireAuth>
+                <StudentAccess />
+              </RequireAuth>
+            }
+          />
           <Route path="/signin" element={<SignIn />} />
           <Route
             path="/capture"

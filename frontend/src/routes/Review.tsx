@@ -1,3 +1,4 @@
+import { RemarkDesk } from "./Remarks";
 import { PrintControls } from "../components/SchoolHardware";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -72,8 +73,19 @@ function ReviewScreen({
   const navigate = useNavigate();
   const scriptId = review.script.id;
   const points = useMemo(() => flatPoints(review.questions), [review.questions]);
-  const [focus, setFocus] = useState(0);
-  const [pageIndex, setPageIndex] = useState(() => firstAnswerPage(review.pages));
+  const [focus, setFocus] = useState(() => {
+    const q = Number(new URLSearchParams(window.location.search).get("question"));
+    return Math.max(
+      0,
+      points.findIndex((p) => p.question.id === q),
+    );
+  });
+  const [reopenReason, setReopenReason] = useState("");
+  const [pageIndex, setPageIndex] = useState(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("page"));
+    const i = review.pages.findIndex((p) => p.id === id);
+    return i < 0 ? firstAnswerPage(review.pages) : i;
+  });
   const [view, setView] = useState(FIT);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -288,7 +300,7 @@ function ReviewScreen({
 
   function reopen() {
     setStamped(false);
-    run(() => api.reopenScript(scriptId), t("review.reopened"));
+    run(() => api.reopenScript(scriptId, reopenReason || undefined), t("review.reopened"));
   }
 
   function rotateBy(pageId: number, delta: 90 | -90) {
@@ -455,6 +467,7 @@ function ReviewScreen({
 
   return (
     <section className="review">
+      <RemarkDesk review={review} />
       {confirmed && <PrintControls examId={examId} scriptId={scriptId} />}
       <div className="desk-bar">
         <div className="desk-who">
@@ -562,10 +575,22 @@ function ReviewScreen({
             />
           )}
           {review.locked ? (
-            <button type="button" className="button-secondary" disabled={busy} onClick={reopen}>
-              <Icon name="undo" />
-              {t("review.reopen")}
-            </button>
+            <>
+              <label>
+                {t("portal.reopenReason")}
+                <input
+                  value={reopenReason}
+                  maxLength={500}
+                  onChange={(e) => {
+                    setReopenReason(e.target.value);
+                  }}
+                />
+              </label>
+              <button type="button" className="button-secondary" disabled={busy} onClick={reopen}>
+                <Icon name="undo" />
+                {t("review.reopen")}
+              </button>
+            </>
           ) : (
             <button
               type="button"

@@ -9,7 +9,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Frame, KeepInFrame, Paragraph, Spacer
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.clock import utcnow
@@ -29,7 +29,12 @@ from app.services.scan_inbox import hardware
 def visible_jobs(db: Session, actor: User) -> list[PrintJob]:
     query = select(PrintJob).where(PrintJob.school_id == actor.school_id)
     if not actor.is_admin:
-        query = query.where(PrintJob.exam_id.in_(visible_exams(actor).with_only_columns(Exam.id)))
+        query = query.where(
+            or_(
+                PrintJob.exam_id.in_(visible_exams(actor).with_only_columns(Exam.id)),
+                PrintJob.requested_by_id == actor.id,
+            )
+        )
     return list(db.scalars(query.order_by(PrintJob.id.desc()).limit(100)))
 
 
@@ -212,6 +217,11 @@ def build_document(db: Session, job: PrintJob, settings: Settings) -> bytes:
         canvas.showPage()
         canvas.save()
         return buffer.getvalue()
+    if job.kind == "student_credentials" and job.file_path:
+        actor = db.get(User, job.requested_by_id)
+        if actor is None or not actor.is_active or actor.school_id != job.school_id:
+            raise NotFoundError("Requester")
+        return (settings.data_dir / job.file_path).read_bytes()
     exam = db.get(Exam, job.exam_id)
     if exam is None:
         raise NotFoundError("Exam")
@@ -255,6 +265,8 @@ def retry(db: Session, actor: User, job_id: int, acknowledge_uncertain: bool) ->
         job.status == "unknown" and not acknowledge_uncertain
     ):
         raise ConflictError("Check the printer before retrying", code="hardware.print_uncertain")
+    if not job.printer_uri:
+        job.printer_uri = hardware(db, actor.school_id).printer_uri or ""
     job.status, job.error_code, job.printer_job_id = "queued", None, None
     audit.record(
         db,

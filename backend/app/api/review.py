@@ -100,9 +100,15 @@ def confirm(script_id: int, db: DbSession, user: CurrentUser) -> ScriptReviewOut
     return review.script_review(db, user, script_id)
 
 
+class ReopenIn(ApiModel):
+    reason: str | None = None
+
+
 @router.post("/scripts/{script_id}/reopen")
-def reopen(script_id: int, db: DbSession, user: CurrentUser) -> ScriptReviewOut:
-    review.reopen(db, user, script_id)
+def reopen(
+    script_id: int, db: DbSession, user: CurrentUser, body: ReopenIn | None = None
+) -> ScriptReviewOut:
+    review.reopen(db, user, script_id, reason=body.reason[:500] if body and body.reason else None)
     return review.script_review(db, user, script_id)
 
 

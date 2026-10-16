@@ -17,6 +17,7 @@ def _snapshot(user: User) -> dict[str, object]:
         "display_name": user.display_name,
         "email": user.email,
         "role": user.role.value,
+        "department_subject_codes": user.department_subject_codes,
         "preferred_language": user.preferred_language.value,
         "is_active": user.is_active,
     }
@@ -55,6 +56,7 @@ def create_user_unchecked(
         email=data.email,
         password_hash=passwords.hash_password(data.password),
         role=data.role,
+        department_subject_codes=data.department_subject_codes,
         preferred_language=data.preferred_language,
         is_active=True,
     )
@@ -90,7 +92,10 @@ def update_user(db: Session, actor: User, user_id: int, data: UserUpdateIn) -> U
     loses_admin = (
         user.is_admin
         and user.is_active
-        and (changes.get("role") == Role.TEACHER or changes.get("is_active") is False)
+        and (
+            (changes.get("role") is not None and changes.get("role") != Role.ADMIN)
+            or changes.get("is_active") is False
+        )
     )
     if loses_admin and _active_admin_count(db, user.school_id) <= 1:
         raise ConflictError(

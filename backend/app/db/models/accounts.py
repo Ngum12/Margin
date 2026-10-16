@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Index, String
+from sqlalchemy import JSON, Boolean, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, IdMixin, TimestampMixin, UTCDateTime
@@ -11,6 +12,7 @@ from app.db.types import str_enum
 class Role(StrEnum):
     ADMIN = "admin"
     TEACHER = "teacher"
+    HEAD_OF_DEPARTMENT = "head_of_department"
 
 
 class Language(StrEnum):
@@ -20,6 +22,8 @@ class Language(StrEnum):
 
 class School(IdMixin, TimestampMixin, Base):
     __tablename__ = "school"
+
+    portal_settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
     name: Mapped[str] = mapped_column(String(200))
     country: Mapped[str] = mapped_column(String(100))
@@ -36,6 +40,7 @@ class User(IdMixin, TimestampMixin, Base):
     display_name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str | None] = mapped_column(String(254))
     password_hash: Mapped[str] = mapped_column(String(255))
+    department_subject_codes: Mapped[list[str]] = mapped_column(JSON, default=list)
     role: Mapped[Role] = mapped_column(str_enum(Role, "role"))
     preferred_language: Mapped[Language] = mapped_column(
         str_enum(Language, "preferred_language"), default=Language.EN

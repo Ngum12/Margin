@@ -46,6 +46,9 @@ class Exam(IdMixin, TimestampMixin, Base):
     pages_checked_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
     # Show the mark scheme to students (owner, 2026-10-15): prints "Missing:" notes for points
     # not earned on marked scripts and offers "Suggest from the mark scheme". Off by default.
+    released_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    released_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
+    student_visibility: Mapped[str] = mapped_column(String(20), default="notes")
     auto_start_marking: Mapped[bool] = mapped_column(Boolean, default=True)
     show_scheme_to_students: Mapped[bool] = mapped_column(Boolean, default=False)
 

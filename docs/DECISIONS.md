@@ -587,3 +587,25 @@ The most likely cause is that the heading was visible before the passive effect
 installed the window key listener; zero-delay events could all arrive in that gap.
 The listener and its current handler now use layout effects, making the visible
 desk immediately interactive. The ordered three-save assertion is unchanged.
+
+## D073 — Student sessions, release and home access (2026-10-16)
+
+Student credentials and sessions are separate tables and cookies from staff users.
+Every student record, image, overlay and remark rechecks ownership, school portal
+availability, exam release and teacher confirmation. A first PIN cannot access
+work. PIN resets revoke sessions; failed attempts persist across restarts. The
+public hostname has a student-only proxy allowlist and a second backend path check.
+Home access requires school DNS, HTTPS and router configuration; none is presumed
+configured in this workspace. App storage and inference stay local.
+
+Post-release edits require a reason. Remark replies change point marks through
+the existing review rules and reconfirm in one transaction, so totals and print
+version guards use the same decisions. Heads of department are scoped by subject
+codes; an escalated request cannot be answered by an ordinary teacher.
+
+The first portal image test exposed an incorrect PNG content type: existing scan
+pages are JPEG. Unrotated pages now keep their original bytes with the actual file
+media type; rotation creates a lossless PNG preview without changing the archive.
+The assertion checks the JPEG bytes and matching media type. Initial frontend
+checks also caught a missing JSX fragment around the new reopen-reason input and
+an impure render-time clock read; these were corrected before functional checks.

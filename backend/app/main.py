@@ -13,6 +13,7 @@ from app.logging_config import configure_logging
 from app.security_headers import SecurityHeadersMiddleware
 from app.spa import mount_spa
 from app.startup_checks import check_startup_safety
+from app.student_host import StudentHostMiddleware
 
 TELEMETRY_DISABLED: TelemetryConfig = {
     "tracing": False,
@@ -54,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.engine = engine
     app.state.sessionmaker = session_factory
     register_error_handlers(app)
+    app.add_middleware(StudentHostMiddleware, hostname=settings.student_public_host)
     app.add_middleware(SecurityHeadersMiddleware)
     app.include_router(api_router, prefix="/api")
     mount_spa(app, settings.frontend_dist)

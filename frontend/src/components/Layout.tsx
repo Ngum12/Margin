@@ -24,7 +24,7 @@ function Shell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const me = state.status === "signed_in" ? state.me : null;
 
-  if (!me) {
+  if (!me || location.pathname === "/student" || location.pathname.startsWith("/student/")) {
     // One layout for "loading" and "signed out", so the sign-in form keeps what was typed.
     // Until the session is known there is no language menu: a choice made now would be lost.
     return (

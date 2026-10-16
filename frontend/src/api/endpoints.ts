@@ -150,8 +150,8 @@ export const api = {
     request<{ scripts_queued: number }>("POST", `/api/exams/${String(examId)}/rerun-ai`),
   confirmScript: (scriptId: number) =>
     request<ScriptReview>("POST", `/api/scripts/${String(scriptId)}/confirm`),
-  reopenScript: (scriptId: number) =>
-    request<ScriptReview>("POST", `/api/scripts/${String(scriptId)}/reopen`),
+  reopenScript: (scriptId: number, reason?: string) =>
+    request<ScriptReview>("POST", `/api/scripts/${String(scriptId)}/reopen`, { json: { reason } }),
   editTranscription: (pageId: number, text: string) =>
     request<ScriptReview>("POST", `/api/pages/${String(pageId)}/transcription`, {
       json: { text },
@@ -208,6 +208,7 @@ export const api = {
     data: Partial<{
       display_name: string;
       role: Role;
+      department_subject_codes: string[];
       is_active: boolean;
       preferred_language: Language;
     }>,

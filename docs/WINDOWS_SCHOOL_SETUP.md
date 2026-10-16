@@ -122,3 +122,35 @@ explained in INSTALL.md. Hold the camera above the paper, keep the QR and all fo
 corners visible, and avoid shadows. Compare the prepared page with the original,
 adjust cropping if needed and press **Use this page**. Test this on the school's
 lowest-cost Android phone; a desktop browser test cannot verify camera quality.
+
+## Optional student access from home
+
+The portal is disabled initially. Enable it in **Settings → Student portal**. Teachers
+print private code/PIN slips from **Student sign-in slips**. Each initial PIN must be
+changed before any work is visible. Confirming a script is not publication: use
+**Results → Release results** after confirming the class and recording absences.
+
+For home access, the school needs a domain, a reachable public IP (not carrier-grade
+NAT), reliable power/internet, and a maintained HTTPS endpoint. Data and AI remain
+on the school box; released work travels encrypted to the authenticated student's
+browser. No hosted relay, external AI, SMS or email is used.
+
+1. Set the domain's DNS to the school's public IP. Forward **TCP 443 only** to Caddy
+   on the school box. Use an existing certificate or Caddy's HTTPS certificate
+   issuance; Caddy needs outbound access to its certificate authority for renewal.
+2. Add the site block in `deploy/Caddyfile.student` to the Caddy configuration. Set
+   `MARGIN_STUDENT_SITE=students.your-school.example` in Caddy's environment and
+   `MARGIN_STUDENT_PUBLIC_HOST=students.your-school.example` in Margin's `.env`.
+3. Keep the app bound to `127.0.0.1:8000` behind Caddy and secure cookies enabled.
+   Do not forward SMB 445, IPP 631, Ollama 11434, the app port, or the staff hostname.
+4. Restart the app and Caddy. From an external phone connection, check the trusted
+   certificate, initial-PIN change, own released pages, sign-out and timeouts.
+   `/api/classes`, `/api/auth/login` and `/settings` on the public hostname must
+   return 404. LAN staff sign-in should still work on its private hostname.
+5. Check that unrelease immediately blocks new student requests and that a PIN
+   reset revokes existing sessions. Test with two different student accounts.
+
+Domain/router/certificate setup is school-specific and has not been performed in
+this cloud workspace. Keep LAN-only access until those external checks pass.
+Private PIN PDFs are sensitive credentials: protect the data directory and backups
+with Windows account permissions and BitLocker; hand slips directly to students.

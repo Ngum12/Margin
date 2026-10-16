@@ -9,6 +9,7 @@ from app.api import (
     exams,
     hardware,
     health,
+    portal,
     results,
     review,
     scans,
@@ -34,3 +35,5 @@ api_router.include_router(answer_sheets.router)
 api_router.include_router(scheme_documents.router)
 
 api_router.include_router(capture.router)
+
+api_router.include_router(portal.router)

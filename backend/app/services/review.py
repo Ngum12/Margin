@@ -200,6 +200,7 @@ def set_decision(
         entity_type="mark_decision",
         entity_id=decision.id,
         action="set_decision",
+        reason=script.reopen_reason,
         old_value=old,
         new_value=new,
     )
@@ -221,12 +222,14 @@ def _accept(
         return False
     decision.decided_by_id = actor.id
     decision.decided_at = utcnow()
+    script = db.get(Script, decision.script_id)
     audit.record(
         db,
         actor=actor,
         entity_type="mark_decision",
         entity_id=decision.id,
         action=action,
+        reason=script.reopen_reason if script else None,
         old_value=old,
         new_value=new,
     )
@@ -494,10 +497,14 @@ def confirm(db: Session, actor: User, script_id: int) -> None:
     _update_exam_completion(db, actor, script.exam_id)
 
 
-def reopen(db: Session, actor: User, script_id: int) -> None:
+def reopen(db: Session, actor: User, script_id: int, *, reason: str | None = None) -> None:
     script = get_visible_script(db, actor, script_id)
     if script.status != ScriptStatus.CONFIRMED:
         raise ConflictError("Script is not confirmed", code="script.not_confirmed")
+    exam = db.get(Exam, script.exam_id)
+    if exam and exam.released_at and not (reason and reason.strip()):
+        raise ConflictError("Give a reason to change released marks", code="portal.reason_required")
+    script.reopen_reason = reason
     if any(
         script.id in job.script_ids
         for job in db.scalars(
@@ -523,6 +530,7 @@ def reopen(db: Session, actor: User, script_id: int) -> None:
         entity_type="script",
         entity_id=script.id,
         action="reopen",
+        reason=reason,
         old_value=old,
         new_value={"status": script.status.value},
     )

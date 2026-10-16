@@ -1335,3 +1335,66 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+.student-portal {
+  width: min(100%, 68rem);
+  margin: auto;
+  padding: var(--space-5);
+}
+.student-portal label,
+.remark-desk label {
+  display: block;
+  margin-block: var(--space-3);
+}
+.student-exams {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-4);
+}
+.student-exam {
+  display: grid;
+  text-align: left;
+  gap: var(--space-3);
+}
+.student-page-scroll {
+  overflow: auto;
+  margin-block: var(--space-4);
+}
+.student-page {
+  position: relative;
+  container-type: inline-size;
+}
+.student-page img {
+  display: block;
+  width: 100%;
+}
+.student-mark {
+  position: absolute;
+  color: var(--mark-red);
+  font-weight: 700;
+  pointer-events: none;
+}
+.student-entry {
+  position: absolute;
+  right: var(--space-5);
+  top: var(--space-4);
+  z-index: 2;
+}
+
+.remark-page {
+  display: block;
+  position: relative;
+  width: min(100%, 24rem);
+  padding: 0;
+  overflow: hidden;
+}
+.remark-page img {
+  display: block;
+  width: 100%;
+}
+.remark-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  color: var(--mark-red);
+  font-size: 2rem;
+}

@@ -5,10 +5,10 @@
 - Anything outside the actor's scope is reported as "not found", so ids cannot be probed.
 """
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Exam, SchoolClass, Script, Student, User
+from app.db.models import Exam, Role, SchoolClass, Script, Student, User
 from app.errors import NotFoundError, PermissionDeniedError
 
 
@@ -31,7 +31,10 @@ def visible_exams(actor: User) -> Select[Exam]:
         .where(SchoolClass.school_id == actor.school_id)
     )
     if not actor.is_admin:
-        query = query.where(SchoolClass.teacher_id == actor.id)
+        permitted = SchoolClass.teacher_id == actor.id
+        if actor.role == Role.HEAD_OF_DEPARTMENT:
+            permitted = or_(permitted, Exam.subject_code.in_(actor.department_subject_codes))
+        query = query.where(permitted)
     return query
 
 

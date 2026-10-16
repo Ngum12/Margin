@@ -75,8 +75,27 @@ function UserRow({ user, act }: { user: User; act: (a: () => Promise<unknown>) =
           }
         >
           <option value="teacher">{t("roles.teacher")}</option>
+          <option value="head_of_department">{t("roles.head_of_department")}</option>
           <option value="admin">{t("roles.admin")}</option>
         </select>
+        {user.role === "head_of_department" && (
+          <label>
+            {t("portal.department")}
+            <input
+              defaultValue={(user.department_subject_codes ?? []).join(", ")}
+              onBlur={(e) => {
+                void act(() =>
+                  api.updateUser(user.id, {
+                    department_subject_codes: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  }),
+                );
+              }}
+            />
+          </label>
+        )}
       </td>
       <td>{user.is_active ? t("users.active") : t("users.inactive")}</td>
       <td className="row-actions">

@@ -22,6 +22,7 @@ from app.db.models.classes import SchoolClass, Student
 from app.db.models.exams import Exam, ExamStatus, MarkSchemePoint, Question
 from app.db.models.exports import Export, ExportKind, ExportStatus
 from app.db.models.hardware import ExamAbsence, Hardware, IntakePage, PrintJob, ScanBatch
+from app.db.models.portal import RemarkRequest, StudentAccount, StudentLoginAttempt, StudentSession
 from app.db.models.scans import (
     CoverSheet,
     Page,
@@ -62,6 +63,7 @@ __all__ = [
     "PrintJob",
     "Question",
     "QuestionComment",
+    "RemarkRequest",
     "ReviewSession",
     "Role",
     "ScanBatch",
@@ -72,6 +74,9 @@ __all__ = [
     "Script",
     "ScriptStatus",
     "Student",
+    "StudentAccount",
+    "StudentLoginAttempt",
+    "StudentSession",
     "Transcription",
     "TranscriptionSource",
     "UnassignedReason",

@@ -1,0 +1,14 @@
+# Optional separate public listener. Run alongside the LAN site or import its site
+# block into the school's existing Caddy configuration (only one global block).
+{$MARGIN_STUDENT_SITE} {
+    encode gzip
+    @root path /
+    redir @root /student 302
+    @student path /student /student/* /api/student/* /assets/*
+    handle @student {
+        reverse_proxy {$MARGIN_UPSTREAM:127.0.0.1:8000}
+    }
+    handle {
+        respond 404
+    }
+}

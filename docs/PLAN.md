@@ -1,3 +1,13 @@
+# Current approved blueprint (2026-10-16)
+
+Items 1–5 are committed: scan inbox/direct printing, QR sheets/spares, scheme
+imports/GCE rules, resumable automatic marking and phone capture. Item 6 adds
+release, separate student PIN sessions, the student portal, remark replies and
+subject-scoped department heads. Items 7 (roster imports/results/history) and 8
+(Phase 6 installation, backup/restore and final documentation) follow without an
+approval pause. The historical phase plan below is retained for design context;
+its old approval/status lines are superseded by this paragraph.
+
 # Plan: Phase 0 and Phase 1
 
 Status: Phases 0 and 1 complete and approved (2026-10-14). Phase 2 complete and approved (2026-10-14). Phase 3 built; model evaluation running. Phase 4 planned, awaiting approval. Refinements made while building are recorded in DECISIONS (D-021 to D-026).

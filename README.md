@@ -223,3 +223,23 @@ for small-angle straightening. It does not repair severely distorted or blurred
 photographs: retake those. Unreadable codes go to the attention tray; match the
 student **and page number**. Test the actual phone/browser and handwriting in the
 school before deployment. Photo preparation and pending previews survive restarts.
+
+### Students, release and remarks
+
+Students open **Student sign in** from the sign-in page and use a school-issued
+code and initial PIN. Admins enable the portal in Settings; teachers print sign-in
+slips from the dashboard. The initial PIN must be changed before viewing work.
+Use **Results → Release results** to publish a confirmed class; **Unrelease** blocks
+student access again. Visibility defaults to marks and notes, with the scheme hidden.
+
+Students can see only their own released work, colour pages, marks and progress.
+Remarks have a school-configurable window and limit (7 days and 3 questions by
+default). Replies and mark changes are audited. An optional head of department
+role handles one escalation, limited to the subject codes assigned by the admin.
+PIN reset revokes sessions; shared-computer sessions expire after inactivity.
+
+Home internet access is optional and requires the school's own HTTPS hostname and
+network configuration. Follow [Windows school setup](docs/WINDOWS_SCHOOL_SETUP.md#optional-student-access-from-home).
+The public hostname exposes only the student portal; staff, scanner, printer and
+model endpoints remain private. DNS, certificates, router forwarding and external
+phone access need verification at the school.

@@ -35,6 +35,7 @@ class UserOut(ApiModel):
     display_name: str
     email: str | None
     role: Role
+    department_subject_codes: list[str]
     preferred_language: Language
     is_active: bool
     last_login_at: datetime | None
@@ -62,6 +63,7 @@ class UserCreateIn(ApiModel):
     display_name: RequiredShortText
     email: Email | None = None
     password: Password
+    department_subject_codes: list[RequiredShortText] = Field(default_factory=list, max_length=30)
     role: Role = Role.TEACHER
     preferred_language: Language = Language.EN
 
@@ -69,6 +71,7 @@ class UserCreateIn(ApiModel):
 class UserUpdateIn(ApiModel):
     display_name: RequiredShortText | None = None
     email: Email | None = None
+    department_subject_codes: list[RequiredShortText] | None = Field(default=None, max_length=30)
     role: Role | None = None
     preferred_language: Language | None = None
     is_active: bool | None = None

@@ -150,7 +150,8 @@
   },
   "roles": {
     "teacher": "Enseignant",
-    "admin": "Administrateur"
+    "admin": "Administrateur",
+    "head_of_department": "Chef de département"
   },
   "classes": {
     "title": "Classes",
@@ -282,7 +283,8 @@
       "print_uncertain": "Des pages ont peut-être été imprimées. Vérifiez avant de réessayer.",
       "print_failed": "Le document n’a pas pu être préparé. Vérifiez les notes confirmées puis réessayez.",
       "print_busy": "Une impression est en cours d’envoi. Attendez son état avant de rouvrir.",
-      "absent_has_scan": "Vérifiez l’absence ou les pages reçues avant de continuer."
+      "absent_has_scan": "Vérifiez l’absence ou les pages reçues avant de continuer.",
+      "printer_missing": "Configurez l’imprimante ou téléchargez les fiches privées."
     },
     "sheets": {
       "pages_locked": "Le nombre de pages ne peut pas diminuer après numérisation. Vérifiez les pages existantes.",
@@ -303,6 +305,13 @@
       "image_unreadable": "Impossible de préparer cette photo. Reprenez-la avec toute la page visible.",
       "duplicate": "Cette photo a déjà été reçue.",
       "not_ready": "Attendez l’aperçu. Une page envoyée en correction ne peut plus être recadrée ici."
+    },
+    "portal": {
+      "not_ready": "Confirmez les copies ou enregistrez les absences.",
+      "change_pin": "Changez votre PIN initial.",
+      "remark_closed": "Le délai de révision est terminé.",
+      "remark_limit": "La limite de demandes est atteinte.",
+      "reason_required": "Indiquez le motif de modification des notes publiées."
     }
   },
   "issues": {
@@ -968,5 +977,89 @@
       "quarantine": "À vérifier",
       "removed": "Écartée"
     }
+  },
+  "portal": {
+    "title": "Espace élève",
+    "signin": "Connexion élève",
+    "signinHint": "Utilisez le code et le PIN de votre fiche personnelle.",
+    "school": "Établissement",
+    "code": "Code élève",
+    "pin": "PIN",
+    "disabled": "L’établissement n’a pas activé l’accès élève.",
+    "changePin": "Choisissez votre PIN",
+    "oldPin": "PIN actuel",
+    "newPin": "Nouveau PIN (6 à 12 chiffres)",
+    "back": "Tous mes examens",
+    "myExams": "Mes examens",
+    "noExams": "Votre professeur n’a pas encore publié de résultats.",
+    "newReply": "Nouvelle réponse",
+    "progress": "Mes progrès",
+    "revise": "À réviser",
+    "reviewQuestion": "Revoyez cette question et vos commentaires.",
+    "overlay": "Afficher les notes du professeur",
+    "zoom": "Zoom",
+    "page": "Page {{number}}",
+    "scheme": "Barème",
+    "askRemark": "Demander une révision",
+    "reason": "Motif",
+    "pageChoice": "Page (facultatif)",
+    "message": "Votre message (500 caractères maximum)",
+    "send": "Envoyer la demande",
+    "remarkUnavailable": "Le délai ou la limite de demandes est atteint.",
+    "totalCorrect": "Le total recalculé est {{total}}. Il est correct.",
+    "markRead": "Marquer la réponse comme lue",
+    "escalate": "Saisir le chef de département",
+    "settings": "Paramètres du portail élève",
+    "enabled": "Activer le portail élève",
+    "escalation": "Autoriser un recours au chef de département",
+    "class_average": "Afficher la moyenne de la classe",
+    "remark_days": "Délai de révision après publication (jours)",
+    "remark_max": "Demandes maximum par examen",
+    "idle_minutes": "Expiration après inactivité (minutes)",
+    "releaseTitle": "Publier les résultats des élèves",
+    "releaseHint": "La confirmation garde les notes privées. Publiez après confirmation de chaque copie ou enregistrement des absences.",
+    "visibility": "Les élèves voient",
+    "release": "Publier les résultats",
+    "updateRelease": "Modifier la visibilité",
+    "unrelease": "Retirer les résultats",
+    "releasedAt": "Publiés le {{date}}",
+    "access": "Fiches de connexion élève",
+    "slipsHint": "Imprimez les codes et PIN initiaux privés. Réinitialiser un PIN déconnecte l’élève.",
+    "openStudent": "Ouvrir le portail élève",
+    "class": "Classe",
+    "resetPins": "Réinitialiser les PIN existants et les sessions",
+    "printSlips": "Imprimer les fiches de la classe",
+    "issueSlip": "Créer la fiche de connexion",
+    "slipPdf": "Télécharger les fiches privées (PDF)",
+    "printQueue": "Voir la file d’impression",
+    "remarks": "Demandes de révision",
+    "remarkStats": "{{count}} demandes · {{changed}} avec notes modifiées",
+    "openReview": "Ouvrir la question au bureau de correction",
+    "replyHint": "Gardez les notes ou modifiez les points ci-dessous. Votre réponse enregistre le motif et confirme la copie. Réimprimez la fiche si les notes changent.",
+    "reply": "Réponse et motif",
+    "sendReply": "Envoyer la réponse",
+    "startLooking": "En cours d’examen",
+    "department": "Codes matières du département (séparés par des virgules)",
+    "reopenReason": "Motif de modification des notes publiées",
+    "reasons": {
+      "missing_mark": "Un point a été oublié",
+      "total_error": "Erreur de total",
+      "unmarked_answer": "Réponse ou page non corrigée",
+      "other": "Autre"
+    },
+    "status": {
+      "sent": "Envoyée",
+      "looking": "En cours d’examen",
+      "answered": "Répondue"
+    },
+    "visibilityOptions": {
+      "marks": "Notes seules",
+      "notes": "Notes et commentaires",
+      "scheme": "Notes, commentaires et barème"
+    },
+    "signout": "Se déconnecter",
+    "average": "Moyenne de classe : {{marks}}",
+    "pointOnPage": "Touchez l’endroit sur votre page (facultatif)",
+    "examNumber": "Examen {{number}}"
   }
 }

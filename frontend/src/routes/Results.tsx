@@ -1,3 +1,4 @@
+import { ReleaseControls } from "../components/PortalControls";
 import { PrintControls } from "../components/SchoolHardware";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -44,6 +45,7 @@ export default function Results() {
   return (
     <section>
       <ExamHeader exam={exam} />
+      <ReleaseControls examId={examId} />
       <PrintControls
         examId={examId}
         students={data.rows

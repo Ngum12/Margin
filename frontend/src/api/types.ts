@@ -1,6 +1,6 @@
 // Shapes returned by the backend API. Keep in sync with backend/app/schemas.
 
-export type Role = "admin" | "teacher";
+export type Role = "admin" | "teacher" | "head_of_department";
 export type Language = "en" | "fr";
 export type ExamStatus = "draft" | "ready" | "marking" | "reviewing" | "completed";
 
@@ -16,6 +16,7 @@ export interface User {
   display_name: string;
   email: string | null;
   role: Role;
+  department_subject_codes?: string[];
   preferred_language: Language;
   is_active: boolean;
   last_login_at: string | null;

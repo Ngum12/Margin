@@ -38,4 +38,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
+        if request.url.path.startswith(("/api/student/", "/student")):
+            response.headers["Cache-Control"] = "no-store"
         return response
