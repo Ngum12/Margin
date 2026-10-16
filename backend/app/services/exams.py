@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.db.models import Exam, ExamStatus, MarkSchemePoint, Question, SchoolClass, User
 from app.errors import ConflictError, Issue, ValidationFailedError
 from app.marks import from_half_marks, to_half_marks
-from app.schemas.mark_scheme import MarkSchemeIn, PointIn, QuestionIn
+from app.schemas.mark_scheme import MarkSchemeIn, PointGroup, PointIn, PointRules, QuestionIn
 from app.services import audit
 from app.services.access import get_visible_class, get_visible_exam, visible_exams
 from app.services.mark_scheme import MarkSchemeReport, validate_mark_scheme
@@ -37,6 +37,7 @@ def scheme_of(exam: Exam) -> MarkSchemeIn:
     return MarkSchemeIn(
         questions=[
             QuestionIn(
+                groups=[PointGroup.model_validate(g) for g in q.groups],
                 label=q.label,
                 prompt_text=q.prompt_text,
                 max_marks=int(from_half_marks(q.max_half_marks)),
@@ -44,6 +45,7 @@ def scheme_of(exam: Exam) -> MarkSchemeIn:
                     PointIn(
                         description=p.description,
                         marks=int(from_half_marks(p.half_marks)),
+                        rules=PointRules.model_validate(p.rules),
                         alternatives=list(p.alternatives),
                     )
                     for p in q.points
@@ -168,6 +170,7 @@ def replace_mark_scheme(
     for qi, q in enumerate(scheme.questions):
         exam.questions.append(
             Question(
+                groups=[g.model_dump() for g in q.groups],
                 label=q.label,
                 prompt_text=q.prompt_text,
                 max_half_marks=to_half_marks(q.max_marks),
@@ -176,6 +179,7 @@ def replace_mark_scheme(
                     MarkSchemePoint(
                         description=p.description,
                         half_marks=to_half_marks(p.marks),
+                        rules=p.rules.model_dump(),
                         alternatives=list(p.alternatives),
                         position=pi,
                     )

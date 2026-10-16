@@ -7,6 +7,7 @@ import { api } from "../api/endpoints";
 import type { ExamDetail } from "../api/types";
 import { ErrorMessage, Field, IssueList, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
+import { DocumentImport } from "../exam/DocumentImport";
 import { CsvImport } from "../exam/CsvImport";
 import { ExamHeader } from "../exam/ExamHeader";
 import { MarkSchemeEditor } from "../exam/MarkSchemeEditor";
@@ -79,23 +80,33 @@ function ExamSetupLoaded({
         <span className="total">{t("editor.examTotal", { total: totalMarks(questions) })}</span>
       </div>
 
-      {editable ? (
-        <>
-          <CsvImport
-            onLoad={(scheme) => {
-              edit(fromScheme(scheme));
-            }}
-          />
-          <MarkSchemeEditor
-            questions={questions}
-            issues={[...report.blocking, ...report.readiness, ...report.notices]}
-            onChange={edit}
-          />
-        </>
-      ) : (
-        <ReadOnlyScheme exam={exam} />
-      )}
-
+      <div className="scheme-workspace">
+        <DocumentImport
+          examId={exam.id}
+          editable={editable}
+          onLoad={(scheme) => {
+            edit(fromScheme(scheme));
+          }}
+        />
+        <div>
+          {editable ? (
+            <>
+              <CsvImport
+                onLoad={(scheme) => {
+                  edit(fromScheme(scheme));
+                }}
+              />
+              <MarkSchemeEditor
+                questions={questions}
+                issues={[...report.blocking, ...report.readiness, ...report.notices]}
+                onChange={edit}
+              />
+            </>
+          ) : (
+            <ReadOnlyScheme exam={exam} />
+          )}
+        </div>
+      </div>
       {(editable || exam.status === "ready" || Boolean(error) || message !== null) && (
         <div className="panel sticky-actions">
           <IssueList issues={report.blocking} tone="error" title={t("editor.mustFix")} />

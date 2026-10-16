@@ -51,6 +51,7 @@ from app.marks import to_half_marks
 from app.services import audit, exports, jobs, transcripts, uploads
 from app.services.ai_marking import exam_spec, mark_key, update_exam_progress
 from app.services.identification import identify_spare
+from app.services.scheme_documents import extract as extract_scheme
 from app.subjects.registry import SubjectConfig, get_registry
 
 logger = logging.getLogger(__name__)
@@ -489,6 +490,7 @@ def export_dataset(
 
 
 HANDLERS = {
+    JobType.EXTRACT_SCHEME: extract_scheme,
     JobType.IDENTIFY_SPARE: identify_spare,
     JobType.PROCESS_UPLOAD: process_upload,
     JobType.TRANSCRIBE_SCRIPT: transcribe_script,

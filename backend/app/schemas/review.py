@@ -123,6 +123,7 @@ class ReviewPageOut(ApiModel):
 
 
 class ReviewPointOut(ApiModel):
+    teacher_only: bool = False
     id: int
     position: int
     description: str

@@ -175,6 +175,7 @@ class OllamaMarker:
         points = "\n".join(
             f"- {point_key(p.id)} ({p.marks} mark{'s' if p.marks != 1 else ''}): {p.description}"
             + (f" | also accept: {'; '.join(p.alternatives)}" if p.alternatives else "")
+            + f" | examiner rules: {p.rules.model_dump_json()}"
             for p in question.points
         )
         lines = answer_lines(answer)

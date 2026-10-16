@@ -1,8 +1,10 @@
 from datetime import date, datetime
 
+from pydantic import Field
+
 from app.db.models import ExamStatus
 from app.schemas.common import ApiModel, IssueOut, RequiredShortText
-from app.schemas.mark_scheme import MarkSchemeIn
+from app.schemas.mark_scheme import MarkSchemeIn, PointGroup, PointRules
 
 
 class ExamCreateIn(ApiModel):
@@ -44,6 +46,7 @@ class ExamSummaryOut(ApiModel):
 
 
 class PointOut(ApiModel):
+    rules: PointRules = Field(default_factory=PointRules)
     id: int
     description: str
     marks: int | float
@@ -51,6 +54,7 @@ class PointOut(ApiModel):
 
 
 class QuestionOut(ApiModel):
+    groups: list[PointGroup] = Field(default_factory=list)
     id: int
     label: str
     prompt_text: str

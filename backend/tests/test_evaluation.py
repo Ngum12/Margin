@@ -316,7 +316,7 @@ def test_both_evidence_designs_share_one_reading(
     assert "mock [lines]" in out
     models = json.loads(report.read_text(encoding="utf-8"))["models"]
     assert [m["evidence"] for m in models] == ["quote", "lines"]
-    assert models[1]["marker_prompt_version"].startswith("marker-lines-v2#")
+    assert models[1]["marker_prompt_version"].startswith("marker-lines-v3#")
     lines_marking = models[1]["marking"]["truth"]
     assert lines_marking["questions"] == 1
     assert lines_marking["failed"] == 0

@@ -118,3 +118,14 @@ The owner's redesign brief asked for these, bundled locally with their licences.
 
 - Pins are checked by `backend/tests/test_deploy_files.py`: no `latest`, the same versions as this table, and `requirements.lock.txt` matching `uv.lock`.
 - After any backend dependency change, regenerate with `cd backend && uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.lock.txt`.
+
+## Blueprint document import (approved 2026-10-16)
+
+| Package | Version | Licence | Purpose / dependencies |
+|---|---|---|---|
+| python-docx | 1.2.0 | MIT | Read DOCX locally; lxml and existing typing-extensions |
+| lxml | 6.1.3 | BSD-3-Clause | Office XML; bundled libxml2/libxslt MIT notices retained in wheel |
+| defusedxml | 0.7.1 | PSF-2.0 | Reject entities and DTDs before DOCX parsing; no dependencies |
+
+No external Office/OCR service. Legacy binary DOC conversion requires separately
+installed LibreOffice; it is not installed by Python package setup.

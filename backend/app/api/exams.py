@@ -19,7 +19,7 @@ from app.schemas.exams import (
     SubjectOut,
     ValidationReportOut,
 )
-from app.schemas.mark_scheme import MarkSchemeIn
+from app.schemas.mark_scheme import MarkSchemeIn, PointGroup, PointRules
 from app.services import exams as exam_service
 from app.services.mark_scheme import MarkSchemeReport, validate_mark_scheme
 from app.services.mark_scheme_import import MAX_CSV_BYTES, decode_csv, parse_mark_scheme_csv
@@ -73,12 +73,14 @@ def _detail_out(exam: Exam) -> ExamDetailOut:
         **_summary_out(exam).model_dump(),
         questions=[
             QuestionOut(
+                groups=[PointGroup.model_validate(g) for g in q.groups],
                 id=q.id,
                 label=q.label,
                 prompt_text=q.prompt_text,
                 max_marks=from_half_marks(q.max_half_marks),
                 points=[
                     PointOut(
+                        rules=PointRules.model_validate(p.rules),
                         id=p.id,
                         description=p.description,
                         marks=from_half_marks(p.half_marks),

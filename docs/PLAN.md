@@ -647,3 +647,16 @@ Approved by the owner on 2026-10-15 (all five parts). Built after the schema eva
 2. **Whole-script marking in one call** as a third marker design: all questions in one reply, validated per question, re-asking only the failed questions. Evaluated against the per-question designs on agreement, failures and time.
 
 **Evaluation reports from now on** also give, per subject: agreement within 1 mark, mean absolute difference, and the direction of disagreements (over- versus under-marking).
+
+## Blueprint item 3 — approved 2026-10-16
+
+Build local document extraction and school scheme reuse after per-page sheets.
+- Persist extended point rules (rejects, dependencies, ECF, meaning, teacher-only)
+  and any-N groups; centralise totals for review/results/exports.
+- Preserve uploaded originals and extraction drafts separately from confirmed schemes.
+  Document jobs run locally through the durable queue; document and library APIs use
+  existing teacher/school scopes. Confirming the scheme remains an explicit teacher action.
+- Add DOCX/XML dependencies from the approved list; no cloud OCR or Office service.
+- Add EN/FR original-versus-editor UI and school library controls.
+- Test rule graphs/caps, teacher-only exclusion, document limits, permission boundaries,
+  migration parity and preservation of confirmed scheme requirements. Run full checks.

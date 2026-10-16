@@ -59,13 +59,31 @@ export interface Subject {
   name_fr: string;
 }
 
+export interface PointRules {
+  key: string;
+  reject: string[];
+  kind: "point" | "M" | "A" | "B";
+  depends_on: string[];
+  ecf: boolean;
+  ecf_from: string;
+  meaning_based: boolean;
+  teacher_only: boolean;
+  group: string;
+}
+export interface PointGroup {
+  key: string;
+  max_points: number;
+  max_marks: number;
+}
 export interface PointInput {
+  rules?: PointRules;
   description: string;
   marks: number;
   alternatives: string[];
 }
 
 export interface QuestionInput {
+  groups?: PointGroup[];
   label: string;
   prompt_text: string;
   max_marks: number;
@@ -289,6 +307,7 @@ export interface ReviewPage {
 }
 
 export interface ReviewPoint {
+  teacher_only?: boolean;
   id: number;
   position: number;
   description: string;

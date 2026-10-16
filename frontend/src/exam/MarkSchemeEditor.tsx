@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 
+import { RuleEditor, GroupEditor } from "./RuleEditor";
 import type { Issue } from "../api/types";
 import { issueMessage } from "../components/errors";
 import { Icon } from "../components/Icon";
@@ -83,6 +84,12 @@ export function MarkSchemeEditor({ questions, issues, onChange }: Props) {
                 </Field>
               </div>
 
+              <GroupEditor
+                groups={question.groups ?? []}
+                onChange={(groups) => {
+                  updateQuestion(qi, { groups });
+                }}
+              />
               <table className="points">
                 <thead>
                   <tr>
@@ -107,6 +114,12 @@ export function MarkSchemeEditor({ questions, issues, onChange }: Props) {
                           value={point.description}
                           onChange={(e) => {
                             updatePoint(qi, pi, { description: e.target.value });
+                          }}
+                        />
+                        <RuleEditor
+                          rules={point.rules}
+                          onChange={(rules) => {
+                            updatePoint(qi, pi, { rules });
                           }}
                         />
                       </td>

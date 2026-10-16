@@ -32,6 +32,7 @@ from app.db.models.scans import (
     Upload,
     UploadStatus,
 )
+from app.db.models.scheme_documents import SchemeDocument, SchemeLibrary
 
 __all__ = [
     "AnswerSheet",
@@ -64,6 +65,8 @@ __all__ = [
     "ReviewSession",
     "Role",
     "ScanBatch",
+    "SchemeDocument",
+    "SchemeLibrary",
     "School",
     "SchoolClass",
     "Script",

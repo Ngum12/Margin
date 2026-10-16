@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Protocol
 
 from app.db.models import ErrorCategory
+from app.schemas.mark_scheme import PointRules
 from app.subjects.registry import SubjectConfig
 
 
@@ -73,6 +74,7 @@ class PointSpec:
     description: str
     marks: int  # whole marks (D-018)
     alternatives: tuple[str, ...] = ()
+    rules: PointRules = field(default_factory=PointRules)
 
 
 @dataclass(frozen=True)

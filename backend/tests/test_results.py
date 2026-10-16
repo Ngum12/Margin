@@ -321,7 +321,7 @@ def test_dataset_holds_only_confirmed_scripts_of_consenting_students(
     assert (point["final_marks"], point["final_category"]) == (0, "omitted")
     assert point["proposal"]["marks"] == 1  # the model's original proposal kept alongside
     assert point["proposal"]["model"] == "mock-marker"
-    assert point["proposal"]["prompt_version"].startswith("marker-lines-v2#")
+    assert point["proposal"]["prompt_version"].startswith("marker-lines-v3#")
     answer = line["pages"][1]
     assert answer["transcription"].startswith("1(a)")
     assert answer["reader_prompt_version"].startswith("reader-v2#")

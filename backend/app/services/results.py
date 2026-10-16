@@ -29,6 +29,7 @@ from app.services import transcripts
 from app.services.access import get_visible_exam
 from app.services.decisions import current_decisions, exam_questions
 from app.services.provenance import marker_models, test_model_scripts
+from app.services.scoring import score_question
 
 if TYPE_CHECKING:
     from app.services.red_pen import ScriptRedPen
@@ -53,8 +54,7 @@ class QuestionResult:
 
     @property
     def final_half(self) -> int | None:
-        decided = [p.final_half for p in self.points if p.final_half is not None]
-        return min(sum(decided), self.question.max_half_marks) if decided else None
+        return score_question(self.question, {p.point_id: p.final_half for p in self.points})
 
 
 @dataclass(frozen=True)

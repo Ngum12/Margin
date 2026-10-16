@@ -878,7 +878,12 @@ function PointRow({
         <PenSign point={point} />
       </span>
       <div className="point-head">
-        <span className="point-description">{point.description}</span>
+        <span className="point-description">
+          {point.description}
+          {point.teacher_only && (
+            <strong className="status-warning"> · {t("schemeRules.teacher_only")}</strong>
+          )}
+        </span>
         <span className="point-max">{t("review.pointMax", { max: point.max_marks })}</span>
         {point.deducted > 0 && (
           <span

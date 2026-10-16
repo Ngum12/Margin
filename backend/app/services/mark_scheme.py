@@ -6,10 +6,11 @@ Issues come in three groups:
 - ``notices``: information for the teacher; never blocks anything.
 """
 
+import re
 from dataclasses import dataclass, field
 
 from app.errors import Issue
-from app.schemas.mark_scheme import MarkSchemeIn
+from app.schemas.mark_scheme import MarkSchemeIn, QuestionIn
 
 MAX_LABEL_LENGTH = 20
 MAX_MARKS_PER_ITEM = 100
@@ -93,8 +94,12 @@ def validate_mark_scheme(scheme: MarkSchemeIn) -> MarkSchemeReport:
                     Issue("point.description_required", [*ppath, "description"])
                 )
 
+        points_total = validate_rules(question, qi, report)
+        if question.label and not re.fullmatch(
+            r"[1-9][0-9]*(?:\((?:[a-zA-Z]+|[0-9]+)\))*", question.label
+        ):
+            report.notices.append(Issue("scheme.numbering", qpath))
         if question.points and points_valid and question.max_marks >= 1:
-            points_total = sum(p.marks for p in question.points)
             params = {
                 "label": question.label,
                 "points_total": points_total,
@@ -106,3 +111,50 @@ def validate_mark_scheme(scheme: MarkSchemeIn) -> MarkSchemeReport:
                 report.notices.append(Issue("question.points_exceed_max", qpath, params))
 
     return report
+
+
+def validate_rules(question: QuestionIn, qi: int, report: MarkSchemeReport) -> int:
+    """Validate references before scoring; return attainable grouped whole marks."""
+    path: list[str | int] = ["questions", qi]
+    keys = [p.rules.key for p in question.points if p.rules.key]
+    groups = {g.key: g for g in question.groups}
+    invalid = len(keys) != len(set(keys)) or len(groups) != len(question.groups)
+    by_key = {p.rules.key: p for p in question.points if p.rules.key}
+    for point in question.points:
+        rule = point.rules
+        if rule.group and rule.group not in groups:
+            invalid = True
+        if rule.kind == "A" and not rule.depends_on:
+            invalid = True
+        if any(k not in by_key for k in rule.depends_on):
+            invalid = True
+        if rule.kind == "A" and not any(
+            by_key[k].rules.kind == "M" for k in rule.depends_on if k in by_key
+        ):
+            invalid = True
+
+    checked: set[str] = set()
+
+    def cyclic(key: str, visiting: frozenset[str]) -> bool:
+        if key in visiting:
+            return True
+        if key in checked:
+            return False
+        point = by_key.get(key)
+        result = bool(point and any(cyclic(k, visiting | {key}) for k in point.rules.depends_on))
+        checked.add(key)
+        return result
+
+    if any(cyclic(key, frozenset()) for key in by_key):
+        invalid = True
+    total = sum(p.marks for p in question.points if not p.rules.group)
+    for group in question.groups:
+        members = sorted(
+            (p.marks for p in question.points if p.rules.group == group.key), reverse=True
+        )
+        if len(members) < group.max_points or sum(members[: group.max_points]) < group.max_marks:
+            invalid = True
+        total += min(sum(members[: group.max_points]), group.max_marks)
+    if invalid:
+        report.blocking.append(Issue("scheme.rules_invalid", path))
+    return total

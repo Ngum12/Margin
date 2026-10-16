@@ -11,7 +11,8 @@
     "saved": "Saved.",
     "cancel": "Cancel",
     "close": "Close",
-    "yes": "Yes"
+    "yes": "Yes",
+    "remove": "Remove"
   },
   "language": {
     "label": "Language",
@@ -109,7 +110,7 @@
     "save": "Save mark scheme",
     "saveFirst": "Save your changes first",
     "nowReady": "The exam is ready. Print answer sheets next.",
-    "markReady": "Mark as ready",
+    "markReady": "Confirm mark scheme",
     "backToDraft": "Return to draft",
     "confirmDelete": "Delete this exam and its mark scheme? This cannot be undone.",
     "deleteExam": "Delete exam",
@@ -288,6 +289,13 @@
       "duplicate_page": "This numbered page is already received. Discard the duplicate or correct the page number.",
       "wrong_student": "This QR belongs to another exam or student. Check the identification.",
       "incomplete": "Resolve missing pages, duplicates and unmatched spare sheets before marking or confirming."
+    },
+    "scheme": {
+      "document_type": "Use PDF, DOCX, JPEG, PNG, TIFF or plain text.",
+      "document_size": "Use a nonempty document smaller than 20 MB.",
+      "local_model_required": "Configure the local Ollama model to extract a scheme. You can edit the scheme manually.",
+      "document_long": "This document exceeds the model extraction limit. Split it into shorter documents or enter the scheme manually.",
+      "document_unreadable": "The document could not be read. Check the original or use PDF or text."
     }
   },
   "issues": {
@@ -337,6 +345,10 @@
     },
     "comment": {
       "too_long": "Comments can be at most {{max}} characters."
+    },
+    "scheme": {
+      "rules_invalid": "Check unique point/group keys, method dependencies, cycles and group limits.",
+      "numbering": "Check question numbering against the original (for example 1(a)(ii))."
     }
   },
   "examTabs": {
@@ -855,5 +867,49 @@
     "verifySuggestion": "Suggested match from the local model. Check the written name before confirming.",
     "pageNumber": "Page number for this spare",
     "missing": "Missing pages: {{pages}}"
+  },
+  "schemeRules": {
+    "title": "Examiner rules",
+    "key": "Point key (e.g. M1)",
+    "kind": "Mark type",
+    "reject": "Reject these answers (one per line)",
+    "depends": "Requires these point keys (comma separated)",
+    "group": "Group key",
+    "ecf": "Allow error carried forward",
+    "ecf_from": "Carry forward from question / step",
+    "meaning_based": "Accept equivalent meaning",
+    "teacher_only": "Teacher only: never AI-marked",
+    "groups": "Any N of M groups",
+    "any": "Maximum points counted",
+    "addGroup": "Add a group",
+    "kinds": {
+      "point": "Point",
+      "M": "Method (M)",
+      "A": "Accuracy (A)",
+      "B": "Independent (B)"
+    }
+  },
+  "schemeImport": {
+    "title": "Original and draft scheme",
+    "help": "Import locally, compare with the original, edit and confirm. Extraction never confirms a scheme.",
+    "kind": "Document type",
+    "scheme": "Mark scheme",
+    "paper": "Question paper",
+    "file": "PDF, DOCX, image or text (20 MB maximum)",
+    "paste": "Paste the scheme text",
+    "extract": "Extract locally",
+    "original": "Original document",
+    "text": "Extracted text",
+    "use": "Use this draft in the editor",
+    "library": "School scheme library",
+    "share": "Share confirmed scheme",
+    "status": {
+      "queued": "Waiting",
+      "running": "Extracting locally",
+      "failed": "Extraction failed",
+      "ready": "Ready to compare",
+      "manual": "Manual review needed",
+      "succeeded": "Finished"
+    }
   }
 }

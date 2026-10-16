@@ -190,3 +190,17 @@ teachers' corrections, so each school's model learns from its own teachers.
 **Margin: the AI does the reading; the teacher keeps the pen.**
 
 </div>
+
+### Comparing a mark scheme with its original
+
+In exam setup, import PDF, DOCX, JPEG/PNG/TIFF or paste text. The worker uses the
+school's local model; mock mode leaves a manual draft and never invents an extraction.
+Compare the original beside the editor, check every point, save, then **Confirm mark
+scheme**. Add reject lists, method/accuracy dependencies, ECF, equivalent meaning,
+teacher-only items and any-N groups under **Examiner rules**. Confirmed schemes can
+be shared in the school's library. Imported drafts never start marking themselves.
+
+Imports are limited to 20 MB. Legacy binary `.doc` is not currently accepted; save
+it as DOCX or PDF first. Very long schemes require shorter documents or manual
+entry. Real handwriting extraction still requires validation with the school's
+local model and real examiner documents; automated tests do not measure its accuracy.

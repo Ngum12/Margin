@@ -21,6 +21,7 @@ from app.db.models import (
 )
 from app.errors import ConflictError
 from app.marks import from_half_marks
+from app.schemas.mark_scheme import PointRules
 from app.services import audit, jobs, page_check
 from app.services.access import get_visible_exam, get_visible_script
 from app.subjects.registry import get_registry
@@ -53,11 +54,14 @@ def exam_spec(exam: Exam, curriculum: str) -> ExamSpec:
                         description=p.description,
                         marks=int(from_half_marks(p.half_marks)),
                         alternatives=tuple(p.alternatives),
+                        rules=PointRules.model_validate(p.rules or {}),
                     )
                     for p in q.points
+                    if not (p.rules or {}).get("teacher_only", False)
                 ),
             )
             for q in exam.questions
+            if any(not (p.rules or {}).get("teacher_only", False) for p in q.points)
         ),
     )
 

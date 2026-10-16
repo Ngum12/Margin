@@ -62,6 +62,7 @@ from app.services.ai_marking import script_is_done
 from app.services.decisions import current_decisions, exam_questions
 from app.services.page_counts import page_count_flag, typical_page_count
 from app.services.provenance import test_model_scripts
+from app.services.scoring import score_question
 from app.services.uploads import get_visible_page
 
 # Review time (owner change 2): a heartbeat arrives every 30 s while the screen is in use.
@@ -664,6 +665,24 @@ def _summaries(
                     final = (final or 0) + d.final_half_marks
                     if d.final_category is not None:
                         summary.decided += 1
+            proposed = score_question(
+                question,
+                {
+                    p.id: decisions[(script.id, p.id)].proposed_half_marks
+                    if (script.id, p.id) in decisions
+                    else None
+                    for p in question.points
+                },
+            )
+            final = score_question(
+                question,
+                {
+                    p.id: decisions[(script.id, p.id)].final_half_marks
+                    if (script.id, p.id) in decisions
+                    else None
+                    for p in question.points
+                },
+            )
             if proposed is not None:
                 summary.proposed_half = (summary.proposed_half or 0) + min(
                     proposed, question.max_half_marks
@@ -886,6 +905,7 @@ def script_review(db: Session, actor: User, script_id: int) -> ScriptReviewOut:
                 totals.decided += d.final_category is not None
             points.append(
                 ReviewPointOut(
+                    teacher_only=bool((point.rules or {}).get("teacher_only", False)),
                     id=point.id,
                     position=point.position,
                     description=point.description,
@@ -905,8 +925,24 @@ def script_review(db: Session, actor: User, script_id: int) -> ScriptReviewOut:
                     prompt_version=d.prompt_version if d else None,
                 )
             )
-        proposed_capped = None if proposed is None else min(proposed, question.max_half_marks)
-        final_capped = None if final is None else min(final, question.max_half_marks)
+        proposed_capped = score_question(
+            question,
+            {
+                p.id: decisions[(script.id, p.id)].proposed_half_marks
+                if (script.id, p.id) in decisions
+                else None
+                for p in question.points
+            },
+        )
+        final_capped = score_question(
+            question,
+            {
+                p.id: decisions[(script.id, p.id)].final_half_marks
+                if (script.id, p.id) in decisions
+                else None
+                for p in question.points
+            },
+        )
         if proposed_capped is not None:
             totals.proposed_half = (totals.proposed_half or 0) + proposed_capped
         if final_capped is not None:

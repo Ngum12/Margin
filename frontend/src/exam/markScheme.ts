@@ -1,7 +1,7 @@
 // Mark scheme editor model. Validation mirrors backend/app/services/mark_scheme.py and uses the
 // same issue codes, so teachers see problems while typing. The server remains authoritative.
 
-import type { ExamDetail, Issue, MarkSchemeInput } from "../api/types";
+import type { ExamDetail, Issue, MarkSchemeInput, PointRules, PointGroup } from "../api/types";
 
 export const MAX_LABEL_LENGTH = 20;
 export const MAX_MARKS_PER_ITEM = 100;
@@ -9,6 +9,7 @@ export const MAX_QUESTIONS = 100;
 export const MAX_POINTS_PER_QUESTION = 50;
 
 export interface DraftPoint {
+  rules?: PointRules | undefined;
   key: string;
   description: string;
   marks: string; // as typed; whole marks only (D-018)
@@ -16,6 +17,7 @@ export interface DraftPoint {
 }
 
 export interface DraftQuestion {
+  groups?: PointGroup[] | undefined;
   key: string;
   label: string;
   prompt_text: string;
@@ -59,11 +61,13 @@ function splitAlternatives(text: string): string[] {
 export function fromScheme(scheme: MarkSchemeInput): DraftQuestion[] {
   return scheme.questions.map((q) => ({
     key: newKey(),
+    groups: q.groups,
     label: q.label,
     prompt_text: q.prompt_text,
     max_marks: String(q.max_marks),
     points: q.points.map((p) => ({
       key: newKey(),
+      rules: p.rules,
       description: p.description,
       marks: String(p.marks),
       alternatives: p.alternatives.join("\n"),
@@ -79,10 +83,14 @@ export function fromExam(exam: ExamDetail): DraftQuestion[] {
 export function toScheme(questions: DraftQuestion[]): MarkSchemeInput {
   return {
     questions: questions.map((q) => ({
+      ...(q.groups ? { groups: q.groups } : {}),
       label: q.label.trim(),
       prompt_text: q.prompt_text.trim(),
       max_marks: parseWholeNumber(q.max_marks) ?? 0,
       points: q.points.map((p) => ({
+        ...(p.rules
+          ? { rules: { ...p.rules, reject: p.rules.reject.map((x) => x.trim()).filter(Boolean) } }
+          : {}),
         description: p.description.trim(),
         marks: parseWholeNumber(p.marks) ?? 0,
         alternatives: splitAlternatives(p.alternatives),

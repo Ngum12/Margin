@@ -97,7 +97,7 @@ def test_review_shows_model_name_and_version_for_every_mark_and_transcription(
     review = alice.get(f"/api/scripts/{marked['a']}/review").json()
     for point in _points(review):
         assert (point["model_name"], point["model_version"]) == ("mock-marker", "mock-1")
-        assert point["prompt_version"].startswith("marker-lines-v2#")
+        assert point["prompt_version"].startswith("marker-lines-v3#")
     answer = next(p for p in review["pages"] if not p["is_cover"])
     version = answer["transcription"]
     assert (version["model_name"], version["model_version"]) == ("mock-reader", "mock-1")

@@ -1274,3 +1274,36 @@ textarea {
     animation: none;
   }
 }
+
+.scheme-workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.6fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.document-import {
+  position: sticky;
+  top: var(--space-4);
+  max-height: 85vh;
+  overflow: auto;
+}
+.scheme-original {
+  width: 100%;
+  height: 55vh;
+  object-fit: contain;
+  border: 0;
+}
+.scheme-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+@media (max-width: 1000px) {
+  .scheme-workspace {
+    grid-template-columns: 1fr;
+  }
+  .document-import {
+    position: static;
+    max-height: none;
+  }
+}

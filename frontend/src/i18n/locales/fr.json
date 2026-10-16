@@ -11,7 +11,8 @@
     "saved": "Enregistré.",
     "cancel": "Annuler",
     "close": "Fermer",
-    "yes": "Oui"
+    "yes": "Oui",
+    "remove": "Supprimer"
   },
   "language": {
     "label": "Langue",
@@ -109,7 +110,7 @@
     "save": "Enregistrer le barème",
     "saveFirst": "Enregistrez d'abord vos modifications",
     "nowReady": "L’examen est prêt. Imprimez les feuilles de réponse.",
-    "markReady": "Marquer comme prêt",
+    "markReady": "Confirmer le barème",
     "backToDraft": "Repasser en brouillon",
     "confirmDelete": "Supprimer cet examen et son barème ? Cette action est irréversible.",
     "deleteExam": "Supprimer l'examen",
@@ -288,6 +289,13 @@
       "duplicate_page": "Cette page numérotée est déjà reçue. Écartez le doublon ou corrigez le numéro.",
       "wrong_student": "Ce QR appartient à un autre examen ou élève. Vérifiez son identification.",
       "incomplete": "Vérifiez les pages manquantes, les doublons et les feuilles non attribuées avant de corriger ou confirmer."
+    },
+    "scheme": {
+      "document_type": "Utilisez PDF, DOCX, JPEG, PNG, TIFF ou du texte.",
+      "document_size": "Utilisez un document non vide de moins de 20 Mo.",
+      "local_model_required": "Configurez le modèle Ollama local pour extraire le barème. Vous pouvez saisir le barème manuellement.",
+      "document_long": "Le document dépasse la limite d’extraction. Divisez-le ou saisissez le barème manuellement.",
+      "document_unreadable": "Document illisible. Vérifiez l’original ou utilisez un PDF ou du texte."
     }
   },
   "issues": {
@@ -337,6 +345,10 @@
     },
     "comment": {
       "too_long": "Les commentaires font au plus {{max}} caractères."
+    },
+    "scheme": {
+      "rules_invalid": "Vérifiez les clés uniques, les dépendances de méthode, les cycles et les limites des groupes.",
+      "numbering": "Vérifiez la numérotation avec l’original (par exemple 1(a)(ii))."
     }
   },
   "examTabs": {
@@ -855,5 +867,49 @@
     "verifySuggestion": "Correspondance proposée par le modèle local. Vérifiez le nom manuscrit avant de confirmer.",
     "pageNumber": "Numéro de cette page supplémentaire",
     "missing": "Pages manquantes : {{pages}}"
+  },
+  "schemeRules": {
+    "title": "Règles de correction",
+    "key": "Clé du point (ex. M1)",
+    "kind": "Type de note",
+    "reject": "Réponses à refuser (une par ligne)",
+    "depends": "Clés requises (séparées par des virgules)",
+    "group": "Clé du groupe",
+    "ecf": "Accepter une erreur reportée",
+    "ecf_from": "Question / étape d’origine",
+    "meaning_based": "Accepter un sens équivalent",
+    "teacher_only": "Enseignant uniquement : jamais noté par l’IA",
+    "groups": "Groupes N points parmi M",
+    "any": "Nombre maximal de points retenus",
+    "addGroup": "Ajouter un groupe",
+    "kinds": {
+      "point": "Point",
+      "M": "Méthode (M)",
+      "A": "Exactitude (A)",
+      "B": "Indépendant (B)"
+    }
+  },
+  "schemeImport": {
+    "title": "Document original et barème provisoire",
+    "help": "Importer localement, comparer avec l’original, modifier et confirmer. L’extraction ne confirme jamais le barème.",
+    "kind": "Type de document",
+    "scheme": "Barème",
+    "paper": "Sujet",
+    "file": "PDF, DOCX, image ou texte (20 Mo maximum)",
+    "paste": "Coller le texte du barème",
+    "extract": "Extraire localement",
+    "original": "Document original",
+    "text": "Texte extrait",
+    "use": "Charger ce brouillon dans l’éditeur",
+    "library": "Bibliothèque de l’établissement",
+    "share": "Partager le barème confirmé",
+    "status": {
+      "queued": "En attente",
+      "running": "Extraction locale",
+      "failed": "Échec de l’extraction",
+      "ready": "Prêt à comparer",
+      "manual": "Vérification manuelle requise",
+      "succeeded": "Terminé"
+    }
   }
 }

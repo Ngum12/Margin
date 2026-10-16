@@ -519,3 +519,23 @@ The full item-2 check found one frontend-test lint error: Vitest's expect.any
 returns any, forbidden by this repository's strict assignment rule. The regression
 now asserts the request token's presence separately rather than putting an untyped
 matcher into an expected object. All functional tests passed in that run.
+
+## D070 — Extended schemes and local originals (2026-10-16)
+
+Use structured point rules and explicit any-N groups, with a shared scoring function
+for review/results/exports. Imported originals remain separate from editable
+proposals; READY remains the teacher's explicit confirmation. Library copies are
+school-scoped snapshots of confirmed schemes. Teacher-only points are excluded
+from the model contract. Local mock mode does not invent an extracted scheme.
+Office XML is bounded and validated before parsing; external relationships are
+refused. Long documents are surfaced for manual review rather than truncated.
+
+Early TypeScript check caught explicit undefined values with exact optional
+property types in the draft converter; draft-only fields now accept undefined.
+Initial Python lint caught a long prompt line and misplaced worker import; moved
+and formatted them. A correction command initially used the root-relative paths
+from backend; no edits were applied by that command, then corrected from repo root.
+The focused backend run found two false numbering warnings: the regex alternation
+was outside the parenthesised segment. Grouped the alternatives so valid 1(a)
+labels pass; retained the original validation tests. Frontend lint required explicit
+blocks for void callbacks and a narrowed proposal instead of a non-null assertion.

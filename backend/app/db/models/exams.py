@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from enum import StrEnum
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -64,6 +65,7 @@ class Question(IdMixin, TimestampMixin, Base):
     )
 
     exam_id: Mapped[int] = mapped_column(ForeignKey("exam.id", ondelete="CASCADE"), index=True)
+    groups: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     label: Mapped[str] = mapped_column(String(20))
     prompt_text: Mapped[str] = mapped_column(Text, default="")
     # Integer half-mark units: 2 = one mark (D-018).
@@ -93,6 +95,7 @@ class MarkSchemePoint(IdMixin, TimestampMixin, Base):
     half_marks: Mapped[int] = mapped_column(Integer)
     # Other acceptable wordings or answers for this point.
     alternatives: Mapped[list[str]] = mapped_column(JSON, default=list)
+    rules: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     position: Mapped[int] = mapped_column(Integer)
 
     question: Mapped[Question] = relationship(back_populates="points")

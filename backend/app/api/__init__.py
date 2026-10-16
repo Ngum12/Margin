@@ -11,6 +11,7 @@ from app.api import (
     results,
     review,
     scans,
+    scheme_documents,
     users,
 )
 
@@ -28,3 +29,5 @@ api_router.include_router(results.router)
 api_router.include_router(hardware.router)
 
 api_router.include_router(answer_sheets.router)
+
+api_router.include_router(scheme_documents.router)
