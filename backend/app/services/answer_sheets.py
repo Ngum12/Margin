@@ -3,6 +3,7 @@
 import io
 from pathlib import Path
 
+import zxingcpp
 from PIL import Image, ImageDraw
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -11,6 +12,7 @@ from reportlab.pdfgen.canvas import Canvas
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from app.ai.types import ModelOutputInvalidError
 from app.config import Settings
 from app.db.models import AnswerSheet, Exam, IntakePage, Page, PageState, PrintJob, Student, User
 from app.errors import ConflictError
@@ -19,7 +21,7 @@ from app.services import audit
 from app.services.access import get_visible_exam
 from app.services.cover_sheets import _require_not_draft
 from app.sheets.cover_pdf import _draw_qr
-from app.sheets.tokens import new_token, payload_for
+from app.sheets.tokens import new_token, parse_payload, payload_for
 
 HEADER_MM = 42
 
@@ -259,8 +261,21 @@ def grading_image(db: Session, page: Page, settings: Settings) -> tuple[Path, in
     target.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(original) as source:
         upright = source.convert("RGB").rotate(-page.effective_rotation, expand=True)
-        ImageDraw.Draw(upright).rectangle(
-            (0, 0, upright.width, round(upright.height * HEADER_MM / 297)), fill="white"
-        )
+        bottom = round(upright.height * HEADER_MM / 297)
+        for code in zxingcpp.read_barcodes(
+            upright, formats=zxingcpp.BarcodeFormats(zxingcpp.BarcodeFormat.QRCode)
+        ):
+            if parse_payload(code.text).token == sheet.token:
+                corners = code.position
+                ys = [
+                    corners.top_left.y,
+                    corners.top_right.y,
+                    corners.bottom_left.y,
+                    corners.bottom_right.y,
+                ]
+                bottom = max(bottom, round(max(ys) + (max(ys) - min(ys)) * 0.25))
+        if bottom > upright.height * 0.4:
+            raise ModelOutputInvalidError("header_orientation_or_crop")
+        ImageDraw.Draw(upright).rectangle((0, 0, upright.width, bottom), fill="white")
         upright.save(target)
     return target, 0

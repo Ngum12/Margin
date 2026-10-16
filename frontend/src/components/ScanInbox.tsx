@@ -113,7 +113,7 @@ function MatchPage({ page, reload }: { page: Intake["pages"][number]; reload: ()
       </a>
       <p>{t(`hardware.reason.${page.reason}`)}</p>
       {page.suggested_student_id && <p>{t("answerSheets.verifySuggestion")}</p>}
-      {page.reason === "spare" && (
+      {
         <label>
           {t("answerSheets.pageNumber")}
           <input
@@ -126,7 +126,7 @@ function MatchPage({ page, reload }: { page: Intake["pages"][number]; reload: ()
             }}
           />
         </label>
-      )}
+      }
       <label>
         {t("hardware.exam")}
         <select

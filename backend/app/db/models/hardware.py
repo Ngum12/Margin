@@ -36,6 +36,9 @@ class ScanBatch(IdMixin, Base):
     __table_args__ = (UniqueConstraint("school_id", "sha256"),)
 
     school_id: Mapped[int] = mapped_column(ForeignKey("school.id"), index=True)
+    captured_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
+    capture_options: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    prepared_path: Mapped[str | None] = mapped_column(String(500))
     sha256: Mapped[str] = mapped_column(String(64))
     size_bytes: Mapped[int | None] = mapped_column(BigInteger)
     source_name: Mapped[str] = mapped_column(String(255))

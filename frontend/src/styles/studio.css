@@ -1307,3 +1307,31 @@ textarea {
     max-height: none;
   }
 }
+
+.capture-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+.capture-comparison figure {
+  margin: 0;
+  min-width: 0;
+}
+.capture-comparison img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.capture-original {
+  position: relative;
+}
+.capture-crop-outline {
+  position: absolute;
+  border: 2px solid var(--ink);
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .capture-comparison {
+    grid-template-columns: 1fr;
+  }
+}

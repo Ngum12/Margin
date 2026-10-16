@@ -112,3 +112,13 @@ Feedback slips, blank answer sheets and labels print single-sided. Full marked
 reprints can use duplex; Margin pads odd-length scripts with a blank reverse so
 two students never share one physical sheet. Inspect paper handling on the actual
 printer during installation.
+
+## Phone fallback
+
+On school Wi-Fi, open the same Margin address and choose **Photograph scripts**.
+Use the phone's browser camera/photo chooser; there is no app to install. For the
+HTTPS installation, first trust the school's local certificate on that phone as
+explained in INSTALL.md. Hold the camera above the paper, keep the QR and all four
+corners visible, and avoid shadows. Compare the prepared page with the original,
+adjust cropping if needed and press **Use this page**. Test this on the school's
+lowest-cost Android phone; a desktop browser test cannot verify camera quality.

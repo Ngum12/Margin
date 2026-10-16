@@ -296,6 +296,13 @@
       "local_model_required": "Configure the local Ollama model to extract a scheme. You can edit the scheme manually.",
       "document_long": "This document exceeds the model extraction limit. Split it into shorter documents or enter the scheme manually.",
       "document_unreadable": "The document could not be read. Check the original or use PDF or text."
+    },
+    "capture": {
+      "image_type": "Choose a JPEG, PNG, TIFF or WebP photograph.",
+      "image_size": "Choose a nonempty photograph smaller than 20 MB.",
+      "image_unreadable": "This photograph could not be prepared. Retake it with the whole page visible.",
+      "duplicate": "This photograph has already been received.",
+      "not_ready": "Wait for the preview. A page already sent to marking cannot be cropped again here."
     }
   },
   "issues": {
@@ -927,5 +934,39 @@
     "released": "Released to students",
     "remark_requested": "Remark requested",
     "printed": "Printed"
+  },
+  "capture": {
+    "eyebrow": "Phone scanning",
+    "title": "Photograph scripts",
+    "help": "Keep the whole page and QR code in view. Use good light, then check the prepared page before sending it to marking.",
+    "desk": "Back to marking desk",
+    "take": "Take a photo or choose a photograph",
+    "limit": "JPEG, PNG, TIFF or WebP · maximum 20 MB. Originals stay on the school box.",
+    "sending": "Sending to the school box…",
+    "recent": "Recent photographs",
+    "original": "Original photograph",
+    "prepared": "Prepared page",
+    "check": "Check that every answer and the QR are visible. This approves the photograph, not the marks.",
+    "adjust": "Adjust crop and straightening",
+    "left": "Left edge (%)",
+    "top": "Top edge (%)",
+    "right": "Right edge (%)",
+    "bottom": "Bottom edge (%)",
+    "angle": "Straighten angle (degrees)",
+    "auto_crop": "Detect paper borders",
+    "auto_straighten": "Straighten using the QR",
+    "clean": "Clean contrast, keeping colour",
+    "preview": "Prepare another preview",
+    "accept": "Use this page",
+    "discard": "Discard photograph",
+    "status": {
+      "capture_preparing": "Preparing preview…",
+      "capture_preview": "Check the prepared page",
+      "pending": "Waiting for routing",
+      "processed": "Received",
+      "duplicate": "Already received",
+      "quarantine": "Needs attention",
+      "removed": "Discarded"
+    }
   }
 }

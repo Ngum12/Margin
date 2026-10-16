@@ -1,5 +1,5 @@
 import { PrintControls } from "../components/SchoolHardware";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
@@ -400,12 +400,13 @@ function ReviewScreen({
     }
   }
 
-  // One window listener; it always calls the latest handler.
+  // Install before paint: the visible desk must accept immediate keyboard input.
+  // Passive effects can run after a user has already pressed their first key.
   const handler = useRef(handle);
-  useEffect(() => {
+  useLayoutEffect(() => {
     handler.current = handle;
   });
-  useEffect(() => {
+  useLayoutEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setHelp(false);

@@ -669,3 +669,11 @@ Per-page QR orientation allows automatic start; plain-paper fallback keeps the
 teacher orientation check. Missing pages, identity problems and duplicates block
 marking. Keep teacher confirmation and manual items mandatory. Test interrupted
 marking, queue idempotency, eligibility and settings permissions; run all checks.
+
+## Blueprint item 5 — phone capture
+
+Add a browser camera/photo screen, school-local original archiving, bounded child
+image preparation, crop/QR deskew/colour cleanup, and a teacher preview before
+routing. Persist preparation states across restarts. Scope unknown captures to
+their uploader; classified pages retain exam access checks. Test cropping, original
+preservation, QR routing, duplicate handling and access boundaries. No new packages.

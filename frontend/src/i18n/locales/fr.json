@@ -296,6 +296,13 @@
       "local_model_required": "Configurez le modèle Ollama local pour extraire le barème. Vous pouvez saisir le barème manuellement.",
       "document_long": "Le document dépasse la limite d’extraction. Divisez-le ou saisissez le barème manuellement.",
       "document_unreadable": "Document illisible. Vérifiez l’original ou utilisez un PDF ou du texte."
+    },
+    "capture": {
+      "image_type": "Choisissez une photo JPEG, PNG, TIFF ou WebP.",
+      "image_size": "Choisissez une photo non vide de moins de 20 Mo.",
+      "image_unreadable": "Impossible de préparer cette photo. Reprenez-la avec toute la page visible.",
+      "duplicate": "Cette photo a déjà été reçue.",
+      "not_ready": "Attendez l’aperçu. Une page envoyée en correction ne peut plus être recadrée ici."
     }
   },
   "issues": {
@@ -927,5 +934,39 @@
     "released": "Publié aux élèves",
     "remark_requested": "Révision demandée",
     "printed": "Imprimé"
+  },
+  "capture": {
+    "eyebrow": "Numérisation au téléphone",
+    "title": "Photographier les copies",
+    "help": "Gardez toute la page et le QR visibles. Utilisez un bon éclairage, puis vérifiez la page préparée avant de l’envoyer en correction.",
+    "desk": "Retour au bureau de correction",
+    "take": "Prendre ou choisir une photo",
+    "limit": "JPEG, PNG, TIFF ou WebP · 20 Mo maximum. Les originaux restent dans l’établissement.",
+    "sending": "Envoi vers le serveur de l’établissement…",
+    "recent": "Photos récentes",
+    "original": "Photo originale",
+    "prepared": "Page préparée",
+    "check": "Vérifiez que les réponses et le QR sont visibles. Vous validez la photo, pas les notes.",
+    "adjust": "Ajuster le cadrage et l’orientation",
+    "left": "Bord gauche (%)",
+    "top": "Bord supérieur (%)",
+    "right": "Bord droit (%)",
+    "bottom": "Bord inférieur (%)",
+    "angle": "Angle de redressement (degrés)",
+    "auto_crop": "Détecter les bords du papier",
+    "auto_straighten": "Redresser à partir du QR",
+    "clean": "Améliorer le contraste en gardant la couleur",
+    "preview": "Préparer un nouvel aperçu",
+    "accept": "Utiliser cette page",
+    "discard": "Écarter la photo",
+    "status": {
+      "capture_preparing": "Préparation de l’aperçu…",
+      "capture_preview": "Vérifier la page préparée",
+      "pending": "En attente d’attribution",
+      "processed": "Reçue",
+      "duplicate": "Déjà reçue",
+      "quarantine": "À vérifier",
+      "removed": "Écartée"
+    }
   }
 }

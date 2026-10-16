@@ -4,6 +4,7 @@ from app.api import (
     ai,
     answer_sheets,
     auth,
+    capture,
     classes,
     exams,
     hardware,
@@ -31,3 +32,5 @@ api_router.include_router(hardware.router)
 api_router.include_router(answer_sheets.router)
 
 api_router.include_router(scheme_documents.router)
+
+api_router.include_router(capture.router)

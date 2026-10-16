@@ -41,6 +41,9 @@ export default function Home() {
           <h1>{t("home.title")}</h1>
           <p className="page-lede">{t("studio.deskIntro")}</p>
         </div>
+        <Link className="button button-secondary" to="/capture">
+          {t("capture.title")}
+        </Link>
         <Link className="button" to="/exams/new">
           <Icon name="plus" />
           {t("home.newExam")}

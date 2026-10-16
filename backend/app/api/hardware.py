@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.api.deps import AdminUser, AppSettings, CurrentUser, DbSession
 from app.clock import utcnow
@@ -179,7 +179,12 @@ def intake(db: DbSession, actor: CurrentUser) -> dict[str, object]:
         )
     )
     if not actor.is_admin:
-        query = query.where(IntakePage.exam_id.in_(visible_exams(actor).with_only_columns(Exam.id)))
+        query = query.where(
+            or_(
+                IntakePage.exam_id.in_(visible_exams(actor).with_only_columns(Exam.id)),
+                (IntakePage.exam_id.is_(None)) & (ScanBatch.captured_by_id == actor.id),
+            )
+        )
     pages = list(db.scalars(query.order_by(IntakePage.id).limit(200)))
     quarantine = (
         list(
@@ -230,6 +235,7 @@ def intake_image(
         raise NotFoundError("Page")
     if (
         not actor.is_admin
+        and not (item.exam_id is None and batch.captured_by_id == actor.id)
         and db.scalar(visible_exams(actor).where(Exam.id == item.exam_id)) is None
     ):
         raise NotFoundError("Page")
@@ -265,6 +271,7 @@ def discard_page(item_id: int, db: DbSession, actor: CurrentUser) -> Response:
         raise NotFoundError("Page")
     if (
         not actor.is_admin
+        and not (item.exam_id is None and batch.captured_by_id == actor.id)
         and db.scalar(visible_exams(actor).where(Exam.id == item.exam_id)) is None
     ):
         raise NotFoundError("Page")

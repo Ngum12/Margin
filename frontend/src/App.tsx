@@ -20,6 +20,7 @@ import Scans from "./routes/Scans";
 import Settings from "./routes/Settings";
 import SignIn from "./routes/SignIn";
 
+const Capture = lazy(() => import("./routes/Capture"));
 const Review = lazy(() => import("./routes/Review"));
 
 export default function App() {
@@ -41,6 +42,14 @@ export default function App() {
       >
         <Routes>
           <Route path="/signin" element={<SignIn />} />
+          <Route
+            path="/capture"
+            element={
+              <RequireAuth>
+                <Capture />
+              </RequireAuth>
+            }
+          />
           <Route
             path="/"
             element={

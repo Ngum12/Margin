@@ -210,3 +210,16 @@ when the worker imports them; missing pages and unresolved identity/duplicate
 problems wait. Plain-paper fallback requires the teacher's orientation check.
 The worker checkpoints every read page and completed question. After a restart it
 resumes unfinished work. Teacher-only items require a manual mark before confirmation.
+
+### Using a phone instead of a copier
+
+Open Margin on the school Wi-Fi and choose **Photograph scripts** on the home
+screen. Take or select a photograph, check the original and prepared page, adjust
+the crop if needed, then press **Use this page**. QR routing chooses the exam and
+student. Repeat for the next page. No app installation is needed.
+
+Margin preserves the original, prepares colour images locally and uses QR geometry
+for small-angle straightening. It does not repair severely distorted or blurred
+photographs: retake those. Unreadable codes go to the attention tray; match the
+student **and page number**. Test the actual phone/browser and handwriting in the
+school before deployment. Photo preparation and pending previews survive restarts.

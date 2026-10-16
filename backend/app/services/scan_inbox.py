@@ -194,7 +194,7 @@ def process(factory: sessionmaker[Session], settings: Settings, batch_id: int) -
         batch = db.get(ScanBatch, batch_id)
         if batch is None or batch.status != "pending":
             return
-        source = settings.data_dir / batch.stored_path
+        source = settings.data_dir / (batch.prepared_path or batch.stored_path)
     relative = Path("scan-pages") / str(batch_id)
     try:
         rendered = render_pdf(source, settings.data_dir / relative, settings)
@@ -344,12 +344,30 @@ def assign(
         or batch.school_id != actor.school_id
         or not student
         or student.class_id != exam.class_id
-        or (not actor.is_admin and item.exam_id != exam.id)
+        or (
+            not actor.is_admin
+            and item.exam_id != exam.id
+            and not (item.exam_id is None and batch.captured_by_id == actor.id)
+        )
     ):
         raise NotFoundError("Page")
     if item.page_id or item.discarded or exam.status == ExamStatus.DRAFT:
         raise ConflictError("Page cannot be assigned", code="page.already_assigned")
     sheet = db.get(AnswerSheet, item.answer_sheet_id) if item.answer_sheet_id else None
+    if sheet is None and page_number is not None:
+        sheet = db.scalar(
+            select(AnswerSheet)
+            .where(
+                AnswerSheet.exam_id == exam.id,
+                AnswerSheet.student_id == student.id,
+                AnswerSheet.active.is_(True),
+                AnswerSheet.page_number == page_number,
+            )
+            .order_by(AnswerSheet.id)
+            .limit(1)
+        )
+        if sheet is not None:
+            item.answer_sheet_id = sheet.id
     if sheet:
         if sheet.exam_id != exam.id or (not sheet.spare and sheet.student_id != student.id):
             raise ConflictError(
@@ -417,6 +435,9 @@ class InboxPoller:
         self.seen: dict[Path, tuple[int, int, float]] = {}
 
     def tick(self, factory: sessionmaker[Session], settings: Settings) -> None:
+        from app.services.capture import prepare
+
+        prepare(factory, settings)
         with factory() as db:
             schools = list(
                 db.scalars(select(Hardware.school_id).where(Hardware.inbox_enabled.is_(True)))

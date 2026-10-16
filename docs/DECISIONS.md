@@ -563,3 +563,27 @@ its previous callback on each call, and per-question calls retained that hook.
 Clear the marker callback before each call and in cleanup; keep the existing
 four-event assertion. Progress now also counts committed question checkpoints
 while idle/retrying, so a restart does not erase completed work from the progress bar.
+
+## D072 — Phone originals and preview acceptance (2026-10-16)
+
+Use browser-native camera/file capture, existing Pillow/ZXing in a bounded child
+process, and durable ScanBatch preparation states. Originals stay byte-for-byte
+in the archive. Cropping, QR deskew and contrast cleanup produce a separate PNG;
+a teacher checks it before QR routing or automatic marking. Manual crop coordinates
+refer to the original, and disable automatic border detection. No perspective or
+blur-repair accuracy is claimed. Bad files are quarantined without logging content.
+
+Unknown phone pages are visible only to their uploader/admin until identified;
+classified intake pages retain exam permission checks. Explicit page-number matching
+binds an unreadable QR page to its expected sheet, closing the missing-page repair gap.
+Grading header masking now follows QR geometry too, accommodating photo margins.
+
+Incremental lint caught the subprocess safety annotation on the wrong line and
+an unnecessary null fallback in the typed photo UI; fixed both. A migration command
+was first invoked from the repository root (module not found); reran from backend.
+
+The item-5 full check caught the rapid-key review test receiving no save calls.
+The most likely cause is that the heading was visible before the passive effect
+installed the window key listener; zero-delay events could all arrive in that gap.
+The listener and its current handler now use layout effects, making the visible
+desk immediately interactive. The ordered three-save assertion is unchanged.
