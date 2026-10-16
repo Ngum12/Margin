@@ -18,6 +18,7 @@ from app.config import Settings
 from app.db.models import (
     CoverSheet,
     Exam,
+    ExamAbsence,
     ExamStatus,
     JobType,
     Page,
@@ -357,7 +358,13 @@ def students_without_scripts(db: Session, actor: User, exam_id: int) -> list[Stu
     return list(
         db.scalars(
             select(Student)
-            .where(Student.class_id == exam.class_id, Student.id.not_in(with_scripts))
+            .where(
+                Student.class_id == exam.class_id,
+                Student.id.not_in(with_scripts),
+                Student.id.not_in(
+                    select(ExamAbsence.student_id).where(ExamAbsence.exam_id == exam.id)
+                ),
+            )
             .order_by(Student.code)
         )
     )

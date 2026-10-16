@@ -455,3 +455,32 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - Keep existing authentication, role checks, workflow links, real dashboard counts, keyboard review controls and bilingual support.
 - **Validation:** cloud check runner passed all 11 check groups: 521 backend tests, 138 frontend tests, 8 Chromium browser tests, formatting, lint, strict types, build and licence notices. Browser inspection covered 1366 px laptops, 1024 px French layouts, 390 px phones, reduced motion, authentication and the review desk without page overflow or JavaScript errors.
 - **Performance:** load the review route on demand so its code is not downloaded for sign-in. Bundled fonts and the original DOM/CSS illustration keep the experience offline.
+
+
+## D-068 — Approved end-to-end blueprint; Windows installation target (2026-10-16)
+
+The owner approved the consolidated dependencies and selected Windows for schools.
+The blueprint overrides the older stop-between-phases instruction: implement in the
+requested order, run the full checks and commit each completed item, then continue.
+Native Windows SMB replaces Samba on this target. Direct IPP uses the standard
+library, restricted to configured private IPv4 addresses without DNS, proxies or
+redirects. CUPS is not needed for printers accepting PDF over IPP; older devices
+need a compatible local print server or the PDF fallback. No external AI/storage.
+
+The network guard now permits the narrow IPP transport in addition to local Ollama.
+Its negative-control probe bypasses environment proxies explicitly: in this cloud
+an inherited proxy otherwise changes the destination being measured. Browser checks
+accept MARGIN_BROWSER_PATH for an existing Chromium installation; Edge stays the
+Windows default. No new browser or package is downloaded by this setting.
+
+Scan batches archive originals before removing inbox files. Unknown-exam pages are
+admin-only. Cover-sheet mode still requires ordered stacks; arbitrary order depends
+on the next per-page QR build item. Print jobs preserve confirmation versions, and
+interrupted submissions require a physical-output check before retry. Paper delivery
+cannot be inferred from an HTTP success. Original-script feedback slips are default.
+
+The first full implementation check passed backend, unit and browser tests but
+failed the frontend strict template-expression lint: new URL builders interpolated
+numeric IDs directly. They now convert IDs explicitly with String, matching the
+existing frontend convention. A separate typecheck caught an Attendance import
+before its JSX insertion; the component is now mounted on the scans screen.

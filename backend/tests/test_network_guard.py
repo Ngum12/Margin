@@ -122,7 +122,9 @@ def test_full_pipeline_only_contacts_the_model_host(
 def test_guard_sees_a_connection_to_another_host(connections: list[tuple[str, int]]) -> None:
     with pytest.raises(urllib.error.URLError):
         # 192.0.2.1 is TEST-NET-1: reserved, never routed. The attempt itself is what we detect.
-        urllib.request.urlopen("http://192.0.2.1/", timeout=0.5)
+        urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
+            "http://192.0.2.1/", timeout=0.5
+        )
     assert ("192.0.2.1", 80) in connections
 
 
@@ -139,7 +141,11 @@ def test_only_the_ollama_client_imports_networking_modules() -> None:
             for name in names:
                 if any(name == m or name.startswith(m + ".") for m in NETWORK_MODULES):
                     offenders.append((path.relative_to(APP_DIR).as_posix(), name))
-    allowed = {("ai/ollama_client.py", "http.client"), ("worker/runner.py", "socket")}
+    allowed = {
+        ("ai/ollama_client.py", "http.client"),
+        ("worker/runner.py", "socket"),
+        ("services/ipp.py", "http.client"),
+    }
     # worker/runner.py uses socket.gethostname() only, to name the worker (no connections).
     assert set(offenders) <= allowed, offenders
 

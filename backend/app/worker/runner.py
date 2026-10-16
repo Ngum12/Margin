@@ -14,7 +14,7 @@ from app.ai.types import ModelUnavailableError
 from app.clock import utcnow
 from app.config import Settings
 from app.db.models import Job, WorkerHeartbeat
-from app.services import jobs
+from app.services import jobs, printing, scan_inbox
 from app.worker.handlers import HANDLERS
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ class Worker:
         self._current_job: int | None = None
         self._stop = threading.Event()
         self._started_at = utcnow()
+        self._inbox = scan_inbox.InboxPoller()
 
     # --- heartbeat -----------------------------------------------------------------------------
 
@@ -117,6 +118,11 @@ class Worker:
         logger.info("Worker %s started", self.worker_id)
         try:
             while not self._stop.is_set():
+                try:
+                    self._inbox.tick(self._factory, self._settings)
+                    printing.tick(self._factory, self._settings)
+                except Exception:
+                    logger.exception("Hardware polling failed; will retry")
                 if not self.run_once():
                     # Idle: pick up work abandoned by a worker that died meanwhile, then wait.
                     self.recover()

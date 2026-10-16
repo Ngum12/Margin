@@ -29,6 +29,7 @@ from app.db.models import (
     MarkSchemePoint,
     Page,
     PageState,
+    PrintJob,
     Question,
     QuestionComment,
     ReviewSession,
@@ -493,6 +494,17 @@ def reopen(db: Session, actor: User, script_id: int) -> None:
     script = get_visible_script(db, actor, script_id)
     if script.status != ScriptStatus.CONFIRMED:
         raise ConflictError("Script is not confirmed", code="script.not_confirmed")
+    if any(
+        script.id in job.script_ids
+        for job in db.scalars(
+            select(PrintJob).where(
+                PrintJob.exam_id == script.exam_id, PrintJob.status == "submitting"
+            )
+        )
+    ):
+        raise ConflictError(
+            "A print is being sent; wait for its status", code="hardware.print_busy"
+        )
     old = {
         "status": script.status.value,
         "confirmed_at": script.confirmed_at.isoformat() if script.confirmed_at else None,

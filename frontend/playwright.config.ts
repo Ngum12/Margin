@@ -15,12 +15,15 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: `http://127.0.0.1:${String(PORT)}`,
-    channel: "msedge",
+    ...(process.env.MARGIN_BROWSER_PATH ? {} : { channel: "msedge" }),
     headless: true,
     trace: "off",
     screenshot: "off",
     video: "off",
     launchOptions: {
+      ...(process.env.MARGIN_BROWSER_PATH
+        ? { executablePath: process.env.MARGIN_BROWSER_PATH }
+        : {}),
       // Keep the browser from contacting anything other than the local app.
       args: [
         "--disable-background-networking",

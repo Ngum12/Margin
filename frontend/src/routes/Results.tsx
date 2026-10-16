@@ -1,3 +1,4 @@
+import { PrintControls } from "../components/SchoolHardware";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,6 +44,12 @@ export default function Results() {
   return (
     <section>
       <ExamHeader exam={exam} />
+      <PrintControls
+        examId={examId}
+        students={data.rows
+          .filter((row) => row.confirmed)
+          .map((row) => ({ id: row.script_id, name: row.student_name ?? row.student_code }))}
+      />
       <div className="panel">
         <div className="panel-header">
           <h2>{t("results.title")}</h2>

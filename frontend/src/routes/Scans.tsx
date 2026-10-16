@@ -1,3 +1,4 @@
+import { Attendance } from "../components/Attendance";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
@@ -54,6 +55,7 @@ export default function Scans() {
   return (
     <section>
       <ExamHeader exam={data.exam} />
+      <Attendance examId={examId} />
       {data.exam.status === "draft" ? (
         <p className="panel empty-state">{t("sheets.needReady")}</p>
       ) : (

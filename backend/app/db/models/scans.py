@@ -36,7 +36,7 @@ class Upload(IdMixin, Base):
     __table_args__ = (UniqueConstraint("exam_id", "sha256"),)
 
     exam_id: Mapped[int] = mapped_column(ForeignKey("exam.id"), index=True)
-    uploaded_by_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    uploaded_by_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"))
     original_filename: Mapped[str] = mapped_column(String(255))
     # Relative to MARGIN_DATA_DIR. The original PDF is kept byte-for-byte (D-030).
     stored_path: Mapped[str] = mapped_column(String(500))

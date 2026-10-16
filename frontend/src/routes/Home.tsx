@@ -1,3 +1,4 @@
+import { ScanInbox } from "../components/ScanInbox";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -26,6 +27,7 @@ export default function Home() {
 
   return (
     <section className="dashboard">
+      <ScanInbox />
       <header className="page-header">
         <div>
           <p className="eyebrow dashboard-date">{today}</p>

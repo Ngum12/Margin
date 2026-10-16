@@ -20,6 +20,7 @@ from app.db.models.audit import AuditEvent
 from app.db.models.classes import SchoolClass, Student
 from app.db.models.exams import Exam, ExamStatus, MarkSchemePoint, Question
 from app.db.models.exports import Export, ExportKind, ExportStatus
+from app.db.models.hardware import ExamAbsence, Hardware, IntakePage, PrintJob, ScanBatch
 from app.db.models.scans import (
     CoverSheet,
     Page,
@@ -36,10 +37,13 @@ __all__ = [
     "CoverSheet",
     "ErrorCategory",
     "Exam",
+    "ExamAbsence",
     "ExamStatus",
     "Export",
     "ExportKind",
     "ExportStatus",
+    "Hardware",
+    "IntakePage",
     "Job",
     "JobStatus",
     "JobType",
@@ -52,10 +56,12 @@ __all__ = [
     "ModelVersion",
     "Page",
     "PageState",
+    "PrintJob",
     "Question",
     "QuestionComment",
     "ReviewSession",
     "Role",
+    "ScanBatch",
     "School",
     "SchoolClass",
     "Script",

@@ -20,7 +20,7 @@ from typing import Any
 
 import pypdfium2 as pdfium
 import zxingcpp
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.pdf.cover_frame import has_cover_frame
 from app.pdf.orientation import quarter_turn_from_qr
@@ -55,6 +55,10 @@ def render(
     max_pages: int,
     max_pixels: int,
 ) -> dict[str, Any]:
+    if input_path.suffix.lower() in {".jpg", ".jpeg", ".png", ".tif", ".tiff"}:
+        return render_images(
+            input_path, output_dir, quality=quality, max_pages=max_pages, max_pixels=max_pixels
+        )
     pdf = pdfium.PdfDocument(input_path)
     try:
         page_count = len(pdf)
@@ -102,6 +106,41 @@ def render(
         return {"page_count": page_count, "pages": pages}
     finally:
         pdf.close()
+
+
+def render_images(
+    input_path: Path, output_dir: Path, *, quality: int, max_pages: int, max_pixels: int
+) -> dict[str, Any]:
+    pages = []
+    with Image.open(input_path) as source:
+        count = getattr(source, "n_frames", 1)
+        if count > max_pages:
+            raise _TooManyPagesError(count)
+        for index in range(count):
+            source.seek(index)
+            if source.width * source.height > max_pixels:
+                raise ValueError("Image too large")
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            qr = _read_qr(image)
+            name = f"{index:04d}.jpg"
+            image.save(output_dir / name, "JPEG", quality=quality)
+            thumb = image.copy()
+            thumb.thumbnail((THUMB_WIDTH, THUMB_WIDTH * 2))
+            thumb.save(output_dir / f"thumb_{name}", "JPEG", quality=80)
+            pages.append(
+                {
+                    "index": index,
+                    "image": name,
+                    "thumb": f"thumb_{name}",
+                    "width": image.width,
+                    "height": image.height,
+                    "qr_rotation": quarter_turn_from_qr(int(qr["orientation"])),
+                    "qr_texts": qr["texts"],
+                    "qr_damaged": qr["damaged"],
+                    "cover_frame": has_cover_frame(image),
+                }
+            )
+    return {"page_count": len(pages), "pages": pages}
 
 
 class _TooManyPagesError(Exception):

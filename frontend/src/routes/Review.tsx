@@ -1,3 +1,4 @@
+import { PrintControls } from "../components/SchoolHardware";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
@@ -453,6 +454,7 @@ function ReviewScreen({
 
   return (
     <section className="review">
+      {confirmed && <PrintControls examId={examId} scriptId={scriptId} />}
       <div className="desk-bar">
         <div className="desk-who">
           <p className="desk-crumb">

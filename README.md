@@ -28,13 +28,18 @@ Margin takes the other road:
 
 - **The data stays in the building.** Scans, transcriptions and marks live on one school
   computer. The AI model runs on that same computer. Nothing is sent to a third-party AI service:
-  the only network calls go to the school's own model server, and a test fails if the code ever
-  tries to call anywhere else.
-- **Students are codes, not names.** Cover sheets carry a QR code and a pseudonymous student
-  code. Names are optional, stay in the local database, and are never shown to the model.
+  network calls are restricted to the school's configured model server and private-IP
+  printer. Tests guard these boundaries.
+- **QR codes contain no personal data.** Cover sheets carry a random QR token and a
+  pseudonymous student code. Names stay local; feedback slips can show the student
+  name, and names are not sent to the grading model.
 - **The AI proposes; the teacher decides.** No mark is final, and nothing is exported, until a
   teacher confirms it. Every change is in an append-only audit log, and every AI output records
   its model, model version and prompt version.
+
+## Windows school workflow
+
+**Windows is the school installation target.** See [Windows scanner and printer setup](docs/WINDOWS_SCHOOL_SETUP.md) for the copier share, IPP printer, test scan and test page. Automatic inbox intake and direct printing implement the first part of the [end-to-end audit](docs/BLUEPRINT_AUDIT.md). The student portal and home access remain planned; do not expose the current staff application publicly.
 
 ## How it works
 

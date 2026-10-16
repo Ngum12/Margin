@@ -1,3 +1,4 @@
+import { SchoolHardware } from "../components/SchoolHardware";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -33,6 +34,7 @@ export default function Settings() {
         <h2 id="language-heading">{t("settings.languageTitle")}</h2>
         <p>{t("settings.languageHelp")}</p>
       </section>
+      {user.role === "admin" && <SchoolHardware />}
       {user.role === "admin" && (
         <section className="panel" aria-labelledby="admin-heading">
           <h2 id="admin-heading">{t("settings.adminTitle")}</h2>

@@ -4,6 +4,8 @@ This guide is for the person setting up Margin in a school: one computer (the "s
 runs Margin and the AI model, and teachers use it from their browsers over the school network.
 Student data never leaves this computer.
 
+For the copier inbox and direct printing, follow [Windows school setup](WINDOWS_SCHOOL_SETUP.md) after installation. Windows is the primary school target.
+
 ## 1. What the school box needs
 
 - Windows 10/11, Ubuntu 22.04+ or macOS, with 16 GB of memory. A GPU with 6 GB or more makes
