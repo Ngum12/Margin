@@ -138,8 +138,8 @@ Desktop (Windows/macOS) or Docker Engine (Linux) runs:
 ```
 git clone https://github.com/Ngum12/Margin.git
 cd Margin
-copy deploy\compose.env.example .env      # Linux/macOS: cp deploy/compose.env.example .env
-# edit .env: MARGIN_SITE = the address teachers will type
+copy deploy\compose.env.example .env.docker   # Linux/macOS: cp deploy/compose.env.example .env.docker
+# edit .env.docker: MARGIN_SITE = the address teachers will type
 docker compose up -d --build
 docker compose exec ollama ollama pull qwen3-vl:4b-instruct
 docker compose exec web python -m app.cli init-school --name "GBHS Example" --country Cameroon

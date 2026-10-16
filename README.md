@@ -135,7 +135,7 @@ python scripts/run.py        # http://127.0.0.1:8000
 **With Docker:**
 
 ```bash
-cp deploy/compose.env.example .env   # set MARGIN_SITE to this computer's address
+cp deploy/compose.env.example .env.docker   # set MARGIN_SITE to this computer's address
 docker compose up -d --build
 docker compose exec ollama ollama pull qwen3-vl:4b-instruct
 ```

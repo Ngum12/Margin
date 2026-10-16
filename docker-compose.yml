@@ -1,5 +1,6 @@
 # Margin on one school computer with Docker (D-066): web app, worker, local AI model and HTTPS.
-# Usage: copy deploy/compose.env.example to .env, set MARGIN_SITE, then `docker compose up -d`.
+# Usage: copy deploy/compose.env.example to .env.docker, set MARGIN_SITE, then
+# `docker compose up -d --build`. (.env.docker is separate from a non-Docker install's .env.)
 # Images are pinned to exact versions (docs/DEPENDENCIES.md); never use "latest".
 
 services:
@@ -7,7 +8,7 @@ services:
     build: .
     image: margin:local
     restart: unless-stopped
-    env_file: .env
+    env_file: .env.docker
     environment:
       MARGIN_MODEL_BASE_URL: http://ollama:11434
     volumes:
@@ -20,7 +21,7 @@ services:
   worker:
     image: margin:local
     restart: unless-stopped
-    env_file: .env
+    env_file: .env.docker
     environment:
       MARGIN_MODEL_BASE_URL: http://ollama:11434
     command: ["python", "-m", "app.worker"]
@@ -45,8 +46,8 @@ services:
   caddy:
     image: caddy:2.11.7
     restart: unless-stopped
+    env_file: .env.docker  # MARGIN_SITE: the address teachers type
     environment:
-      MARGIN_SITE: ${MARGIN_SITE:?Set MARGIN_SITE in .env to this computer's name or address}
       MARGIN_UPSTREAM: web:8000
     ports:
       - "443:443"
