@@ -8,6 +8,7 @@ Pin = Annotated[str, StringConstraints(pattern=r"^[0-9]{6,12}$")]
 
 
 class PortalSettings(ApiModel):
+    training_consent: bool = False
     enabled: bool = False
     remark_days: int = Field(default=7, ge=1, le=90)
     remark_max: int = Field(default=3, ge=1, le=20)

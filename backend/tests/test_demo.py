@@ -21,7 +21,8 @@ def test_demo_seed_creates_a_ready_exam_with_cover_sheets(db: Session, world: Wo
         )
         == 6
     )
-    assert db.scalar(select(func.count()).select_from(CoverSheet)) == 6
+    assert db.scalar(select(func.count()).select_from(CoverSheet)) == 18
+    assert set(db.scalars(select(Exam.subject_code))) == {"chemistry", "mathematics", "economics"}
 
 
 def test_demo_seed_runs_only_once(db: Session, world: World) -> None:

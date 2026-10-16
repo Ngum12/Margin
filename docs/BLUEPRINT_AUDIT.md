@@ -1,10 +1,27 @@
 # End-to-end school workflow: implementation audit
 
-Audited 16 October 2026 against commit `591fa70`. This is a gap assessment,
-not a claim that all proposed features are implemented. The owner approved the
-dependency proposal and selected Windows on 16 October 2026. Implementation is
-proceeding in the requested order. See commit history and WINDOWS_SCHOOL_SETUP.md
-for delivered functionality; the table below preserves the pre-build assessment.
+Initial audit: 16 October 2026 against `591fa70`. The approved Windows build
+is now implemented in the requested order. The original gap table below is kept
+as the baseline, not a list of outstanding work.
+
+| Item | Delivered commit / scope |
+|---|---|
+| 1 | `04957d1`: inbox routing, attention fixes, direct IPP and durable print queue |
+| 2 | `a8d649d`: per-page QR sheets, spares, covers and labels |
+| 3 | `2a85047`: local scheme drafts, GCE rules and school library |
+| 4 | `918ff19`: automatic marking, restart checkpoints and review guards |
+| 5 | `04cfbdf`: browser phone capture and colour-original preservation |
+| 6 | `ff8ddd4`: release, private student portal, remarks, HOD and optional home host |
+| 7 | `04aab5a`: confirmed class imports, Excel results and history |
+| 8 | Final reliability commit: validated backup/restore, Windows scheduled backup, three-subject demo, private training statistics and deployment guides |
+
+Acceptance still requires the school's Windows machine, actual SMB copier and
+IPP printer, a cheap Android phone, and (for home access) its DNS/TLS/router.
+Automated checks use mock AI; real handwriting accuracy is not established.
+Legacy binary DOC/XLS need conversion to supported DOCX/XLSX/PDF/CSV; embedded
+DOCX images need a PDF/image export. The experimental marks-only overprint onto
+original sheets remains deferred as specified in the blueprint. Training exports
+are anonymous aggregate correction/remark statistics, not raw images or OCR text.
 
 ## Build order and acceptance boundaries
 
@@ -114,8 +131,8 @@ ADF page handling, QR legibility, printer duplex/trays/status fidelity, school r
 reachability or camera quality on the school's cheapest phone. Record these as
 installation acceptance checks, not as automated-test passes.
 
-This audit made no runtime changes and installed no dependencies. Existing test
-results from the previous UI work are not validation of these unimplemented flows.
+The initial audit installed nothing. Each implementation commit subsequently ran
+the complete check suite; see DECISIONS.md for failures investigated and corrected.
 
 Windows implementation uses native SMB and direct IPP from the standard library;
 Samba and CUPS are not required or installed on that target. No new Python package

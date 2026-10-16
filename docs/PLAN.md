@@ -1,12 +1,15 @@
+<!-- Updated implementation status: the approved 2026-10-16 blueprint items 1–8
+are implemented. Historical phase descriptions below are retained as design
+context; current acceptance boundaries are in BLUEPRINT_AUDIT.md and README.md. -->
+
 # Current approved blueprint (2026-10-16)
 
-Items 1–5 are committed: scan inbox/direct printing, QR sheets/spares, scheme
-imports/GCE rules, resumable automatic marking and phone capture. Item 6 adds
-release, separate student PIN sessions, the student portal, remark replies and
-subject-scoped department heads. Items 7 (roster imports/results/history) and 8
-(Phase 6 installation, backup/restore and final documentation) follow without an
-approval pause. The historical phase plan below is retained for design context;
-its old approval/status lines are superseded by this paragraph.
+All eight approved build items are implemented: scanner/printer workflow, QR
+sheets, scheme rules/imports, resumable marking, phone capture, student
+release/remarks, registers/results/history, and deployment/backup reliability.
+See BLUEPRINT_AUDIT.md for commit evidence and hardware acceptance boundaries.
+The historical phase plan below is retained for design context; its old
+approval/status lines are superseded by this paragraph.
 
 # Plan: Phase 0 and Phase 1
 

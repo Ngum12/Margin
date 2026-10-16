@@ -634,3 +634,35 @@ Real register-photo accuracy still requires school documents.
 The first register UI test selected the shared language dropdown while the lazy
 register route was loading. It now waits for the class option and selects the
 control by its accessible Class label; the edit-before-confirm assertion remains.
+
+
+## D075 — Windows operation and privacy-safe recovery (2026-10-16)
+
+Backups snapshot SQLite online and checksum every archived member. Restore checks
+paths (including Windows device names), CRC, manifest and database before replacing
+anything, and retains the previous data directory for rollback. Stop web and worker
+for restore; unimported inbox files and previous backups are excluded. Native
+Windows Task Scheduler runs retention only after a successful nightly backup.
+The same account must own the task and installation; S4U tasks use local/USB storage.
+Actual Windows hardware acceptance remains separate from Linux software checks.
+
+Training exports previously included images/transcriptions, which can contain
+handwritten names despite pseudonymous filenames. Format 2 exports only aggregate
+correction and remark statistics, suppressing groups below five distinct students.
+Both school opt-in and individual consent are required. Legacy raw exports are
+blocked at download by a migrated safety flag. No raw student writing is exported.
+Chemistry, Mathematics and Economics demo exams are seeded locally; runtime package
+resolution is offline. Route splitting reduces the initial student-browser bundle.
+
+The first new aggregate-export test failed because its cloned MarkDecision used
+`point_id`; the actual foreign key is `mark_scheme_point_id`. Corrected the fixture,
+without weakening assertions. Mypy also caught reuse of a list variable across
+differently typed aggregation loops; distinct names fix the typing. A formatting
+command initially ran from the wrong directory and applied the root configuration
+to scripts; those incidental edits were reverted and the backend configuration is
+used by the official check runner.
+
+A fresh isolated Linux installation smoke check ran the documented CLI sequence:
+migrate, create school/admin, seed all three subjects, back up, restore and verify
+SQLite integrity and the three retained exams. Windows Task Scheduler, physical
+SMB/IPP devices and public DNS/TLS are explicitly manual installation acceptance.

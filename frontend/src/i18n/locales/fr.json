@@ -270,7 +270,9 @@
       "nothing_confirmed": "Il n'y a pas encore de copies confirmées à exporter.",
       "nothing_consented": "Aucun des examens choisis n'a de copie confirmée d'un élève ayant donné son consentement.",
       "not_ready": "Le fichier n'est pas encore prêt.",
-      "failed": "Le fichier n'a pas pu être préparé. Réessayez."
+      "failed": "Le fichier n'a pas pu être préparé. Réessayez.",
+      "school_consent": "Activez d’abord le consentement de l’établissement dans Paramètres.",
+      "legacy_private": "Cette ancienne archive contient des données privées. Créez un nouvel export de statistiques anonymes."
     },
     "hardware": {
       "no_printer": "Demandez à l’administrateur de configurer une imprimante.",
@@ -674,7 +676,7 @@
     "serverReachable": "serveur de modèles joignable",
     "configHelp": "Les modèles se changent dans le fichier de configuration de l'installation, pas ici.",
     "exportTitle": "Export des données d'entraînement",
-    "exportHelp": "Exporte les copies confirmées des élèves dont le consentement est enregistré : images des pages, transcriptions finales, et notes de l'enseignant à côté des propositions de l'IA. Les élèves apparaissent uniquement par leur code.",
+    "exportHelp": "Exporte des statistiques anonymes de corrections confirmées avec consentement de l’établissement et des élèves. Les groupes de moins de cinq élèves sont exclus. Activez le consentement dans Paramètres.",
     "noConfirmed": "Aucun examen n'a encore de copies confirmées.",
     "include": "Inclure",
     "includeExam": "Inclure {{title}}",
@@ -682,7 +684,7 @@
     "consented": "Avec consentement",
     "export_one": "Exporter {{count}} copie",
     "export_other": "Exporter {{count}} copies",
-    "privacy": "Chaque export est enregistré dans le journal d'audit. Vérifiez les fichiers avant de les partager hors de l'établissement : un élève a pu écrire son nom sur une page de réponse."
+    "privacy": "L’écriture, les noms, les identifiants et les textes libres restent dans l’établissement. Aucun export n’est envoyé automatiquement. Chaque export est audité."
   },
   "testModel": {
     "short": "Modèle de test : pas une vraie correction par IA",
@@ -1065,7 +1067,8 @@
     "signout": "Se déconnecter",
     "average": "Moyenne de classe : {{marks}}",
     "pointOnPage": "Touchez l’endroit sur votre page (facultatif)",
-    "examNumber": "Examen {{number}}"
+    "examNumber": "Examen {{number}}",
+    "training_consent": "Autoriser l’apprentissage local sur les corrections avec consentement individuel"
   },
   "register": {
     "title": "Registres de classe",

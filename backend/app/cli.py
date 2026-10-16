@@ -131,7 +131,10 @@ def seed_demo(password_env: str | None) -> int:
             print(exc, file=sys.stderr)
             return 1
         db.commit()
-    print(f"Demo ready: sign in as '{username}'. Exam {exam_id} has cover sheets to print.")
+    print(
+        f"Demo ready: sign in as '{username}'. Chemistry (exam {exam_id}), "
+        "Mathematics and Economics are ready."
+    )
     return 0
 
 

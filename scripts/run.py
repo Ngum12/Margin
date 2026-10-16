@@ -58,6 +58,9 @@ def main() -> int:
     args = parser.parse_args()
 
     env = {**_read_dotenv(), **os.environ, "UV_PYTHON_PREFERENCE": "only-managed"}
+    # Runtime uses installed packages/cache; installation is an explicit step.
+    env.setdefault("UV_OFFLINE", "true")
+    env.setdefault("npm_config_offline", "true")
     host = env.get("MARGIN_HOST", "127.0.0.1")
     port = env.get("MARGIN_PORT", "8000")
     npm = _tool("npm")
@@ -75,7 +78,7 @@ def main() -> int:
     ]
 
     if not (FRONTEND / "node_modules").is_dir():
-        subprocess.run([npm, "ci"], cwd=FRONTEND, check=True)  # noqa: S603
+        subprocess.run([npm, "ci"], cwd=FRONTEND, env=env, check=True)  # noqa: S603
 
     # Bring the database schema up to date before serving (safe to run every time).
     migrate = [_tool("uv"), "run", "--frozen", "python", "-m", "app.cli", "migrate"]
@@ -97,7 +100,7 @@ def main() -> int:
 
     if args.rebuild or _frontend_is_stale():
         print("Building frontend...", flush=True)
-        subprocess.run([npm, "run", "build"], cwd=FRONTEND, check=True)  # noqa: S603
+        subprocess.run([npm, "run", "build"], cwd=FRONTEND, env=env, check=True)  # noqa: S603
 
     # The background worker (uploads, AI marking) runs next to the web app.
     worker = subprocess.Popen(worker_cmd, cwd=BACKEND, env=env)  # noqa: S603

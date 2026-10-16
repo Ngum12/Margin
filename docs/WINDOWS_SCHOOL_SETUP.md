@@ -83,8 +83,7 @@ accept PDF just because they advertise IPP; Settings checks this capability.
   no identifiable exam; teachers can resolve pages already scoped to their exams.
 - Review and confirm using the existing marking desk. Results and confirmed
   scripts offer feedback slips or full marked reprints, sent to the configured
-  printer. Class printing uses student creation order until explicit register
-  ordering is introduced with roster imports.
+  printer. Class printing uses the saved exam register order.
 - **Print not yet printed** excludes only versions whose printer reported
   completion. A new confirmation after editing is eligible to print again.
 
@@ -95,23 +94,15 @@ the acknowledgement and retrying. Printer cancellation can leave partial output.
 Restart recovery can take two minutes before an interrupted submission is shown
 as uncertain. Failed jobs caused by changed marks require a fresh print request.
 
-## Internet access and remaining build items
+## Acceptance at the school
 
-The student portal and public student HTTPS hostname are not implemented yet.
-Do not forward the current application directly to the internet. Keep SMB, IPP,
-Ollama, database and staff access private. The planned home portal will still
-store data and run models at school; it requires a domain, trusted TLS and inbound
-connectivity. An ISP using CGNAT needs a separate connectivity solution.
+Use the final checklist in `docs/BLUEPRINT_AUDIT.md`. Automatic tests cover the software
+flow, while Windows sharing, Task Scheduler, real printer completion/duplex, a copier's
+feeder and the cheapest Android phone must be checked on site. Home access additionally
+requires the school's DNS/router/certificate setup below.
 
-See [BLUEPRINT_AUDIT.md](BLUEPRINT_AUDIT.md) for the remaining implementation order.
-Do not treat this guide as evidence of a real-device acceptance test. Verify
-large ADF batches, duplex orientation, interrupted writes, QR readability,
-printer completion reporting and power-cut recovery with the school's equipment.
-
-Feedback slips, blank answer sheets and labels print single-sided. Full marked
-reprints can use duplex; Margin pads odd-length scripts with a blank reverse so
-two students never share one physical sheet. Inspect paper handling on the actual
-printer during installation.
+Feedback slips, blank sheets and labels print single-sided. Full marked reprints can
+use duplex; odd-length scripts are padded to avoid two students sharing a sheet.
 
 ## Phone fallback
 

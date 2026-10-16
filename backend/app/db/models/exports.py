@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import BigInteger, ForeignKey, String
+from sqlalchemy import BigInteger, Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.clock import utcnow
@@ -27,6 +27,7 @@ class ExportStatus(StrEnum):
 class Export(IdMixin, Base):
     __tablename__ = "export"
 
+    anonymised: Mapped[bool] = mapped_column(Boolean, default=False)
     kind: Mapped[ExportKind] = mapped_column(str_enum(ExportKind, "export_kind"))
     # Null for a training dataset, which can span several exams.
     exam_id: Mapped[int | None] = mapped_column(ForeignKey("exam.id"), index=True)

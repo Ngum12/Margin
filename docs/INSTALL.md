@@ -23,8 +23,13 @@ For the copier inbox and direct printing, follow [Windows school setup](WINDOWS_
 git clone https://github.com/Ngum12/Margin.git
 cd Margin
 uv python install 3.12
-cd backend && uv sync --frozen && cd ..
-cd frontend && npm ci && npm run build && cd ..
+cd backend
+uv sync --frozen
+cd ..
+cd frontend
+npm ci
+npm run build
+cd ..
 ollama pull qwen3-vl:4b-instruct
 ```
 
@@ -106,10 +111,11 @@ cd ..
 python scripts/run.py
 ```
 
-Open http://127.0.0.1:8000 and sign in as `admin`. Then, under Settings:
+In production, open the HTTPS school address configured above and sign in as `admin`.
+Only local development/mock mode uses http://127.0.0.1:8000. Then, under Settings:
 1. Add teachers (Staff accounts).
 2. Create classes, assign a teacher to each, and add students. Names are optional; students
-   appear to the AI and on paper by code only.
+   have anonymous QR tokens. Named answer sheets are supported; grading images mask the printed header.
 
 `python scripts/run.py` starts the web app and the AI worker together, and applies any database
 updates first. Keep that window open, or run it as a service (section 7).
@@ -122,8 +128,9 @@ uv run python -m app.cli seed-demo
 ```
 
 This creates a teacher `demo` (you choose the password), the class "Form 5 Demo" with six students, and a
-ready chemistry exam with its cover sheets prepared. Print the cover sheets, have students (or
-colleagues) write answers, scan the stack and upload it, then start AI marking. It runs once.
+ready Chemistry, Mathematics and Economics exams. Use development/mock mode for a GPU-free
+demonstration, print sheets, write answers, scan to Margin (or use the upload fallback),
+and review the labelled Mock proposals. It runs once.
 
 ## 5. Check it works
 
@@ -156,7 +163,7 @@ Teachers open `https://<MARGIN_SITE>`, after installing Caddy's certificate (abo
 
 The images are pinned to exact versions (`docs/DEPENDENCIES.md`).
 
-## 6. Backups (do this every week, and before every update)
+## 6. Backups and restore
 
 ```
 cd backend
@@ -164,7 +171,9 @@ uv run python -m app.cli backup                       # writes data/backups/marg
 uv run python -m app.cli backup --out E:\margin-backup.zip   # or straight to a USB drive
 ```
 
-A backup can be taken while Margin runs. It holds the database and every stored scan and export.
+Take a nightly backup and one before every update. SQLite uses its online snapshot API;
+verified stored files are archived with SHA-256 checksums. Finish importing the copier pile
+first: in-progress `scan-inbox` files and logs are excluded.
 Copy it off the school box (to a USB drive kept somewhere else). **It contains student data:**
 store it as carefully as the exam papers.
 
@@ -176,13 +185,37 @@ uv run python -m app.cli restore --archive E:\margin-backup.zip --force
 uv run python -m app.cli migrate
 ```
 
-`--force` replaces the current data, so only use it when that is what you want.
+`--force` replaces the current data only after staging and validation. The previous directory
+is retained beside it as `data.before-restore-*`. Stop both web and worker before restoring;
+Windows file locks will otherwise prevent replacement. Restore into the standard directory
+containing `margin.db`; custom database paths must be configured separately afterwards.
+
+**Nightly Windows task:** from the repository root, in elevated PowerShell under the school
+Margin account, run `scripts\windows-install-backup-task.ps1 -BackupDirectory E:\MarginBackups`.
+It runs at 02:00 using the installed virtual environment, keeps 30 days, and prunes only after
+success. Run it manually once in Task Scheduler; check Last Run Result is 0. S4U tasks use local
+storage, so use a local/USB disk rather than a network share requiring a saved password.
+
+**Restore rehearsal, at installation and after updates:**
+1. Back up the school installation to an encrypted removable disk.
+2. On a spare machine/folder, set `MARGIN_DATA_DIR` to a new directory and restore the archive.
+3. Run migrations, start with the same installed model/configuration, and sign in.
+4. Open a known confirmed script: compare page count, marks and audit history.
+5. Check student isolation/release and print a test slip before declaring recovery successful.
+6. Keep the old installation and backup until the school approves the recovered data.
+
+The data archive excludes `.env`, Caddy configuration/certificate storage and Ollama models;
+keep those separately. A backup zip is not encrypted by Margin: use BitLocker or equivalent
+local disk encryption and restricted Windows account permissions.
 
 ## 7. Start Margin automatically
 
 - **Windows:** Task Scheduler → Create task → "At startup", action
   `python C:\path\to\Margin\scripts\run.py`, start in `C:\path\to\Margin`, and "Run whether user
-  is logged on or not". Ollama installs itself as a startup service.
+  is logged on or not". The Windows Ollama desktop app normally starts at user
+  sign-in, not as a system service. For an unattended box, configure a separate
+  startup task for `ollama serve` under the same account and test after a reboot;
+  do not run a second server if the desktop app already owns port 11434.
 - **Linux:** a systemd service running `python3 scripts/run.py` in the Margin folder, plus
   `systemctl enable ollama`.
 
@@ -190,8 +223,8 @@ uv run python -m app.cli migrate
 
 1. Back up (section 6).
 2. Stop Margin.
-3. Run `git pull`, then `cd backend && uv sync --frozen`, then
-   `cd ../frontend && npm ci && npm run build`.
+3. Run `git pull`. In `backend`, run `uv sync --frozen`. In `frontend`,
+   run `npm ci` and then `npm run build`. Return to the repository root.
 4. Start Margin again (database updates run automatically).
 
 ## Troubleshooting

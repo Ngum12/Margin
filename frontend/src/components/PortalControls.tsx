@@ -5,6 +5,7 @@ import { useLoad } from "./useLoad";
 import { ErrorMessage, Loading } from "./ui";
 
 interface Policy {
+  training_consent: boolean;
   enabled: boolean;
   remark_days: number;
   remark_max: number;
@@ -30,6 +31,7 @@ export function PortalSettings() {
           void request("PUT", "/api/portal/settings", {
             json: {
               enabled: data.has("enabled"),
+              training_consent: data.has("training_consent"),
               escalation: data.has("escalation"),
               class_average: data.has("class_average"),
               remark_days: Number(data.get("remark_days")),
@@ -41,7 +43,7 @@ export function PortalSettings() {
             .catch(setError);
         }}
       >
-        {(["enabled", "escalation", "class_average"] as const).map((key) => (
+        {(["enabled", "escalation", "class_average", "training_consent"] as const).map((key) => (
           <label key={key}>
             <input type="checkbox" name={key} defaultChecked={state.data[key]} />
             {t(`portal.${key}`)}

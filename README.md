@@ -1,265 +1,221 @@
-<div align="center">
-
 # Margin
 
-### The AI marking assistant that never lets student data leave the school
+Margin is an on-premise exam-marking assistant for schools. It reads handwritten
+scripts with a local model, proposes marks against a teacher-confirmed scheme,
+and leaves every final mark to the teacher. The interface is available in English
+and French. **Windows is the primary school installation path.**
 
-**Margin reads handwritten exam scripts, proposes marks against the teacher's own mark scheme,
-and shows exactly why. Then the teacher decides.** It runs on a single school computer with an
-open AI model, offline, in English and French.
+After an exam: **Scan on the photocopier → review in Margin → Print**. Uploads and
+PDF downloads remain fallbacks. Student results stay private until the teacher
+releases them. Optional home access serves each student's own released work over
+HTTPS from the school box; storage and AI never move to a third-party service.
 
-`On-premise` · `Offline` · `Open models only` · `Teacher-confirmed` · `English | Français`
+![Margin marking desk](docs/images/marking-desk.png)
 
-<img src="docs/images/marking-desk.png" alt="The Margin marking desk: a scanned answer page with the AI's red-pen marks on the left, and the mark scheme as a checklist with evidence line numbers on the right" width="900">
+*The screenshot uses synthetic demonstration data.*
 
-<sub>The marking desk, showing synthetic test data.</sub>
+## 1. Install once on the school Windows computer
 
-</div>
+Use a dedicated Windows account and a local SSD. A practical starting point is
+16 GB RAM, with enough disk space for the model, scans and backups. A GPU improves
+marking speed. Install Git, Python 3.12, uv, Node.js/npm, and—when using real AI—
+Ollama. Caddy provides HTTPS for school-network and optional home access.
+Approved versions and licences are in [DEPENDENCIES](docs/DEPENDENCIES.md).
 
----
+Open **PowerShell**. These installation commands need internet access once:
 
-## Why Margin
-
-A secondary-school teacher with five classes can face 200 scripts after a single exam: weekends
-of marking, and feedback that reaches students weeks later. AI could help, but the obvious tools
-send children's handwriting to a cloud company, and they mark on their own.
-
-Margin takes the other road:
-
-- **The data stays in the building.** Scans, transcriptions and marks live on one school
-  computer. The AI model runs on that same computer. Nothing is sent to a third-party AI service:
-  network calls are restricted to the school's configured model server and private-IP
-  printer. Tests guard these boundaries.
-- **QR codes contain no personal data.** Cover sheets carry a random QR token and a
-  pseudonymous student code. Names stay local; feedback slips can show the student
-  name, and names are not sent to the grading model.
-- **The AI proposes; the teacher decides.** No mark is final, and nothing is exported, until a
-  teacher confirms it. Every change is in an append-only audit log, and every AI output records
-  its model, model version and prompt version.
-
-## Windows school workflow
-
-**Windows is the school installation target.** See [Windows scanner and printer setup](docs/WINDOWS_SCHOOL_SETUP.md) for the copier share, IPP printer, test scan and test page. Automatic inbox intake and direct printing implement the first part of the [end-to-end audit](docs/BLUEPRINT_AUDIT.md). The student portal and home access remain planned; do not expose the current staff application publicly.
-
-## How it works
-
-```mermaid
-flowchart LR
-    A[Print answer sheets<br/>anonymous QR on every page] --> B[Students answer<br/>on paper]
-    B --> C[Copier scans to Margin<br/>PDF or images]
-    C --> D[Margin routes each page<br/>and flags missing pages]
-    D --> E[Check page orientation<br/>one click per page]
-    E --> F[Local AI reads each page<br/>and proposes marks with evidence]
-    F --> G[Teacher reviews<br/>at the marking desk]
-    G --> H[Print feedback slips<br/>or full marked copies]
-```
-
-1. **Set up the exam:** type the mark scheme or import it as CSV. It reads like a printed one.
-2. **Print answer sheets.** Each page has an anonymous QR; spare sheets and A4 labels are available.
-3. **Scan to Margin** from the copier. Margin archives and routes the pages automatically.
-   Anything it is not sure about goes to a tray with a plain reason, never a guess.
-4. **AI marking runs in the background**, often overnight: a progress bar, an estimated time
-   left, and the page being read right now.
-5. **Review at the marking desk.** For each mark scheme point the AI gives a proposed mark, its
-   evidence lines in the student's answer, a category ("conceptual error", "language /
-   expression"…) and its confidence. The scripts that most need attention come first.
-6. **Confirm and print.** Return original papers with a one-page feedback slip, or choose a
-   full marked reprint. Print one student, a selection, all confirmed or not yet printed.
-   The queue distinguishes sent, printed, failed and uncertain jobs. PDF download remains available.
-
-## The marking desk
-
-The screen where teachers spend their time is built for speed:
-
-| Key | Action |
-|---|---|
-| `J` / `K` | Next / previous script |
-| `←` / `→` | Previous / next question |
-| `↑` / `↓` | Previous / next mark scheme point |
-| `0`–`9` | Give that many marks |
-| `A` · `Shift+A` | Accept the AI's proposal · accept all remaining |
-| `E` | Show the evidence on the page |
-| `Enter` | Confirm marks |
-
-- The scanned page sits on the left, with an exercise-book margin line and the evidence for the
-  selected point highlighted across the page.
-- The checklist sits on the right: one question at a time, every point with its evidence line
-  numbers.
-- Confirming a script is the one animated moment: the total settles in green, like a stamp.
-
-<table>
-<tr>
-<td width="50%"><img src="docs/images/dashboard.png" alt="Dashboard: what needs you today, in order of work"><br><sub><b>What needs you today:</b> real counts, in the order of the work.</sub></td>
-<td width="50%"><img src="docs/images/page-check-fr.png" alt="Page check before AI marking, in French"><br><sub><b>Check page orientation</b>, fully in French.</sub></td>
-</tr>
-</table>
-
-## What teachers get
-
-- **Results that point to teaching.** A class table sorted any way you like, with each
-  question's class average and the share of students who scored zero. Topics worth reteaching
-  stand out.
-- **Exports:** a results CSV, marked PDFs per student or one print-ready file for the class, and
-  (with consent) a training-data export so the school's own model can learn from its teachers'
-  corrections.
-- **Notation printed properly:** CH₄, x², Na⁺ and → appear correctly in printed comments.
-- **Showing the mark scheme to students is optional**, per exam: "Missing: …" notes on their
-  copy, or only the teacher's own comments.
-
-## Built to be trusted
-
-| | |
-|---|---|
-| **Validated AI output** | Every model reply is checked against a strict, per-question schema. Invalid output is retried once, then the script is flagged for marking by hand. Margin never drops data and never invents a mark. |
-| **Honest about test output** | Output from the built-in test model is labelled "Test model: not real AI marking" everywhere it appears, and production refuses to start with it configured. |
-| **Resilient** | Long work runs in a background worker on a database job table. Jobs survive restarts, and the web app keeps working when the AI is busy or offline. |
-| **Secure** | Argon2 passwords, httpOnly secure session cookies, CSRF protection, administrator and teacher roles, and teachers see only their own classes. PDFs are processed in a separate, time-limited process. |
-| **Accessible** | WCAG AA contrast checked by a test on every colour pair, full keyboard use, visible focus everywhere, and colour never the only signal. |
-| **Bilingual** | Every string is in English and French, and a test keeps the two in step. |
-| **Permissive licences only** | No GPL/AGPL dependencies. Every package, font and icon is recorded with its licence ([`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)). |
-
-**Measured, not assumed.** Every change to the prompt or model is evaluated per subject: exact
-agreement, agreement within one mark, mean absolute difference, and over- versus under-marking.
-On the current synthetic evaluation set the default model (`qwen3-vl:4b-instruct`) matched the
-reference mark exactly on 81 % of questions, with a mean absolute difference of 0.25 marks. Real
-handwritten scripts are the next benchmark.
-
-## Get started
-
-**On a school computer, without Docker** (works on ordinary Windows laptops):
-
-```bash
-git clone https://github.com/Ngum12/Margin.git && cd Margin
+```powershell
+git clone https://github.com/Ngum12/Margin.git
+Set-Location Margin
+Copy-Item .env.example .env
+$env:UV_PYTHON_PREFERENCE = "only-managed"
 uv python install 3.12
-cd backend && uv sync --frozen && cd ..
-cd frontend && npm ci && npm run build && cd ..
-ollama pull qwen3-vl:4b-instruct
-python scripts/run.py        # http://127.0.0.1:8000
+Set-Location backend
+uv sync --frozen
+Set-Location ..\frontend
+npm ci
+npm run build
+Set-Location ..
 ```
 
-**With Docker:**
+Choose one mode in the new `.env` file:
 
-```bash
-cp deploy/compose.env.example .env.docker   # set MARGIN_SITE to this computer's address
-docker compose up -d --build
-docker compose exec ollama ollama pull qwen3-vl:4b-instruct
-```
-
-HTTPS on the school network comes from Caddy, with its own local certificate. Backups are one
-command: `python -m app.cli backup`. A demo class is one more: `python -m app.cli seed-demo`.
-
-**[Read the full installation guide](docs/INSTALL.md)**: first start, HTTPS and certificates,
-backups, updates and troubleshooting.
-
-## Under the hood
-
-```
-Browser (React + TypeScript) ──HTTPS──> Caddy ──> FastAPI app ──> SQLite (WAL) + local file store
-                                                       │
-                                            Worker (job table) ──> Ollama (local vision model)
-```
-
-- **Backend:** Python 3.12, FastAPI, SQLAlchemy 2, Alembic, pypdfium2 (rendered in a child
-  process), ReportLab for the marked PDFs, and Pillow for the red-pen layout.
-- **Frontend:** React 19 and TypeScript (strict), plain CSS from design tokens, and bundled fonts
-  (Literata, Atkinson Hyperlegible Next, Caveat). No CDN of any kind.
-- **AI:** the models sit behind `Reader` and `Marker` interfaces, with versioned prompts.
-  Swapping the model is a setting, followed by an evaluation.
-- **Quality:** about 650 automated tests (pytest, Vitest, Playwright in Edge), strict mypy, ruff
-  and ESLint. One command runs everything: `python scripts/check.py`.
-
-## Documentation
-
-| | |
+| Purpose | Settings |
 |---|---|
-| [Installation](docs/INSTALL.md) | School computer, Docker, HTTPS, backups |
-| [Design system](docs/DESIGN.md) | The "Marking desk" visual language, tokens and contrast ratios |
-| [Decisions](docs/DECISIONS.md) | Every design and product decision, with its reasons |
-| [Plan](docs/PLAN.md) | Phases and what comes next |
-| [Dependencies](docs/DEPENDENCIES.md) | Every dependency, its version and licence |
+| Demonstration on this computer, without a GPU | `MARGIN_ENV=development`, `MARGIN_AI_BACKEND=mock` |
+| Real school use | `MARGIN_ENV=production`, `MARGIN_AI_BACKEND=ollama`, `MARGIN_HOST=127.0.0.1` |
 
-## Status
+For real AI, install the local model once:
 
-Margin is in active development toward its first school pilot. Phases 0–5 are complete: accounts
-and classes, mark schemes, scanning and splitting, AI marking, teacher review, results and
-exports. Phase 6 (deployment, backup and the demo) is in progress. Next comes fine-tuning on
-teachers' corrections, so each school's model learns from its own teachers.
+```powershell
+ollama pull qwen3-vl:4b-instruct
+```
 
-<div align="center">
+Keep `MARGIN_MODEL_BASE_URL=http://127.0.0.1:11434` when Ollama is on the same
+computer. Production requires HTTPS and secure cookies. Follow the
+[HTTPS installation guide](docs/INSTALL.md#sign-in-over-the-school-network-https-with-caddy)
+before signing in from another computer. No public AI API key is required.
 
-**Margin: the AI does the reading; the teacher keeps the pen.**
+Create the school and administrator; the commands prompt privately for passwords:
 
-</div>
+```powershell
+Set-Location backend
+uv run python -m app.cli migrate
+uv run python -m app.cli init-school --name "Your School" --country Cameroon
+uv run python -m app.cli create-user --username admin --display-name "Administrator" --role admin
+Set-Location ..
+python scripts/run.py
+```
 
-### Comparing a mark scheme with its original
+Keep the launcher running: it starts **both the web app and background worker**.
+Run only one launcher/worker for the school database. On the same computer in
+demonstration mode, open `http://127.0.0.1:8000`. In production, open the HTTPS
+school address configured in Caddy. Startup uses the installed packages offline;
+updates and dependency installation are separate administrator actions.
 
-In exam setup, import PDF, DOCX, JPEG/PNG/TIFF or paste text. The worker uses the
-school's local model; mock mode leaves a manual draft and never invents an extraction.
-Compare the original beside the editor, check every point, save, then **Confirm mark
-scheme**. Add reject lists, method/accuracy dependencies, ECF, equivalent meaning,
-teacher-only items and any-N groups under **Examiner rules**. Confirmed schemes can
-be shared in the school's library. Imported drafts never start marking themselves.
+## 2. Connect the photocopier and printer
 
-Imports are limited to 20 MB. Legacy binary `.doc` is not currently accepted; save
-it as DOCX or PDF first. Very long schemes require shorter documents or manual
-entry. Real handwriting extraction still requires validation with the school's
-local model and real examiner documents; automated tests do not measure its accuracy.
+Follow [Windows school setup](docs/WINDOWS_SCHOOL_SETUP.md) in order:
 
-Automatic marking is on by default per exam. Complete per-page QR scripts start
-when the worker imports them; missing pages and unresolved identity/duplicate
-problems wait. Plain-paper fallback requires the teacher's orientation check.
-The worker checkpoints every read page and completed question. After a restart it
-resumes unfinished work. Teacher-only items require a manual mark before confirmation.
+1. In Settings, create the scan inbox. Run the supplied Windows SMB setup script
+   with a dedicated copier account and add the share as a copier shortcut named
+   **Margin**. Send a test scan and check its arrival in Settings.
+2. Enter the printer's private IP/IPP address, choose A4 and duplex defaults, and
+   print a test page. The printer must support direct PDF over IPP.
+3. Test a small shuffled, rotated, mixed-exam pile before using a whole class.
 
-### Using a phone instead of a copier
+QR answer sheets identify each page independently. Cover-sheet fallback stacks
+must stay together because their plain answer pages do not have page QR codes.
+Original scans are archived; unreadable files are quarantined with a reason.
 
-Open Margin on the school Wi-Fi and choose **Photograph scripts** on the home
-screen. Take or select a photograph, check the original and prepared page, adjust
-the crop if needed, then press **Use this page**. QR routing chooses the exam and
-student. Repeat for the next page. No app installation is needed.
+## 3. Teachers: class → exam → return
 
-Margin preserves the original, prepares colour images locally and uses QR geometry
-for small-angle straightening. It does not repair severely distorted or blurred
-photographs: retake those. Unreadable codes go to the attention tray; match the
-student **and page number**. Test the actual phone/browser and handwriting in the
-school before deployment. Photo preparation and pending previews survive restarts.
+1. **Class registers:** import XLSX/CSV (`Name` or `Nom`, optional `Code`), paste
+   one name per line, or select a register photo/PDF for local reading. Edit the
+   preview and confirm it. An existing student code preserves the same record;
+   blank codes create new records. Similar names never merge automatically.
+2. Arrange register order with the up/down buttons. Remove/restore students
+   without losing history. Exam membership is preserved once scanning starts.
+3. **New exam:** choose the subject and class. Import a scheme from PDF, DOCX,
+   photo/scan, pasted text or CSV. Compare the original and editable scheme, fix
+   highlighted problems, and confirm it. Reuse confirmed schemes from the school
+   library. Accepted alternatives, reject lists, any-N groups, M/A dependencies,
+   ecf and teacher-only items are supported.
+4. **Answer sheets:** print named per-page QR sheets, spare sheets, cover sheets
+   or A4 sticker labels. QR codes contain random checked tokens, not personal
+   details. Set the number of pages per student.
+5. **After the exam:** scan to **Margin**. Alternatively, open **Phone capture**
+   on school Wi-Fi, check the crop/straightening preview and accept it. Resolve
+   missing/unreadable/duplicate pages and match spare sheets. Record absences.
+6. Marking starts automatically by default when the scheme and pages are ready.
+   The background queue resumes completed page/question work after interruption.
+   Review the least-confident scripts first; teacher-only items need a human mark.
+7. **Confirm marks**, then **Print** or **Print all confirmed**. The default is
+   original papers plus one feedback slip per student. Full marked reprints,
+   selected students and not-yet-printed copies are available. Class output follows
+   the saved register order. Check uncertain jobs physically before retrying.
+8. **Results:** inspect question averages and zero-score shares, print the table,
+   set the term and export report-card Excel. Absent/unconfirmed totals stay blank.
+   Student history is available from the register.
 
-### Students, release and remarks
+Legacy binary `.doc` and `.xls` need conversion to DOCX/XLSX or PDF/CSV before
+import. Embedded images inside DOCX are not OCRed; submit their pages as PDF or
+photos. Long or doubtful model extractions remain editable drafts. Photo capture
+handles crop, rotation and modest skew; retake blurred or strongly distorted pages.
 
-Students open **Student sign in** from the sign-in page and use a school-issued
-code and initial PIN. Admins enable the portal in Settings; teachers print sign-in
-slips from the dashboard. The initial PIN must be changed before viewing work.
-Use **Results → Release results** to publish a confirmed class; **Unrelease** blocks
-student access again. Visibility defaults to marks and notes, with the scheme hidden.
+## 4. Students and home access
 
-Students can see only their own released work, colour pages, marks and progress.
-Remarks have a school-configurable window and limit (7 days and 3 questions by
-default). Replies and mark changes are audited. An optional head of department
-role handles one escalation, limited to the subject codes assigned by the admin.
-PIN reset revokes sessions; shared-computer sessions expire after inactivity.
+Admins enable **Settings → Student portal**. Teachers print private code/initial-PIN
+slips from **Student sign-in slips**; students choose their own PIN at first sign-in.
+Forgotten PINs can be reset, revoking existing sessions. Shared-computer sessions
+expire after inactivity. There is a visible sign-out button.
 
-Home internet access is optional and requires the school's own HTTPS hostname and
-network configuration. Follow [Windows school setup](docs/WINDOWS_SCHOOL_SETUP.md#optional-student-access-from-home).
-The public hostname exposes only the student portal; staff, scanner, printer and
-model endpoints remain private. DNS, certificates, router forwarding and external
-phone access need verification at the school.
+**Confirmation does not publish results.** Use **Results → Release results** after
+the class is confirmed or absent. Choose marks only, marks and notes (default), or
+marks, notes and scheme. Unrelease blocks further student access. Students see only
+their own released pages, marks, feedback and progress; no rankings are shown.
 
-### Class registers and report cards
+Students can request a question remark within the school window (default 7 days,
+maximum 3 questions per exam), select a page/location and write up to 500 characters.
+Teachers reply at the marking desk. Changes update totals and invalidate old print
+versions. Optional department heads handle one escalation, scoped by subject.
+Notifications stay inside Margin.
 
-Open **Class registers** on the dashboard. Import `.xlsx` or `.csv` with a `Name`
-(or `Nom`) column and an optional `Code` column, paste one name per line, or select
-a register photo/PDF for local reading. Check and edit the preview, then press
-**Confirm class list**. An existing Margin student code reuses that record; a
-blank code creates a new record. Names never merge automatically. Legacy `.xls`
-files must be saved as `.xlsx` or CSV first.
+For home internet access, follow
+[the public student-host instructions](docs/WINDOWS_SCHOOL_SETUP.md#optional-student-access-from-home).
+The school needs DNS, a reachable public IP/router and a trusted HTTPS certificate.
+Only student routes are public; staff, SMB, IPP and model ports stay private.
 
-Use the up/down buttons to arrange register order. Removing a student keeps their
-exam history; the record can be restored. Exam membership is preserved once scans
-arrive, so later class transfers do not alter an old exam's attendance. Teachers
-can manage their own classes; training consent remains an admin decision.
+## 5. Back up nightly and rehearse restore
 
-**Results → School report cards** sets the term and exports an Excel workbook in
-register order, with question marks, totals, percentages and status. Absent and
-unconfirmed students have blank marks. The results screen remains printable and
-shows question averages and the share scoring zero. Student history is available
-from the register and, for released work, from the student's own portal.
+Use a separate encrypted disk/location. To run a backup manually:
+
+```powershell
+Set-Location backend
+uv run python -m app.cli backup --out E:\MarginBackups\manual.zip
+```
+
+From the repository root, register the nightly Windows task once in elevated
+PowerShell under the school's Margin Windows account:
+
+```powershell
+.\scripts\windows-install-backup-task.ps1 -BackupDirectory E:\MarginBackups
+```
+
+The task runs at 02:00, keeps 30 days, and prunes only after a successful backup.
+Test it in Task Scheduler and check **Last Run Result = 0**. Keep an offline copy.
+Backups include a SQLite snapshot and checksummed stored files. In-progress copier
+inbox files and logs are excluded; finish importing the pile before the nightly run.
+
+To restore, **stop Margin and its worker first**. From `backend`:
+
+```powershell
+uv run python -m app.cli restore --archive E:\MarginBackups\manual.zip --force
+```
+
+Restore validates paths, checksums and database integrity before replacing data.
+It keeps the previous directory beside the restored one as `data.before-restore-*`.
+Start Margin, check a known script and its marks, and print a test slip. Restore
+uses the standard data directory containing `margin.db`. Keep `.env`, Caddy's
+configuration/certificate storage and the Ollama model separately; they are not
+in the application-data backup. See [the restore checklist](docs/INSTALL.md#6-backups-and-restore).
+
+## 6. Demonstrate and verify
+
+In demonstration mode (`development` + `mock`), run once from `backend`:
+
+```powershell
+uv run python -m app.cli seed-demo
+```
+
+This creates the `demo` teacher, six fictional students and ready Chemistry,
+Mathematics and Economics exams. Mock results are labelled and do not represent
+real handwriting recognition or marking accuracy. No GPU is needed for this flow.
+
+For developers, run **all checks** from the repository root:
+
+```powershell
+python scripts/check.py
+```
+
+This runs Python formatting/lint/types/tests, licence notices, frontend
+formatting/lint/types/tests/build and browser tests. Browser checks use installed
+Edge; `MARGIN_BROWSER_PATH` can select another installed Chromium browser.
+
+## Privacy and deployment notes
+
+- School-local storage and inference; bundled fonts/assets; no telemetry or external AI.
+- Teacher changes, confirmations, imports, printing and deletions are audited.
+- School training opt-in and individual consent are off by default. Local correction
+  records support future school-side learning. Export contains anonymous correction
+  statistics only, suppressing groups below five students; handwriting, names,
+  identifiers and free text are excluded. Nothing is sent automatically. Legacy
+  training archives are blocked from download.
+- Windows SMB/Task Scheduler, copier feeding, IPP job completion/duplex, cheap Android
+  cameras and public DNS/TLS/router access require acceptance tests at the school.
+  Automated checks in this workspace do not establish real model accuracy or prove
+  physical printer completion.
+
+More: [Windows setup](docs/WINDOWS_SCHOOL_SETUP.md) · [Installation](docs/INSTALL.md) ·
+[Blueprint audit](docs/BLUEPRINT_AUDIT.md) · [Decisions](docs/DECISIONS.md) ·
+[Architecture and rules](CLAUDE.md) · [Dependencies](docs/DEPENDENCIES.md).

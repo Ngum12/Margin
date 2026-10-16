@@ -54,3 +54,64 @@ def test_restore_refuses_a_zip_that_is_not_a_backup(tmp_path: Path) -> None:
         archive.writestr("../evil.txt", "x")
     with pytest.raises(ValueError, match="not a Margin backup"):
         backup.restore(_settings(tmp_path / "t"), bad)
+
+
+def test_backup_in_data_directory_does_not_include_itself(tmp_path: Path) -> None:
+    import json
+    import zipfile
+
+    source = tmp_path / "school"
+    _make_install(source)
+    target = source / "manual.zip"
+    backup.backup(_settings(source), target)
+    with zipfile.ZipFile(target) as archive:
+        assert "manual.zip" not in archive.namelist()
+        assert not any(name.endswith(".partial") for name in archive.namelist())
+        manifest = json.loads(archive.read("backup-manifest.json"))
+        assert "margin.db" in manifest["sha256"]
+
+
+@pytest.mark.parametrize(
+    "unsafe", ["../escape", "C:/escape", "folder\\escape", "CON.txt", "file:stream"]
+)
+def test_restore_rejects_unsafe_paths_before_touching_existing_data(
+    tmp_path: Path, unsafe: str
+) -> None:
+    import zipfile
+
+    source = tmp_path / "school"
+    _make_install(source)
+    original = (source / "margin.db").read_bytes()
+    bad = tmp_path / "bad.zip"
+    with zipfile.ZipFile(bad, "w") as archive:
+        archive.writestr("margin.db", b"not a database")
+        archive.writestr(unsafe, b"untrusted")
+    with pytest.raises(ValueError, match=r"Unsafe path|Windows device"):
+        backup.restore(_settings(source), bad, force=True)
+    assert (source / "margin.db").read_bytes() == original
+
+
+def test_corrupt_backup_never_replaces_live_data_and_success_keeps_rollback(tmp_path: Path) -> None:
+    import json
+    import zipfile
+
+    source = tmp_path / "school"
+    _make_install(source)
+    original = (source / "margin.db").read_bytes()
+    valid = backup.backup(_settings(source), tmp_path / "valid.zip")
+    bad = tmp_path / "bad.zip"
+    with zipfile.ZipFile(valid) as archive, zipfile.ZipFile(bad, "w") as changed:
+        for name in archive.namelist():
+            content = archive.read(name)
+            if name == "backup-manifest.json":
+                manifest = json.loads(content)
+                manifest["sha256"]["margin.db"] = "0" * 64
+                content = json.dumps(manifest).encode()
+            changed.writestr(name, content)
+    with pytest.raises(ValueError, match="checksum"):
+        backup.restore(_settings(source), bad, force=True)
+    assert (source / "margin.db").read_bytes() == original
+    backup.restore(_settings(source), valid, force=True)
+    previous = list(tmp_path.glob("school.before-restore-*"))
+    assert len(previous) == 1
+    assert (previous[0] / "margin.db").read_bytes() == original

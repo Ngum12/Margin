@@ -1,5 +1,5 @@
-"""Demo data for showing Margin (Phase 6): a teacher, a class of six students and a chemistry exam
-whose mark scheme is ready and whose cover sheets are prepared. Everything goes through the
+"""Demo data: one teacher, six students, and Chemistry, Mathematics and Economics exams
+whose mark schemes are ready and whose cover sheets are prepared. Everything goes through the
 normal services, so it is audited like real work. Run once; it refuses to run twice."""
 
 from sqlalchemy import select
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ExamStatus, Role, School, User
 from app.schemas.accounts import UserCreateIn
 from app.schemas.classes import ClassIn
-from app.schemas.mark_scheme import MarkSchemeIn, PointIn, QuestionIn
+from app.schemas.mark_scheme import MarkSchemeIn, PointGroup, PointIn, PointRules, QuestionIn
 from app.services import classes, cover_sheets, exams, students
 from app.services.users import create_user_unchecked
 
@@ -52,6 +52,55 @@ DEMO_SCHEME = MarkSchemeIn(
 )
 
 
+MATH_SCHEME = MarkSchemeIn(
+    questions=[
+        QuestionIn(
+            label="1",
+            prompt_text="Solve 2x + 3 = 7.",
+            max_marks=2,
+            points=[
+                PointIn(
+                    description="Subtracts 3 from both sides: 2x = 4",
+                    marks=1,
+                    rules=PointRules(key="M1", kind="M"),
+                ),
+                PointIn(
+                    description="x = 2",
+                    marks=1,
+                    rules=PointRules(key="A1", kind="A", depends_on=["M1"]),
+                ),
+            ],
+        )
+    ]
+)
+ECONOMICS_SCHEME = MarkSchemeIn(
+    questions=[
+        QuestionIn(
+            label="1(a)",
+            prompt_text="Define opportunity cost.",
+            max_marks=1,
+            points=[
+                PointIn(
+                    description="The next best alternative forgone",
+                    marks=1,
+                    alternatives=["Value of the best alternative given up"],
+                )
+            ],
+        ),
+        QuestionIn(
+            label="1(b)",
+            prompt_text="State two factors that shift demand.",
+            max_marks=2,
+            groups=[PointGroup(key="any2", max_points=2, max_marks=2)],
+            points=[
+                PointIn(description=text, marks=1, rules=PointRules(group="any2"))
+                for text in ["Consumer income", "Tastes and preferences", "Price of a related good"]
+            ],
+        ),
+    ]
+)
+
+
 class DemoExistsError(Exception):
     pass
 
@@ -83,16 +132,20 @@ def seed_demo(db: Session, password: str) -> tuple[str, int]:
     )
     db.flush()
     students.add_students(db, admin, klass.id, DEMO_STUDENTS)
-    exam = exams.create_exam(
-        db,
-        teacher,
-        class_id=klass.id,
-        subject_code="chemistry",
-        title="Demo: Chemistry term test",
-        exam_date=None,
-    )
-    db.flush()
-    exams.replace_mark_scheme(db, teacher, exam.id, DEMO_SCHEME)
-    exams.set_status(db, teacher, exam.id, ExamStatus.READY)
-    cover_sheets.prepare_sheets(db, teacher, exam.id)
-    return teacher.username, exam.id
+    first_exam = 0
+    for subject, title, scheme in [
+        ("chemistry", "Demo: Chemistry term test", DEMO_SCHEME),
+        ("mathematics", "Demo: Mathematics term test", MATH_SCHEME),
+        ("economics", "Demo: Economics term test", ECONOMICS_SCHEME),
+    ]:
+        exam = exams.create_exam(
+            db, teacher, class_id=klass.id, subject_code=subject, title=title, exam_date=None
+        )
+        exam.term = "Demo term"
+        db.flush()
+        exams.replace_mark_scheme(db, teacher, exam.id, scheme)
+        exams.set_status(db, teacher, exam.id, ExamStatus.READY)
+        cover_sheets.prepare_sheets(db, teacher, exam.id)
+        if not first_exam:
+            first_exam = exam.id
+    return teacher.username, first_exam

@@ -6,7 +6,8 @@ On-premise AI marking assistant for secondary schools. Full requirements: `PROJE
 The owner approved the eight-item end-to-end blueprint and dependencies on 2026-10-16,
 with Windows as the school deployment target. The blueprint supersedes the original
 brief's portal exclusion, pseudonymous-only printed sheets and phase-stop rule.
-Build items 1–6 are committed; item 7 is in progress. Document import currently
+Build items 1–8 are implemented. Real Windows, copier/printer and public-domain
+acceptance remain installation checks (see docs/BLUEPRINT_AUDIT.md). Document import currently
 supports PDF/DOCX/images/text, with legacy binary DOC conversion still unavailable.
 Continue the approved build order without requesting approval between items.
 Run `python scripts/check.py` in full, read its output and commit after each item.
@@ -26,9 +27,9 @@ released records from the school box, never external AI or third-party storage.
 - Commit both lockfiles (`backend/uv.lock`, `frontend/package-lock.json`).
 
 ## Non-negotiables (breaking any is a critical bug)
-- **Data stays in the school.** The only outbound network calls go to the configured model server (`MARGIN_MODEL_BASE_URL`, default local Ollama). No telemetry, analytics, external fonts, CDNs or third-party scripts; all assets bundled locally. A test must fail on any other outbound connection (Phase 3).
-- **Pseudonymous codes only** on paper and to models. Real names optional, local DB only, never sent to a model, never logged.
-- **Auth:** Argon2 passwords, httpOnly secure session cookies, CSRF on unsafe methods, roles `admin`/`teacher`; a teacher sees only their own classes and exams.
+- **Data stays in the school.** Outbound connections are restricted to the school printer (IPP) and configured model server (`MARGIN_MODEL_BASE_URL`, default local Ollama). No telemetry, analytics, external fonts, CDNs or third-party scripts; all assets bundled locally. A test must fail on any other outbound connection (Phase 3).
+- **QR tokens contain no personal data.** Named sheets and local register/spare-name recognition are approved; names are excluded from grading inputs, logs and training exports. Training exports contain consented, small-group-suppressed aggregate statistics only.
+- **Auth:** Argon2 passwords, httpOnly secure session cookies, CSRF on unsafe methods, roles `admin`/`head_of_department`/`teacher`, plus separate student accounts; server-side class/subject/own-record scopes apply.
 - **Files:** uploads and images stored outside served directories (`MARGIN_DATA_DIR`), served only through authenticated endpoints; validate type and size; PDFs are untrusted input.
 - **Secrets** from env or git-ignored `.env`, never in code.
 - **AI never finalises a mark.** Teacher confirmation required before export.
@@ -56,7 +57,7 @@ Browser (React/TS, Vite build) --> FastAPI app (backend/app) --> SQLite (WAL) vi
 - **Marks:** stored as integer half marks (`app/marks.py`, D-018); the API and UI use whole marks.
 - **Schema changes:** edit models, run `cd backend && uv run alembic revision --autogenerate -m "..."`, review the file (delete the duplicate enum CHECK constraints Alembic emits), and keep `tests/test_migrations.py` passing.
 - **Scans (Phase 2):** cover sheets carry `MA1-<token>-<check>` QR codes, never ids (`app/sheets/`). Uploads are streamed raw (`application/pdf`), stored unchanged with SHA-256 (`uploads/<id>/original.pdf`), and rendered by a child process with a timeout (`app/pdf/render_worker.py`, `runner.py`; never import PDFium in the web process). `app/services/splitting.py` is the pure placement logic: never assign by guess; anything uncertain goes to the tray with a reason (`UnassignedReason`, translated under `scans.reason.*`). Processing is idempotent and resumed on start-up (`upload_processor.py`) until Phase 3 moves it to the job table.
-- **AI pipeline (Phase 3):** long work runs only in the worker (`python -m app.worker`, `app/worker/`) from the `job` table (`app/services/jobs.py`); handlers must stay idempotent. Models sit behind `Reader`/`Marker` (`app/ai/types.py`); pick with `MARGIN_AI_BACKEND=mock|ollama`. Prompts are versioned files (`app/ai/prompts/`). Model output is validated strictly (`app/ai/validation.py`); after retries the script is flagged for manual marking, never guessed. Only `app/ai/ollama_client.py` may open network connections (tests enforce it). Measure any model or prompt change with `uv run python -m app.cli evaluate --data <folder> --backend ollama --report r.json`.
+- **AI pipeline (Phase 3):** long work runs only in the worker (`python -m app.worker`, `app/worker/`) from the `job` table (`app/services/jobs.py`); handlers must stay idempotent. Models sit behind `Reader`/`Marker` (`app/ai/types.py`); pick with `MARGIN_AI_BACKEND=mock|ollama`. Prompts are versioned files (`app/ai/prompts/`). Model output is validated strictly (`app/ai/validation.py`); after retries the script is flagged for manual marking, never guessed. Only approved local model and printer clients may open network connections (tests enforce the boundary). Measure any model or prompt change with `uv run python -m app.cli evaluate --data <folder> --backend ollama --report r.json`.
 - **Deployment modes (D-052):** school box now; district hub and Margin-hosted cloud later, same code. Never assume the model server or the database is on the browser's machine; keep the model host configurable.
 - **When to evaluate (owner, 2026-10-15):** no more evaluations on the synthetic set until real handwritten scripts exist. Re-evaluate only when the prompt or the model changes, always overnight, with only the design in use and cached transcriptions.
 - **Evaluation reports** must give, per subject: exact agreement, agreement within 1 mark, mean absolute difference, and over- versus under-marking counts (owner, 2026-10-15).

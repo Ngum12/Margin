@@ -270,7 +270,9 @@
       "nothing_confirmed": "There are no confirmed scripts to export yet.",
       "nothing_consented": "None of the chosen exams has a confirmed script of a student with training consent.",
       "not_ready": "The file is not ready yet.",
-      "failed": "The file could not be prepared. Try again."
+      "failed": "The file could not be prepared. Try again.",
+      "school_consent": "Enable the school training opt-in in Settings first.",
+      "legacy_private": "This older training archive contains private source data. Create a new anonymous statistics export."
     },
     "hardware": {
       "no_printer": "Ask the administrator to configure a printer in Settings.",
@@ -674,7 +676,7 @@
     "serverReachable": "model server reachable",
     "configHelp": "Models are changed in the installation's configuration file, not here.",
     "exportTitle": "Training-data export",
-    "exportHelp": "Exports confirmed scripts of students whose training consent is recorded: page images, the final transcriptions, and the teacher's marks next to the AI's proposals. Students appear by code only.",
+    "exportHelp": "Exports anonymous correction statistics from confirmed work with school and individual consent. Groups below five students are suppressed. Enable the school opt-in in Settings first.",
     "noConfirmed": "No exam has confirmed scripts yet.",
     "include": "Include",
     "includeExam": "Include {{title}}",
@@ -682,7 +684,7 @@
     "consented": "With consent",
     "export_one": "Export {{count}} script",
     "export_other": "Export {{count}} scripts",
-    "privacy": "Every export is recorded in the audit log. Check the files before sharing them outside the school: a student may have written a name on an answer page."
+    "privacy": "Handwriting, names, identifiers and free text stay on the school box. No export is sent automatically. Every export is audited."
   },
   "testModel": {
     "short": "Test model: not real AI marking",
@@ -1065,7 +1067,8 @@
     "signout": "Sign out",
     "average": "Class average: {{marks}}",
     "pointOnPage": "Tap the place on your page (optional)",
-    "examNumber": "Exam {{number}}"
+    "examNumber": "Exam {{number}}",
+    "training_consent": "Allow local learning from individually consented corrections"
   },
   "register": {
     "title": "Class registers",

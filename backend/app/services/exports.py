@@ -197,6 +197,11 @@ def dataset_preview(db: Session, actor: User) -> list[ConsentCount]:
 
 def consented_scripts(db: Session, exam: Exam) -> list[Script]:
     """Confirmed scripts of students with training consent: the only ones in a dataset."""
+    from app.db.models import School
+
+    school = db.get(School, exam.school_class.school_id)
+    if not school or not school.portal_settings.get("training_consent", False):
+        return []
     return [s for s in exportable_scripts(db, exam) if s.student.training_consent]
 
 
@@ -204,13 +209,17 @@ def request_dataset(
     db: Session, actor: User, exam_ids: list[int] | None, settings: Settings
 ) -> Export:
     require_admin(actor)
+    if not actor.school.portal_settings.get("training_consent", False):
+        raise ConflictError("School training opt-in is required", code="export.school_consent")
     exams = _dataset_exams(db, actor, exam_ids)
     if not any(consented_scripts(db, exam) for exam in exams):
         raise ConflictError(
             "No confirmed scripts of consenting students", code="export.nothing_consented"
         )
     stamp = utcnow().strftime("%Y%m%d-%H%M")
-    export = _record(db, actor, ExportKind.DATASET, None, f"margin-dataset-{stamp}.zip")
+    export = _record(
+        db, actor, ExportKind.DATASET, None, f"margin-correction-statistics-{stamp}.zip"
+    )
     jobs.enqueue(
         db,
         JobType.EXPORT_DATASET,
@@ -236,7 +245,7 @@ def get_visible_export(db: Session, actor: User, export_id: int) -> Export:
     if export is None or export.school_id != actor.school_id:
         raise NotFoundError("Export")
     if export.kind == ExportKind.DATASET:
-        if not actor.is_admin:
+        if not actor.is_admin or not actor.school.portal_settings.get("training_consent", False):
             raise NotFoundError("Export")
     elif (
         export.exam_id is None
@@ -253,6 +262,11 @@ def export_file(export: Export, settings: Settings) -> str:
     """The stored file's path relative to MARGIN_DATA_DIR."""
     if export.status != ExportStatus.DONE or not export.file_path:
         raise ConflictError("The file is not ready", code="export.not_ready")
+    if export.kind == ExportKind.DATASET and not export.anonymised:
+        raise ConflictError(
+            "Legacy training archive is private; create an anonymous export",
+            code="export.legacy_private",
+        )
     return export.file_path
 
 
@@ -289,14 +303,17 @@ def build_class_pdf(db: Session, export: Export, settings: Settings) -> None:
 
 def build_dataset(db: Session, export: Export, exam_ids: list[int], settings: Settings) -> None:
     user = db.get(User, export.requested_by_id)
-    if user is None:  # pragma: no cover
-        return
+    if user is None or not user.is_active or not user.is_admin:
+        raise NotFoundError("Requester")
+    if not user.school.portal_settings.get("training_consent", False):
+        raise ConflictError("School consent withdrawn", code="export.school_consent")
     exams = [
         (exam, consented_scripts(db, exam))
         for exam in db.scalars(select(Exam).where(Exam.id.in_(exam_ids)).order_by(Exam.id))
     ]
     path, relative = _target(export, settings)
     counts = write_dataset(db, [(e, s) for e, s in exams if s], settings.data_dir, path)
+    export.anonymised = True
     _finish(db, export, path, relative)
     _audit_export(
         db,

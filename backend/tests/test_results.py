@@ -12,7 +12,6 @@ from typing import Any
 import pypdfium2 as pdfium
 import pytest
 from fastapi import FastAPI
-from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -69,6 +68,7 @@ def marked(
 ) -> dict[str, Any]:
     """Three Mock-marked scripts. AAAAAA (consent) and CCCCCC (no consent) are confirmed;
     BBBBBB (consent) is not. AAAAAA lost a mark on its second point and has a comment."""
+    world.school.portal_settings = {"training_consent": True}
     for code, name in NAMES.items():
         student = factory.student(world.class_a, code, name)
         student.training_consent = code != "CCCCCC"
@@ -312,23 +312,10 @@ def test_dataset_holds_only_confirmed_scripts_of_consenting_students(
     archive = _dataset(app, admin)
 
     lines = [json.loads(line) for line in archive.read("dataset.jsonl").decode().splitlines()]
-    assert [line["student_code"] for line in lines] == ["AAAAAA"]  # not BBBBBB, not CCCCCC
-    line = lines[0]
-    assert line["exam"]["subject"] == "chemistry"
-    assert line["exam"]["curriculum"] == "cm_gce_ol"
-    assert line["total"] == 2
-    point = line["questions"][0]["points"][1]
-    assert (point["final_marks"], point["final_category"]) == (0, "omitted")
-    assert point["proposal"]["marks"] == 1  # the model's original proposal kept alongside
-    assert point["proposal"]["model"] == "mock-marker"
-    assert point["proposal"]["prompt_version"].startswith("marker-lines-v3#")
-    answer = line["pages"][1]
-    assert answer["transcription"].startswith("1(a)")
-    assert answer["reader_prompt_version"].startswith("reader-v2#")
-    for page in line["pages"]:
-        assert page["image"] in archive.namelist()
+    assert lines == []  # One consenting student is below the five-student threshold.
+    assert json.loads(archive.read("manifest.json"))["groups"] == 0
     event = db.scalars(select(AuditEvent).where(AuditEvent.action == "export")).one()
-    assert event.new_value | {"exams": 1, "scripts": 1, "pages": 2} == event.new_value
+    assert event.new_value | {"exams": 1, "scripts": 1, "pages": 0} == event.new_value
 
 
 def test_dataset_contains_no_names_anywhere(
@@ -348,16 +335,23 @@ def test_dataset_readme_describes_every_field(
 ) -> None:
     archive = _dataset(app, admin)
     readme = archive.read("README.md").decode("utf-8")
-    line = json.loads(archive.read("dataset.jsonl").decode().splitlines()[0])
-    fields = set(line) | set(line["exam"]) | set(line["pages"][0]) | set(line["questions"][0])
-    fields |= set(line["questions"][0]["points"][0]) | set(
-        line["questions"][0]["points"][0]["proposal"]
-    )
-    missing = [f for f in fields if f"`{f}`" not in readme]
-    assert missing == []
+    fields = {
+        "format_version",
+        "kind",
+        "max_marks",
+        "category",
+        "count",
+        "mean_proposed_marks",
+        "mean_final_marks",
+        "correction_count",
+        "reason",
+        "changed_count",
+        "mean_change",
+    }
+    assert all(f"`{field}`" in readme for field in fields)
 
 
-def test_dataset_images_are_upright(
+def test_dataset_never_exports_handwriting_even_when_rotated(
     app: FastAPI, admin: ApiUser, marked: dict[str, Any], db: Session, settings: Any
 ) -> None:
     page = db.scalars(
@@ -365,13 +359,9 @@ def test_dataset_images_are_upright(
     ).one()
     page.rotation_teacher = 90
     db.commit()
-    with Image.open(settings.data_dir / page.image_path) as image:
-        stored = image.size
-
     archive = _dataset(app, admin)
-
-    exported = Image.open(io.BytesIO(archive.read(f"images/{marked['exam_id']}_AAAAAA_p2.jpg")))
-    assert exported.size == (stored[1], stored[0])  # turned a quarter
+    assert set(archive.namelist()) == {"dataset.jsonl", "README.md", "manifest.json"}
+    assert b"AAAAAA" not in archive.read("dataset.jsonl")
 
 
 def test_dataset_is_admin_only(alice: ApiUser, marked: dict[str, Any]) -> None:
@@ -380,8 +370,10 @@ def test_dataset_is_admin_only(alice: ApiUser, marked: dict[str, Any]) -> None:
 
 
 def test_dataset_with_no_consented_script_is_refused(
-    admin: ApiUser, alice: ApiUser, world: World
+    admin: ApiUser, alice: ApiUser, world: World, db: Session
 ) -> None:
+    world.school.portal_settings = {"training_consent": True}
+    db.commit()
     exam = make_ready_exam(alice, world.class_a.id)
     response = admin.post("/api/admin/training-export", json={"exam_ids": [exam["id"]]})
     assert response.status_code == 409
@@ -478,3 +470,72 @@ def test_bundled_fonts_match_the_approved_files() -> None:
             assert hashlib.sha256((fonts.FONT_DIR / name).read_bytes()).hexdigest() == digest
     assert ord(fonts.TICK) in fonts._covered(fonts.SYMBOLS)
     assert ord(fonts.CROSS) in fonts._covered(fonts.SYMBOLS)
+
+
+def test_anonymous_statistics_require_school_opt_in_and_suppress_identifiers(
+    app: FastAPI,
+    admin: ApiUser,
+    marked: dict[str, Any],
+    db: Session,
+    factory: Factory,
+    world: World,
+) -> None:
+    from app.clock import utcnow
+    from app.db.models import ScriptStatus
+
+    original = db.get_one(Script, marked["a"])
+    decisions = list(db.scalars(select(MarkDecision).where(MarkDecision.script_id == original.id)))
+    for code in ("DDDDDD", "EEEEEE", "FFFFFF", "GGGGGG"):
+        student = factory.student(world.class_a, code, "Private handwritten name")
+        student.training_consent = True
+        copy = Script(
+            exam_id=original.exam_id,
+            student_id=student.id,
+            status=ScriptStatus.CONFIRMED,
+            confirmed_by_id=world.teacher_a.id,
+            confirmed_at=utcnow(),
+        )
+        db.add(copy)
+        db.flush()
+        for decision in decisions:
+            db.add(
+                MarkDecision(
+                    script_id=copy.id,
+                    mark_scheme_point_id=decision.mark_scheme_point_id,
+                    ai_run=0,
+                    proposed_half_marks=decision.proposed_half_marks,
+                    final_half_marks=decision.final_half_marks,
+                    final_category=decision.final_category,
+                    evidence="Private handwritten name",
+                )
+            )
+    db.commit()
+    archive = _dataset(app, admin)
+    rows = [json.loads(line) for line in archive.read("dataset.jsonl").splitlines()]
+    assert rows
+    assert sum(row["count"] for row in rows) == 15
+    for member in archive.namelist():
+        content = archive.read(member)
+        assert b"Private handwritten name" not in content
+        assert b"AAAAAA" not in content
+    world.school.portal_settings = {"training_consent": False}
+    db.commit()
+    assert (
+        admin.post("/api/admin/training-export", json={}).json()["code"] == "export.school_consent"
+    )
+    export = db.scalars(select(Export).order_by(Export.id.desc())).first()
+    assert export
+    assert admin.get(f"/api/exports/{export.id}/file").status_code == 404
+
+
+def test_legacy_private_dataset_download_is_blocked(
+    app: FastAPI, admin: ApiUser, marked: dict[str, Any], db: Session
+) -> None:
+    _dataset(app, admin)
+    export = db.scalars(select(Export).order_by(Export.id.desc())).first()
+    assert export
+    export.anonymised = False
+    db.commit()
+    response = admin.get(f"/api/exports/{export.id}/file")
+    assert response.status_code == 409
+    assert response.json()["code"] == "export.legacy_private"
