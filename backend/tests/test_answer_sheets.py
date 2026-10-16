@@ -156,3 +156,56 @@ def test_sheet_permission_and_label_stock(app: FastAPI, world: World, factory: F
         assert sheet
         assert sheet.layout == "labels"
         assert db.scalar(select(Student.display_name)) == "Private Name"
+
+
+def test_automatic_start_waits_for_every_numbered_page(
+    app: FastAPI, world: World, factory: Factory, settings: Settings, tmp_path: Path
+) -> None:
+    from app.db.models import Job, ScriptStatus
+    from app.services.automatic_marking import tick
+    from tests.factories import run_jobs
+
+    alice = ApiUser(app, "alice")
+    factory.student(world.class_a, "CCCCCC")
+    exam = make_ready_exam(alice, world.class_a.id)
+    sheets = alice.post(
+        f"/api/exams/{exam['id']}/answer-sheets",
+        json={"pages_per_student": 2, "spares": 0, "request_key": "auto" * 8},
+    ).json()
+    images = render_pdf_pages(alice.get(sheets["download_url"]).content)
+
+    def ingest(index: int) -> None:
+        path = tmp_path / f"auto{index}.pdf"
+        path.write_bytes(ScanBuilder().add(images[index]).build())
+        with app.state.sessionmaker() as db:
+            batch = scan_inbox.receive(db, world.school.id, path, settings)
+            assert batch
+            batch_id = batch.id
+            db.commit()
+        scan_inbox.process(app.state.sessionmaker, settings, batch_id)
+
+    ingest(0)
+    assert tick(app.state.sessionmaker, settings) == 0
+    ingest(1)
+    assert tick(app.state.sessionmaker, settings) == 1
+    assert tick(app.state.sessionmaker, settings) == 0
+    with app.state.sessionmaker() as db:
+        assert len(list(db.scalars(select(Job)))) == 1
+    run_jobs(app)
+    with app.state.sessionmaker() as db:
+        assert db.scalars(select(Script)).one().status == ScriptStatus.AI_MARKED
+    assert (
+        alice.get(f"/api/exams/{exam['id']}/queue").json()["items"][0]["lifecycle"]
+        == "ready_for_review"
+    )
+    bruno = ApiUser(app, "bruno")
+    assert (
+        bruno.put(f"/api/exams/{exam['id']}/automatic-marking", json={"enabled": False}).status_code
+        == 404
+    )
+    assert (
+        alice.put(f"/api/exams/{exam['id']}/automatic-marking", json={"enabled": False}).json()[
+            "auto_start_marking"
+        ]
+        is False
+    )

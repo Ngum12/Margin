@@ -215,7 +215,8 @@ function QueueRow({
       </td>
       <td>
         <span className={`badge badge-script-${item.status}`}>
-          {t(`scriptStatus.${item.status}`)}
+          {item.lifecycle ? t(`lifecycle.${item.lifecycle}`) : t(`scriptStatus.${item.status}`)}
+          {item.printed && <> · {t("lifecycle.printed")}</>}
         </span>
         {item.test_model && (
           <>

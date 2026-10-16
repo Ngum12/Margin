@@ -911,5 +911,21 @@
       "manual": "Manual review needed",
       "succeeded": "Finished"
     }
+  },
+  "automaticMarking": {
+    "enabled": "Start marking when scans arrive",
+    "help": "Complete QR scripts start automatically. Plain-paper answers still need an orientation check. Every mark requires teacher confirmation.",
+    "addAndRemark": "Match page and re-mark if needed"
+  },
+  "lifecycle": {
+    "awaiting_scan": "Awaiting scan",
+    "scanned": "Scanned",
+    "needs_attention": "Needs attention",
+    "marking": "Marking",
+    "ready_for_review": "Ready for review",
+    "confirmed": "Confirmed",
+    "released": "Released to students",
+    "remark_requested": "Remark requested",
+    "printed": "Printed"
   }
 }

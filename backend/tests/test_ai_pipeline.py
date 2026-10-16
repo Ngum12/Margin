@@ -154,6 +154,8 @@ def test_marker_failure_on_one_question_keeps_the_others_and_flags(
     class HalfMarker(MockMarker):
         def mark(self, transcription, exam):  # type: ignore[no-untyped-def]
             proposal = super().mark(transcription, exam)
+            if exam.questions[0].label != "1(a)":
+                return proposal
             failed = proposal.questions[0].question_id
             return type(proposal)(
                 proposal.questions[1:],
@@ -274,3 +276,139 @@ def test_reader_time_out_flags_the_script_with_its_own_reason(
     assert [s.manual_reason for s in scripts] == ["ai.reader_timeout"] * 2
     jobs = db.scalars(select(Job).where(Job.type == "transcribe_script")).all()
     assert all(j.status == JobStatus.SUCCEEDED for j in jobs)  # not retried as an outage
+
+
+def test_restart_keeps_completed_questions(
+    app: FastAPI,
+    alice: ApiUser,
+    scanned: dict[str, Any],
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.ai.types import ExamSpec, MarkingProposal
+    from app.ai.types import Transcription as AiText
+    from app.config import Settings
+    from app.worker import handlers
+    from app.worker.runner import Worker
+
+    start_ai(alice, scanned["id"])
+    worker = Worker(app.state.sessionmaker, app.state.settings)
+    # Read the two scripts, then call a marker that loses power on question 1(b).
+    assert worker.run_once()
+    assert worker.run_once()
+    script = db.scalars(select(Script).order_by(Script.id)).first()
+    assert script is not None
+    called: list[str] = []
+    interrupted = True
+
+    class InterruptingMarker(MockMarker):
+        def mark(self, transcription: AiText, exam: ExamSpec) -> MarkingProposal:
+            nonlocal interrupted
+            label = exam.questions[0].label
+            called.append(label)
+            if label == "1(b)" and interrupted:
+                interrupted = False
+                raise RuntimeError("simulated_power_cut")
+            return super().mark(transcription, exam)
+
+    monkeypatch.setattr(handlers, "build_marker", lambda _: InterruptingMarker())
+    settings: Settings = app.state.settings
+    with pytest.raises(RuntimeError, match="simulated_power_cut"):
+        handlers.mark_script(app.state.sessionmaker, settings, {"script_id": script.id})
+    assert (
+        len(db.scalars(select(MarkDecision).where(MarkDecision.script_id == script.id)).all()) == 2
+    )
+    handlers.mark_script(app.state.sessionmaker, settings, {"script_id": script.id})
+    assert called == ["1(a)", "1(b)", "1(b)"]
+    assert (
+        len(db.scalars(select(MarkDecision).where(MarkDecision.script_id == script.id)).all()) == 3
+    )
+    db.refresh(script)
+    assert script.status == ScriptStatus.AI_MARKED
+
+
+def test_teacher_only_points_require_a_manual_mark(
+    app: FastAPI, alice: ApiUser, scanned: dict[str, Any], db: Session
+) -> None:
+    from app.db.models import MarkSchemePoint, Question
+
+    point = db.scalars(
+        select(MarkSchemePoint)
+        .join(Question)
+        .where(Question.exam_id == scanned["id"])
+        .order_by(MarkSchemePoint.id)
+    ).first()
+    assert point
+    point.rules = {"teacher_only": True}
+    point_id = point.id
+    db.commit()
+    start_ai(alice, scanned["id"])
+    run_jobs(app)
+    script = db.scalars(select(Script).order_by(Script.id)).first()
+    assert script
+    view = alice.get(f"/api/scripts/{script.id}/review").json()
+    manual = view["questions"][0]["points"][0]
+    assert manual["teacher_only"] is True
+    assert manual["proposed_marks"] is None
+    alice.post(f"/api/scripts/{script.id}/accept-all")
+    assert alice.post(f"/api/scripts/{script.id}/confirm").status_code == 409
+    marked = alice.put(
+        f"/api/scripts/{script.id}/decisions/{point_id}", json={"marks": 1, "category": "correct"}
+    )
+    assert marked.status_code == 200, marked.text
+    assert alice.post(f"/api/scripts/{script.id}/confirm").status_code == 200
+
+
+def test_late_page_remark_preserves_old_decisions_and_rejects_confirmed_scripts(
+    app: FastAPI, alice: ApiUser, scanned: dict[str, Any], db: Session, world: World
+) -> None:
+    from app.db.models import IntakePage, ScanBatch
+
+    start_ai(alice, scanned["id"])
+    run_jobs(app)
+    script = db.scalars(select(Script).order_by(Script.id)).first()
+    assert script
+    batch = ScanBatch(
+        school_id=world.school.id, sha256="b" * 64, source_name="late.jpg", stored_path="late.jpg"
+    )
+    db.add(batch)
+    db.flush()
+    item = IntakePage(
+        batch_id=batch.id,
+        source_index=0,
+        image_path="late.jpg",
+        thumb_path="late.jpg",
+        width=400,
+        height=600,
+        exam_id=script.exam_id,
+        reason="script_locked",
+    )
+    db.add(item)
+    db.commit()
+    body = {"exam_id": script.exam_id, "student_id": script.student_id}
+    url = f"/api/intake/{item.id}/assign"
+    assert alice.post(url, json=body).status_code == 409
+    assert alice.post(url, json={**body, "re_mark": True}).status_code == 204
+    db.refresh(script)
+    assert script.ai_run == 1
+    old = list(db.scalars(select(MarkDecision).where(MarkDecision.script_id == script.id)))
+    assert len(old) == 3
+    assert all(d.ai_run == 0 for d in old)
+    assert len(script.pages) == 4
+    script.status = ScriptStatus.CONFIRMED
+    second = IntakePage(
+        batch_id=batch.id,
+        source_index=1,
+        image_path="another.jpg",
+        thumb_path="another.jpg",
+        width=400,
+        height=600,
+        exam_id=script.exam_id,
+        reason="script_locked",
+    )
+    db.add(second)
+    db.commit()
+    assert (
+        alice.post(f"/api/intake/{second.id}/assign", json={**body, "re_mark": True}).status_code
+        == 409
+    )

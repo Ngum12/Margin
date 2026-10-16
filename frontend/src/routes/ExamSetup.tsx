@@ -3,6 +3,7 @@ import type { SubmitEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 
+import { request } from "../api/client";
 import { api } from "../api/endpoints";
 import type { ExamDetail } from "../api/types";
 import { ErrorMessage, Field, IssueList, Loading } from "../components/ui";
@@ -312,6 +313,30 @@ function ExamSettingsCard({
   return (
     <div className="panel">
       <h2>{t("exam.studentCopies")}</h2>
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          checked={exam.auto_start_marking ?? true}
+          disabled={busy}
+          onChange={(e) => {
+            const enabled = e.target.checked;
+            setBusy(true);
+            setError(null);
+            void request<ExamDetail>("PUT", `/api/exams/${String(exam.id)}/automatic-marking`, {
+              json: { enabled },
+            })
+              .then(onSaved)
+              .catch((err: unknown) => {
+                setError(err);
+              })
+              .finally(() => {
+                setBusy(false);
+              });
+          }}
+        />
+        {t("automaticMarking.enabled")}
+      </label>
+      <p className="field-hint">{t("automaticMarking.help")}</p>
       <label className="checkbox">
         <input
           type="checkbox"

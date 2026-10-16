@@ -43,6 +43,8 @@ class RotationIn(ApiModel):
 
 
 class QueueItemOut(ApiModel):
+    lifecycle: str = "scanned"
+    printed: bool = False
     script_id: int
     student_code: str
     student_name: str | None

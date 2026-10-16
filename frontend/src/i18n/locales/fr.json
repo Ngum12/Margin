@@ -911,5 +911,21 @@
       "manual": "Vérification manuelle requise",
       "succeeded": "Terminé"
     }
+  },
+  "automaticMarking": {
+    "enabled": "Démarrer la correction à l’arrivée des scans",
+    "help": "Les copies QR complètes démarrent automatiquement. Vérifiez l’orientation des pages sans QR. Chaque note doit être confirmée par l’enseignant.",
+    "addAndRemark": "Associer la page et recorriger si nécessaire"
+  },
+  "lifecycle": {
+    "awaiting_scan": "En attente de scan",
+    "scanned": "Numérisé",
+    "needs_attention": "À vérifier",
+    "marking": "Correction en cours",
+    "ready_for_review": "Prêt à vérifier",
+    "confirmed": "Confirmé",
+    "released": "Publié aux élèves",
+    "remark_requested": "Révision demandée",
+    "printed": "Imprimé"
   }
 }

@@ -64,6 +64,7 @@ def _summary_out(exam: Exam, counts: ScriptCounts | None = None) -> ExamSummaryO
         total_marks=from_half_marks(exam_service.total_half_marks(exam)),
         scripts=counts,
         updated_at=exam.updated_at,
+        auto_start_marking=exam.auto_start_marking,
         show_scheme_to_students=exam.show_scheme_to_students,
     )
 
@@ -201,3 +202,29 @@ async def import_preview(request: Request, user: CurrentUser) -> ImportPreviewOu
         issues=[IssueOut.of(i) for i in result.issues],
         validation=_report_out(validate_mark_scheme(result.scheme)) if result.scheme else None,
     )
+
+
+class AutomaticMarkingIn(ApiModel):
+    enabled: bool
+
+
+@router.put("/exams/{exam_id}/automatic-marking")
+def automatic_marking(
+    exam_id: int, data: AutomaticMarkingIn, db: DbSession, user: CurrentUser
+) -> ExamDetailOut:
+    from app.services import audit
+
+    exam = exam_service.get_exam(db, user, exam_id)
+    old = exam.auto_start_marking
+    exam.auto_start_marking = data.enabled
+    if old != data.enabled:
+        audit.record(
+            db,
+            actor=user,
+            entity_type="exam",
+            entity_id=exam.id,
+            action="automatic_marking_setting",
+            old_value=old,
+            new_value=data.enabled,
+        )
+    return _detail_out(exam)

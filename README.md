@@ -204,3 +204,9 @@ Imports are limited to 20 MB. Legacy binary `.doc` is not currently accepted; sa
 it as DOCX or PDF first. Very long schemes require shorter documents or manual
 entry. Real handwriting extraction still requires validation with the school's
 local model and real examiner documents; automated tests do not measure its accuracy.
+
+Automatic marking is on by default per exam. Complete per-page QR scripts start
+when the worker imports them; missing pages and unresolved identity/duplicate
+problems wait. Plain-paper fallback requires the teacher's orientation check.
+The worker checkpoints every read page and completed question. After a restart it
+resumes unfinished work. Teacher-only items require a manual mark before confirmation.

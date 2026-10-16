@@ -166,13 +166,18 @@ function MatchPage({ page, reload }: { page: Intake["pages"][number]; reload: ()
         disabled={!examId || !matchedStudentId}
         onClick={() => {
           void request("POST", `/api/intake/${String(page.id)}/assign`, {
-            json: { exam_id: examId, student_id: matchedStudentId, page_number: pageNumber },
+            json: {
+              exam_id: examId,
+              student_id: matchedStudentId,
+              page_number: pageNumber,
+              re_mark: true,
+            },
           })
             .then(reload)
             .catch(setError);
         }}
       >
-        {t("hardware.match")}
+        {t("automaticMarking.addAndRemark")}
       </button>
       <button
         className="button-secondary"

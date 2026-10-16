@@ -14,7 +14,7 @@ from app.ai.types import ModelUnavailableError
 from app.clock import utcnow
 from app.config import Settings
 from app.db.models import Job, WorkerHeartbeat
-from app.services import jobs, printing, scan_inbox
+from app.services import automatic_marking, jobs, printing, scan_inbox
 from app.worker.handlers import HANDLERS
 
 logger = logging.getLogger(__name__)
@@ -110,19 +110,27 @@ class Worker:
             count += 1
         return count
 
+    def _hardware_loop(self) -> None:
+        # Long model calls must not postpone scan intake or print reconciliation.
+        while not self._stop.is_set():
+            try:
+                self._inbox.tick(self._factory, self._settings)
+                printing.tick(self._factory, self._settings)
+                automatic_marking.tick(self._factory, self._settings)
+            except Exception:
+                logger.exception("Hardware polling failed; will retry")
+            self._stop.wait(self._settings.worker_poll_seconds)
+
     def run_forever(self) -> None:
         self.recover()
         self.beat()
         heartbeat = threading.Thread(target=self._heartbeat_loop, name="heartbeat", daemon=True)
         heartbeat.start()
+        hardware = threading.Thread(target=self._hardware_loop, name="hardware", daemon=True)
+        hardware.start()
         logger.info("Worker %s started", self.worker_id)
         try:
             while not self._stop.is_set():
-                try:
-                    self._inbox.tick(self._factory, self._settings)
-                    printing.tick(self._factory, self._settings)
-                except Exception:
-                    logger.exception("Hardware polling failed; will retry")
                 if not self.run_once():
                     # Idle: pick up work abandoned by a worker that died meanwhile, then wait.
                     self.recover()

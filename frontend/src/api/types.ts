@@ -113,6 +113,7 @@ export interface ExamSummary {
   total_marks: number;
   scripts: { waiting: number; ai_marked: number; confirmed: number };
   updated_at: string;
+  auto_start_marking?: boolean;
   show_scheme_to_students: boolean;
 }
 
@@ -241,6 +242,8 @@ export const ERROR_CATEGORIES: readonly ErrorCategory[] = [
 export type Rotation = 0 | 90 | 180 | 270;
 
 export interface QueueItem {
+  lifecycle?: string;
+  printed?: boolean;
   script_id: number;
   student_code: string;
   student_name: string | null;

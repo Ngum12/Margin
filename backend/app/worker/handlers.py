@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.ai.factory import build_marker, build_reader
 from app.ai.types import (
+    ExamSpec,
     ModelCallTimeoutError,
     ModelInfo,
     ModelOutputInvalidError,
@@ -50,6 +51,7 @@ from app.db.models import (
 from app.marks import to_half_marks
 from app.services import audit, exports, jobs, transcripts, uploads
 from app.services.ai_marking import exam_spec, mark_key, update_exam_progress
+from app.services.answer_sheets import require_complete
 from app.services.identification import identify_spare
 from app.services.scheme_documents import extract as extract_scheme
 from app.subjects.registry import SubjectConfig, get_registry
@@ -122,6 +124,7 @@ def transcribe_script(
         exam = db.get(Exam, script.exam_id)
         if exam is None:  # pragma: no cover
             return
+        require_complete(db, exam.id, script.student_id)
         subject = get_registry().get(_curriculum(db, exam), exam.subject_code)
         if subject is None:  # pragma: no cover
             return
@@ -399,56 +402,66 @@ def mark_script(
         if script is None or script.manual_reason or script.status != ScriptStatus.TRANSCRIBED:
             return
         exam = db.get(Exam, script.exam_id)
-        if exam is None:  # pragma: no cover
+        if exam is None:
             return
+        require_complete(db, exam.id, script.student_id)
         _register_model(db, marker.model, ModelRole.MARKER)
         db.commit()
-
-        already = db.scalar(
-            select(MarkDecision.id)
-            .where(
-                MarkDecision.script_id == script.id,
-                MarkDecision.model_name == marker.model.name,
-                MarkDecision.model_version == marker.model.version,
-                MarkDecision.prompt_version == marker.prompt_version,
-                MarkDecision.ai_run == script.ai_run,
-            )
-            .limit(1)
-        )
-        if already is None:
-            texts = _latest_texts(db, _answer_pages(db, script))
-            transcription = AiTranscription(texts, marker.model, marker.prompt_version, utcnow())
-            timer = _QuestionTimer(db, script, marker.model.name)
-            marker.on_question = timer.next_question
-            try:
-                proposal = marker.mark(transcription, exam_spec(exam, _curriculum(db, exam)))
-            finally:
-                marker.on_question = None
-                timer.finish()
-            for question in proposal.questions:
-                for point in question.points:
-                    db.add(
-                        MarkDecision(
-                            script_id=script.id,
-                            mark_scheme_point_id=point.point_id,
-                            proposed_half_marks=to_half_marks(point.awarded_marks),
-                            evidence=point.evidence,
-                            confidence=point.confidence,
-                            error_category=point.error_category,
-                            model_name=proposal.model.name,
-                            model_version=proposal.model.version,
-                            prompt_version=proposal.prompt_version,
-                            proposed_at=proposal.created_at,
-                            ai_run=script.ai_run,
-                            evidence_refs=_line_refs(texts, point.evidence_lines),
+        texts = _latest_texts(db, _answer_pages(db, script))
+        transcription = AiTranscription(texts, marker.model, marker.prompt_version, utcnow())
+        spec = exam_spec(exam, _curriculum(db, exam))
+        timer = _QuestionTimer(db, script, marker.model.name)
+        failures = False
+        try:
+            for number, question in enumerate(spec.questions, start=1):
+                expected = {p.id for p in question.points}
+                done = set(
+                    db.scalars(
+                        select(MarkDecision.mark_scheme_point_id).where(
+                            MarkDecision.script_id == script.id,
+                            MarkDecision.mark_scheme_point_id.in_(expected),
+                            MarkDecision.model_name == marker.model.name,
+                            MarkDecision.model_version == marker.model.version,
+                            MarkDecision.prompt_version == marker.prompt_version,
+                            MarkDecision.ai_run == script.ai_run,
                         )
                     )
-            if proposal.failed_question_ids:
-                # Proposals for the other questions are kept; the teacher marks the rest.
-                _flag_manual(db, script, "ai.marker_invalid_output")
-        if script.manual_reason is None:
+                )
+                if done == expected:
+                    continue
+                timer.next_question(number, len(spec.questions))
+                marker.on_question = None
+                proposal = marker.mark(transcription, ExamSpec(spec.subject, (question,)))
+                for result in proposal.questions:
+                    for point in result.points:
+                        if point.point_id in done:
+                            continue
+                        db.add(
+                            MarkDecision(
+                                script_id=script.id,
+                                mark_scheme_point_id=point.point_id,
+                                proposed_half_marks=to_half_marks(point.awarded_marks),
+                                evidence=point.evidence,
+                                confidence=point.confidence,
+                                error_category=point.error_category,
+                                model_name=proposal.model.name,
+                                model_version=proposal.model.version,
+                                prompt_version=proposal.prompt_version,
+                                proposed_at=proposal.created_at,
+                                ai_run=script.ai_run,
+                                evidence_refs=_line_refs(texts, point.evidence_lines),
+                            )
+                        )
+                failures = failures or bool(proposal.failed_question_ids)
+                db.commit()  # checkpoint every completed question, not the whole script
+        finally:
+            marker.on_question = None
+            timer.finish()
+        if failures:
+            _flag_manual(db, script, "ai.marker_invalid_output")
+        else:
             script.status = ScriptStatus.AI_MARKED
-        db.commit()  # all decisions for the script in one transaction
+        db.commit()
         update_exam_progress(db, script.exam_id)
         db.commit()
 

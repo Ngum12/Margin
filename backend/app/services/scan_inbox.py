@@ -18,6 +18,8 @@ from app.db.models import (
     ExamStatus,
     Hardware,
     IntakePage,
+    Job,
+    JobStatus,
     JobType,
     Page,
     PageState,
@@ -147,7 +149,7 @@ def attach(
     ):
         raise ConflictError("Page already received", code="sheets.duplicate_page")
     script = uploads._script_for(db, exam.id, student.id)
-    if script.status != ScriptStatus.WAITING:
+    if not uploads.pages_mutable(db, script):
         raise ConflictError("Script pages are locked", code="script.locked")
     upload = db.scalar(
         select(Upload).where(Upload.exam_id == exam.id, Upload.sha256 == batch.sha256)
@@ -328,6 +330,9 @@ def assign(
     exam_id: int,
     student_id: int,
     page_number: int | None = None,
+    *,
+    re_mark: bool = False,
+    settings: Settings | None = None,
 ) -> None:
     exam = get_visible_exam(db, actor, exam_id)
     item = db.get(IntakePage, item_id)
@@ -354,7 +359,46 @@ def assign(
             sheet.student_id = student.id
             sheet.page_number = page_number or 1
             sheet.active = True
+    script = uploads._script_for(db, exam.id, student.id)
+    restarting = re_mark and script.status != ScriptStatus.WAITING
+    if restarting:
+        active = db.scalar(
+            select(Job.id)
+            .where(
+                Job.idempotency_key.in_([f"transcribe:{script.id}", f"mark:{script.id}"]),
+                Job.status.in_([JobStatus.QUEUED, JobStatus.RUNNING]),
+            )
+            .limit(1)
+        )
+        if script.status == ScriptStatus.CONFIRMED or active or settings is None:
+            raise ConflictError(
+                "Reopen a confirmed script; wait for running work", code="script.locked"
+            )
+        old = {"ai_run": script.ai_run, "status": script.status.value}
+        script.ai_run += 1
+        script.status = ScriptStatus.WAITING
+        script.manual_reason = None
+        script.ai_started_at = None
+        audit.record(
+            db,
+            actor=actor,
+            entity_type="script",
+            entity_id=script.id,
+            action="add_page_and_remark",
+            old_value=old,
+            new_value={"ai_run": script.ai_run},
+        )
     attach(db, batch, item, exam, student)
+    if restarting and settings is not None:
+        jobs.enqueue(
+            db,
+            JobType.TRANSCRIBE_SCRIPT,
+            {"script_id": script.id},
+            f"transcribe:{script.id}",
+            max_attempts=settings.job_max_attempts,
+            requeue=True,
+        )
+        exam.status = ExamStatus.MARKING
     audit.record(
         db,
         actor=actor,

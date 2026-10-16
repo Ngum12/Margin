@@ -539,3 +539,27 @@ The focused backend run found two false numbering warnings: the regex alternatio
 was outside the parenthesised segment. Grouped the alternatives so valid 1(a)
 labels pass; retained the original validation tests. Frontend lint required explicit
 blocks for void callbacks and a narrowed proposal instead of a non-null assertion.
+
+## D071 — Automatic marking and question checkpoints (2026-10-16)
+
+Automatic start defaults on. Only complete per-page QR scripts or scripts with a
+teacher orientation check qualify; unresolved QR/spare/duplicate problems hold
+work. Scheduler polling is idempotent. Once work is queued, page membership is
+locked. Adding a late page to an unconfirmed finished script is an explicit audited
+"Add page and re-mark" action; previous decisions remain as history.
+
+Commit marking proposals after each question so interruption repeats only the
+unfinished question. Adapted the partial-failure mock to fail question 1(a) by
+label, preserving its original assertion when the worker makes one call per
+question. Fixed minimum-confidence accumulation treating zero as absent. Printed
+is independent of lifecycle and tied to the current confirmation version.
+An incremental lint check caught a missing ScriptStatus import after introducing
+late-page re-marking; restored the import before running the tests.
+Run hardware polling in its own worker thread with independent DB sessions, so a
+long local model call does not delay copier intake or print-queue updates. School
+installations run one worker process; its heartbeat remains separate as before.
+The first full check caught a duplicate live-progress event: a test marker wrapped
+its previous callback on each call, and per-question calls retained that hook.
+Clear the marker callback before each call and in cleanup; keep the existing
+four-event assertion. Progress now also counts committed question checkpoints
+while idle/retrying, so a restart does not erase completed work from the progress bar.

@@ -17,11 +17,12 @@ from app.db.models import (
     Exam,
     Job,
     JobStatus,
+    MarkDecision,
+    MarkSchemePoint,
     ModelCall,
     ModelRole,
     Page,
     PageState,
-    Question,
     Script,
     ScriptStatus,
     Transcription,
@@ -87,7 +88,9 @@ def _average_seconds(db: Session, role: ModelRole) -> float | None:
     return sum(recent) / len(recent) if recent else None
 
 
-def _script_progress(script: Script, pages: int, questions: int, has_job: bool) -> ScriptProgress:
+def _script_progress(
+    script: Script, pages: int, questions: int, has_job: bool, completed_questions: int = 0
+) -> ScriptProgress:
     total = pages + questions
     done_ai = script.manual_reason is not None or script.status not in (
         ScriptStatus.WAITING,
@@ -102,7 +105,7 @@ def _script_progress(script: Script, pages: int, questions: int, has_job: bool) 
     if script.status == ScriptStatus.WAITING:
         done = max(index - 1, 0) if step == "reading" else 0
     else:  # transcribed: every page read, marking under way or queued
-        done = pages + (max(index - 1, 0) if step == "marking" else 0)
+        done = pages + max(completed_questions, max(index - 1, 0) if step == "marking" else 0)
     state = "working" if step else ("queued" if has_job else "idle")
     return ScriptProgress(
         script, step, script.ai_step_index, script.ai_step_total, done, total, state
@@ -113,7 +116,10 @@ def exam_progress(db: Session, actor: User, exam_id: int) -> ExamProgress:
     exam = get_visible_exam(db, actor, exam_id)
     scripts = list(db.scalars(select(Script).where(Script.exam_id == exam.id)))
     scripts.sort(key=lambda s: s.student.code)
-    questions = db.scalar(select(func.count()).where(Question.exam_id == exam.id)) or 0
+    questions = sum(
+        any(not (p.rules or {}).get("teacher_only", False) for p in q.points)
+        for q in exam.questions
+    )
     pages = dict(
         db.execute(
             select(Page.script_id, func.count())
@@ -134,8 +140,24 @@ def exam_progress(db: Session, actor: User, exam_id: int) -> ExamProgress:
             )
         )
     }
+    finished_questions = dict(
+        db.execute(
+            select(MarkDecision.script_id, func.count(func.distinct(MarkSchemePoint.question_id)))
+            .join(MarkSchemePoint, MarkSchemePoint.id == MarkDecision.mark_scheme_point_id)
+            .join(Script, Script.id == MarkDecision.script_id)
+            .where(
+                Script.exam_id == exam.id,
+                MarkDecision.ai_run == Script.ai_run,
+                MarkDecision.proposed_half_marks.is_not(None),
+            )
+            .group_by(MarkDecision.script_id)
+        ).all()
+    )
     progress = [
-        _script_progress(s, pages.get(s.id, 0), questions, s.id in with_job) for s in scripts
+        _script_progress(
+            s, pages.get(s.id, 0), questions, s.id in with_job, finished_questions.get(s.id, 0)
+        )
+        for s in scripts
     ]
     running = any(p.state in ("working", "queued") for p in progress)
     # The run covers scripts the AI still has to finish plus those it has finished since.

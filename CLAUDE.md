@@ -3,9 +3,16 @@
 On-premise AI marking assistant for secondary schools. Full requirements: `PROJECT_BRIEF.md` (read it). Plan: `docs/PLAN.md`. Decisions: `docs/DECISIONS.md`. Out-of-scope ideas: `docs/BACKLOG.md`. Dependency licences: `docs/DEPENDENCIES.md`.
 
 ## Current phase
-**Phase 0: complete and approved.** **Phase 1: complete and approved (2026-10-14).** **Phases 0–3: complete and approved** (default model `qwen3-vl:4b-instruct`, quote evidence, D-048). **Phase 4: complete and approved (2026-10-15).** **Phase 5 (results and exports) and per-question schemas: built, waiting for owner approval.** Then Phase 6 (deployment, demo on 26 October); whole-script marking only if time allows.
-
-Workflow: one phase at a time → plan → build → `python scripts/check.py` passes → commit → stop and report. Never claim something works without running it. Record decisions and deviations in `docs/DECISIONS.md` first. Out-of-scope ideas go to `docs/BACKLOG.md`.
+The owner approved the eight-item end-to-end blueprint and dependencies on 2026-10-16,
+with Windows as the school deployment target. The blueprint supersedes the original
+brief's portal exclusion, pseudonymous-only printed sheets and phase-stop rule.
+Build items 1–3 are committed; item 4 is in progress. Document import currently
+supports PDF/DOCX/images/text, with legacy binary DOC conversion still unavailable.
+Continue the approved build order without requesting approval between items.
+Run `python scripts/check.py` in full, read its output and commit after each item.
+Keep EN/FR, school-local AI/storage and teacher confirmation mandatory. Optional
+home student access means encrypted delivery of only the signed-in student's
+released records from the school box, never external AI or third-party storage.
 
 ## Commit and test-failure rules (permanent, set by the owner)
 - **Never commit until `python scripts/check.py` has passed in full and its output has been read.** Run the suite as its own step, read the summary, then commit in a separate step. Never chain a commit after a test command whose result has not been checked.

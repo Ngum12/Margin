@@ -21,6 +21,8 @@ from app.db.models import (
     Exam,
     ExamAbsence,
     ExamStatus,
+    Job,
+    JobStatus,
     JobType,
     Page,
     PageState,
@@ -262,7 +264,7 @@ def process_upload(factory: sessionmaker[Session], settings: Settings, upload_id
                     page.unassigned_reason = UnassignedReason.ABSENT_STUDENT
                 else:
                     script = _script_for(db, exam_id, placement.student_id)
-                    if script.status != ScriptStatus.WAITING:
+                    if not pages_mutable(db, script):
                         page.unassigned_reason = UnassignedReason.SCRIPT_LOCKED
                     else:
                         page.state = PageState.ASSIGNED
@@ -461,8 +463,19 @@ def _exam_pages(db: Session, actor: User, exam_id: int, page_ids: list[int]) -> 
     return _ExamPages(exam, pages)
 
 
-def _require_editable(script: Script | None) -> None:
-    if script is not None and script.status != ScriptStatus.WAITING:
+def pages_mutable(db: Session, script: Script) -> bool:
+    return script.status == ScriptStatus.WAITING and not db.scalar(
+        select(Job.id)
+        .where(
+            Job.idempotency_key.in_([f"transcribe:{script.id}", f"mark:{script.id}"]),
+            Job.status.in_([JobStatus.QUEUED, JobStatus.RUNNING]),
+        )
+        .limit(1)
+    )
+
+
+def _require_editable(db: Session, script: Script | None) -> None:
+    if script is not None and not pages_mutable(db, script):
         raise ConflictError(
             "This script is already being marked; its pages cannot change", code="script.locked"
         )
@@ -493,7 +506,7 @@ def assign_pages(
     ):
         raise ConflictError("Resolve absence first", code="hardware.absent_has_scan")
     script = _script_for(db, found.exam.id, student.id)
-    _require_editable(script)
+    _require_editable(db, script)
     position = _next_position(db, script.id)
     for page in found.pages:
         sheet = db.get(AnswerSheet, page.answer_sheet_id) if page.answer_sheet_id else None
@@ -540,7 +553,7 @@ def unassign_pages(db: Session, actor: User, exam_id: int, page_ids: list[int]) 
     scripts: dict[int, Script] = {}
     for page in found.pages:
         if page.script is not None:
-            _require_editable(page.script)
+            _require_editable(db, page.script)
             scripts[page.script.id] = page.script
     for page in found.pages:
         old = {"state": page.state.value, "script_id": page.script_id}

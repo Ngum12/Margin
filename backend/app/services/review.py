@@ -651,6 +651,9 @@ def _summaries(
             for point in question.points:
                 d = decisions.get((script.id, point.id))
                 if d is None:
+                    if (point.rules or {}).get("teacher_only", False):
+                        summary.min_confidence = 0.0
+                        summary.uncertain += 1
                     continue
                 if d.proposed_half_marks is not None:
                     proposed = (proposed or 0) + d.proposed_half_marks
@@ -658,7 +661,10 @@ def _summaries(
                         summary.deductions += 1
                         summary.deducted_half += point.half_marks - d.proposed_half_marks
                 if d.confidence is not None:
-                    summary.min_confidence = min(summary.min_confidence or 1.0, d.confidence)
+                    summary.min_confidence = min(
+                        summary.min_confidence if summary.min_confidence is not None else 1.0,
+                        d.confidence,
+                    )
                 if d.error_category == ErrorCategory.TRANSCRIPTION_UNCERTAIN:
                     summary.uncertain += 1
                 if d.final_half_marks is not None:
@@ -698,6 +704,8 @@ def _marks(half: int | None) -> Marks | None:
 
 
 def _queue_items(db: Session, exam: Exam) -> tuple[list[QueueItemOut], int | None]:
+    from app.services import lifecycle
+
     scripts = list(db.scalars(select(Script).where(Script.exam_id == exam.id)))
     questions = exam_questions(db, exam.id)
     max_half = sum(q.max_half_marks for q in questions)
@@ -733,6 +741,8 @@ def _queue_items(db: Session, exam: Exam) -> tuple[list[QueueItemOut], int | Non
         time = times.get(script.id)
         items.append(
             QueueItemOut(
+                lifecycle=lifecycle.state(db, script),
+                printed=lifecycle.printed(db, script),
                 script_id=script.id,
                 student_code=script.student.code,
                 student_name=script.student.display_name,

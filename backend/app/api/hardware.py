@@ -101,6 +101,7 @@ class AssignIn(BaseModel):
     exam_id: int
     student_id: int
     page_number: int | None = Field(default=None, ge=1, le=1000)
+    re_mark: bool = False
 
 
 class RetryIn(BaseModel):
@@ -240,8 +241,19 @@ def intake_image(
 
 
 @router.post("/intake/{item_id}/assign", status_code=204)
-def assign_page(item_id: int, body: AssignIn, db: DbSession, actor: CurrentUser) -> Response:
-    scan_inbox.assign(db, actor, item_id, body.exam_id, body.student_id, body.page_number)
+def assign_page(
+    item_id: int, body: AssignIn, db: DbSession, actor: CurrentUser, settings: AppSettings
+) -> Response:
+    scan_inbox.assign(
+        db,
+        actor,
+        item_id,
+        body.exam_id,
+        body.student_id,
+        body.page_number,
+        re_mark=body.re_mark,
+        settings=settings,
+    )
     return Response(status_code=204)
 
 

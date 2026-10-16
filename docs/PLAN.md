@@ -660,3 +660,12 @@ Build local document extraction and school scheme reuse after per-page sheets.
 - Add EN/FR original-versus-editor UI and school library controls.
 - Test rule graphs/caps, teacher-only exclusion, document limits, permission boundaries,
   migration parity and preservation of confirmed scheme requirements. Run full checks.
+
+## Blueprint item 4 — automatic marking and restart recovery
+
+Add per-exam automatic start (default on), eligible-script scheduling after inbox
+processing, per-question marking checkpoints, and explicit lifecycle labels.
+Per-page QR orientation allows automatic start; plain-paper fallback keeps the
+teacher orientation check. Missing pages, identity problems and duplicates block
+marking. Keep teacher confirmation and manual items mandatory. Test interrupted
+marking, queue idempotency, eligibility and settings permissions; run all checks.
