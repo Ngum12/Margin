@@ -11,7 +11,8 @@ from reportlab.pdfgen.canvas import Canvas
 from app.exports import fonts
 from app.redpen.layout import CROSS, PARTIAL, TICK, Mark, PageLayout
 
-RED = (0.82, 0.07, 0.07)
+# The marking red of the design tokens (--mark-red #B3261E), as on the review screen.
+RED = (179 / 255, 38 / 255, 30 / 255)
 
 
 def _stroke(canvas: Canvas, size: float) -> None:

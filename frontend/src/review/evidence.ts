@@ -26,3 +26,38 @@ export function highlight(text: string, evidence: string): Segment[] {
   if (last < text.length) segments.push({ text: text.slice(last), mark: false });
   return segments;
 }
+
+/** 1-based numbers of the lines of `text` that contain part of the evidence. */
+export function evidenceLines(text: string, evidence: string): number[] {
+  const lines = new Set<number>();
+  let line = 1;
+  for (const segment of highlight(text, evidence)) {
+    const parts = segment.text.split("\n");
+    if (segment.mark) {
+      parts.forEach((part, index) => {
+        if (part.trim()) lines.add(line + index);
+      });
+    }
+    line += parts.length - 1;
+  }
+  return [...lines].sort((a, b) => a - b);
+}
+
+/** Line numbers as short ranges: [3, 4, 5, 8] → "3–5, 8". */
+export function formatLines(lines: readonly number[]): string {
+  const ranges: string[] = [];
+  let start: number | null = null;
+  let previous: number | null = null;
+  for (const line of [...lines, Number.NaN]) {
+    if (start !== null && previous !== null && line === previous + 1) {
+      previous = line;
+      continue;
+    }
+    if (start !== null && previous !== null) {
+      ranges.push(start === previous ? String(start) : `${String(start)}–${String(previous)}`);
+    }
+    start = line;
+    previous = line;
+  }
+  return ranges.join(", ");
+}

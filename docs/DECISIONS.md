@@ -400,3 +400,26 @@ Each entry: date, decision, alternatives considered, reason. Newest at the botto
 - **Finding (owner's report, "discard is not working"):** after signing in again (here after the app restart), a tab opened earlier kept the old session's CSRF token in memory. The browser's cookie belonged to the new session, so pages still loaded but every change from that tab (discard, assign, upload) got 403 `auth.csrf_failed`. Discard itself works.
 - **Decision:** when a change is refused with `auth.csrf_failed`, the client fetches `/api/auth/me` once, takes the current token and retries the request once. It does this only if the cookie still belongs to the same user. If someone else signed in from another tab, it shows `auth.session_changed` ("Someone else signed in… reload") and never acts as that user. Sign-in and sign-out requests are never retried. Security is unchanged: another site cannot read `/api/auth/me`, so it cannot get the token.
 - **Browser tests (failures during this change, investigated):** two browser tests failed once. Real AI marking ran on the same laptop at the same time, on battery power (22:34–23:05), and every step ran 5–10× slower. The French test's language switch went past its 10 s limit and stopped before switching back to English. The next test then signed in and found the screen in French. **Rule from now on:** the browser tests' `signIn` helper always returns the teacher to English, so one test stopping early cannot break the next. A later run was stopped at its one-hour limit with the backend tests at about 75%. The tests near that point pass on their own. A full re-run on mains power with `faulthandler_timeout=240` (it prints where any test that takes over 4 minutes is stuck) passed in full with no stall. Most likely cause: the machine was slowed down (just back from battery, low charge), not a hanging test. If it happens again, run the suite with `PYTEST_ADDOPTS="-o faulthandler_timeout=240"`.
+
+### D-064 · 2026-10-16 · UI redesign: "Marking desk"
+- **Decision (owner's brief):** a visual and interaction redesign before Phase 6. Business logic, the API, the data model and marking behaviour are unchanged. The reference is `docs/DESIGN.md`.
+  - **Tokens:** one tokens file (`frontend/src/styles/tokens.css`) holds every colour; a test checks every text/background pair for WCAG AA.
+  - **Colours:** marking red only for marks; confirmed green only for "confirmed by the teacher"; separate tones for errors and warnings.
+  - **Fonts:** Literata for titles, Atkinson Hyperlegible Next for the interface, Noto Sans as fallback, and Caveat only for the red pen. All are bundled as files: no package and no CDN (`docs/DEPENDENCIES.md`).
+  - **Shell:** an ink side rail and a top bar with the breadcrumb.
+  - **Dashboard:** "What needs you today".
+  - **Exam tabs:** in workflow order, with their state in words.
+  - **Mark scheme:** looks like a printed mark scheme.
+  - **Scans:** one script per row.
+  - **Results:** sortable, with each question's share of zero scores and a print style.
+  - **Review:** becomes the marking desk, with the page and margin line on the left and the current question's checklist on the right.
+- **Interaction changes:**
+  - **Review keys:** J/K move between scripts (they used to move between points); arrow keys move between points and questions; E shows or hides the evidence (it used to edit the transcription; that is now T); Enter confirms the marks (Ctrl+Enter still does). Enter on a focused button or link presses it instead. N and P are no longer used.
+  - **Wording:** "Confirm script" is now "Confirm marks", leading to "Marks confirmed." (FR « Valider les notes » / « Notes validées »).
+  - **Review layout:** shows one question at a time, and the red-pen layout is always loaded, because it also positions the evidence bands.
+  - **Marked PDF:** uses the same marking red (#B3261E instead of #D11212).
+- **Bugs found and fixed during the redesign:**
+  - While sign-in status was loading, the old layout showed a language menu whose choice was not saved to the account.
+  - A first version of the new layout remounted the sign-in form when loading finished, losing what had been typed. Loading and signed-out now share one layout.
+  - Opening a script scrolled the window to the focused point and hid the student's name. The first focus no longer scrolls.
+- **Not done (the API gives no dates):** the dashboard shows all confirmed scripts rather than those "confirmed this week" (backlog).

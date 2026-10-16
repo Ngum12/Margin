@@ -96,73 +96,78 @@ function ExamSetupLoaded({
         <ReadOnlyScheme exam={exam} />
       )}
 
-      <div className="card sticky-actions">
-        <IssueList issues={report.blocking} tone="error" title={t("editor.mustFix")} />
-        {editable && (
-          <IssueList issues={report.readiness} tone="warning" title={t("editor.beforeReady")} />
-        )}
-        <IssueList issues={report.notices} tone="info" />
-        <ErrorMessage error={error} />
-        {message && (
-          <p className="success" role="status">
-            {message}
-          </p>
-        )}
-        <div className="actions">
+      {(editable || exam.status === "ready" || Boolean(error) || message !== null) && (
+        <div className="panel sticky-actions">
+          <IssueList issues={report.blocking} tone="error" title={t("editor.mustFix")} />
           {editable && (
-            <button
-              type="button"
-              disabled={busy || !dirty || report.blocking.length > 0}
-              onClick={() =>
-                void run(() => api.saveMarkScheme(exam.id, toScheme(questions)), t("editor.saved"))
-              }
-            >
-              {t("editor.save")}
-            </button>
+            <IssueList issues={report.readiness} tone="warning" title={t("editor.beforeReady")} />
           )}
-          {editable && (
-            <button
-              type="button"
-              className="button-secondary"
-              disabled={busy || dirty || report.blocking.length + report.readiness.length > 0}
-              title={dirty ? t("editor.saveFirst") : undefined}
-              onClick={() =>
-                void run(() => api.setExamStatus(exam.id, "ready"), t("editor.nowReady"))
-              }
-            >
-              {t("editor.markReady")}
-            </button>
+          <IssueList issues={report.notices} tone="info" />
+          <ErrorMessage error={error} />
+          {message && (
+            <p className="success" role="status">
+              {message}
+            </p>
           )}
-          {exam.status === "ready" && (
-            <button
-              type="button"
-              className="button-secondary"
-              disabled={busy}
-              onClick={() => void run(() => api.setExamStatus(exam.id, "draft"))}
-            >
-              {t("editor.backToDraft")}
-            </button>
-          )}
-          {editable && (
-            <button
-              type="button"
-              className="button-danger"
-              disabled={busy}
-              onClick={() => {
-                if (!window.confirm(t("editor.confirmDelete"))) return;
-                void run(async () => {
-                  await api.deleteExam(exam.id);
-                  void navigate("/");
-                  return undefined;
-                });
-              }}
-            >
-              {t("editor.deleteExam")}
-            </button>
-          )}
+          <div className="actions">
+            {editable && (
+              <button
+                type="button"
+                disabled={busy || !dirty || report.blocking.length > 0}
+                onClick={() =>
+                  void run(
+                    () => api.saveMarkScheme(exam.id, toScheme(questions)),
+                    t("editor.saved"),
+                  )
+                }
+              >
+                {t("editor.save")}
+              </button>
+            )}
+            {editable && (
+              <button
+                type="button"
+                className="button-secondary"
+                disabled={busy || dirty || report.blocking.length + report.readiness.length > 0}
+                title={dirty ? t("editor.saveFirst") : undefined}
+                onClick={() =>
+                  void run(() => api.setExamStatus(exam.id, "ready"), t("editor.nowReady"))
+                }
+              >
+                {t("editor.markReady")}
+              </button>
+            )}
+            {exam.status === "ready" && (
+              <button
+                type="button"
+                className="button-secondary"
+                disabled={busy}
+                onClick={() => void run(() => api.setExamStatus(exam.id, "draft"))}
+              >
+                {t("editor.backToDraft")}
+              </button>
+            )}
+            {editable && (
+              <button
+                type="button"
+                className="button-danger"
+                disabled={busy}
+                onClick={() => {
+                  if (!window.confirm(t("editor.confirmDelete"))) return;
+                  void run(async () => {
+                    await api.deleteExam(exam.id);
+                    void navigate("/");
+                    return undefined;
+                  });
+                }}
+              >
+                {t("editor.deleteExam")}
+              </button>
+            )}
+          </div>
+          {dirty && <p className="muted">{t("editor.unsaved")}</p>}
         </div>
-        {dirty && <p className="muted">{t("editor.unsaved")}</p>}
-      </div>
+      )}
     </section>
   );
 }
@@ -202,7 +207,8 @@ function ExamDetailsForm({
   }
 
   return (
-    <form className="card form details-form" onSubmit={(e) => void submit(e)}>
+    <form className="panel form details-form" onSubmit={(e) => void submit(e)}>
+      <h2>{t("exam.detailsTitle")}</h2>
       <div className="form-row">
         <Field label={t("exam.title")}>
           <input
@@ -293,7 +299,8 @@ function ExamSettingsCard({
   }
 
   return (
-    <div className="card">
+    <div className="panel">
+      <h2>{t("exam.studentCopies")}</h2>
       <label className="checkbox">
         <input
           type="checkbox"
@@ -312,26 +319,30 @@ function ExamSettingsCard({
 function ReadOnlyScheme({ exam }: { exam: ExamDetail }) {
   const { t } = useTranslation();
   return (
-    <div className="card">
+    <div className="panel">
       <p className="muted">{t("editor.lockedHelp")}</p>
       {exam.questions.map((q) => (
         <div key={q.id} className="readonly-question">
           <h3>
-            {q.label}{" "}
-            <span className="muted">({t("editor.marksCount", { count: q.max_marks })})</span>
+            <span>{q.label}</span>
+            <span className="scheme-point-marks">
+              {t("editor.marksCount", { count: q.max_marks })}
+            </span>
           </h3>
           {q.prompt_text && <p>{q.prompt_text}</p>}
-          <ul>
+          <ul className="scheme-points">
             {q.points.map((p) => (
               <li key={p.id}>
-                {p.description}{" "}
-                <span className="muted">({t("editor.marksCount", { count: p.marks })})</span>
-                {p.alternatives.length > 0 && (
-                  <span className="muted">
-                    {" "}
-                    · {t("editor.alsoAccept")}: {p.alternatives.join("; ")}
-                  </span>
-                )}
+                <span>
+                  {p.description}
+                  {p.alternatives.length > 0 && (
+                    <span className="muted">
+                      {" "}
+                      · {t("editor.alsoAccept")}: {p.alternatives.join("; ")}
+                    </span>
+                  )}
+                </span>
+                <span className="scheme-point-marks">{p.marks}</span>
               </li>
             ))}
           </ul>

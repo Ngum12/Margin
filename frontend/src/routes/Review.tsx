@@ -4,21 +4,31 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { api } from "../api/endpoints";
-import type { ErrorCategory, RedPen, ReviewPage, ScriptReview } from "../api/types";
+import type {
+  ErrorCategory,
+  RedPen,
+  ReviewPage,
+  ReviewPoint,
+  ReviewQuestion,
+  ScriptReview,
+} from "../api/types";
 import { ERROR_CATEGORIES } from "../api/types";
+import { useBreadcrumb } from "../components/breadcrumb";
+import { Icon } from "../components/Icon";
 import { ErrorMessage, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
-import { highlight } from "../review/evidence";
+import { evidenceLines, formatLines, highlight } from "../review/evidence";
 import { flatPoints, nextDeduction, step } from "../review/focus";
 import type { FlatPoint } from "../review/focus";
-import { actionForKey, isTypingTarget, SHORTCUTS } from "../review/keyboard";
+import { actionForKey, activatesOnEnter, isTypingTarget, SHORTCUTS } from "../review/keyboard";
 import type { ReviewAction } from "../review/keyboard";
 import { ConfirmButton, ModelLabel, TestModelBanner } from "../review/ModelLabel";
 import { PageViewer } from "../review/PageViewer";
 import { useHeartbeat } from "../review/useHeartbeat";
 import { FIT, nextCategory, rotate, zoomIn, zoomOut } from "../review/viewer";
 
-/** Screen 7: review one script. Everything can be done from the keyboard (`?` lists keys). */
+/** The marking desk: the scanned page on the left, the current question's mark scheme as a
+ * checklist on the right. Everything can be done from the keyboard (`?` lists the keys). */
 export default function Review() {
   const params = useParams();
   const examId = Number(params.examId);
@@ -34,6 +44,19 @@ function firstAnswerPage(pages: ReviewPage[]): number {
   const index = pages.findIndex((p) => !p.is_cover);
   return index < 0 ? 0 : index;
 }
+
+/** Where the AI's evidence for a point is: the page and its line numbers. */
+function evidenceLocation(pages: ReviewPage[], evidence: string) {
+  if (!evidence) return null;
+  for (const [index, page] of pages.entries()) {
+    if (!page.transcription) continue;
+    const lines = evidenceLines(page.transcription.text, evidence);
+    if (lines.length > 0) return { pageIndex: index, lines };
+  }
+  return null;
+}
+
+type Tone = "info" | "confirmed";
 
 function ReviewScreen({
   examId,
@@ -55,34 +78,49 @@ function ReviewScreen({
   const [draft, setDraft] = useState("");
   const [help, setHelp] = useState(false);
   const [redPenOn, setRedPenOn] = useState(readRedPenSetting);
+  const [showEvidence, setShowEvidence] = useState(true);
   const [redPen, setRedPen] = useState<RedPen | null>(null);
+  // The confirmed total settles with a short stamp, only when the teacher confirms it here.
+  const [stamped, setStamped] = useState(false);
   // Saves waiting to finish. Keys are never dropped: every change joins an ordered queue.
   const [pending, setPending] = useState(0);
   const busy = pending > 0;
   const [error, setError] = useState<unknown>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; tone: Tone } | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const comments = useRef(new Map<number, HTMLInputElement>());
   const pointItems = useRef(new Map<number, HTMLLIElement>());
 
   const editable = review.ready && !review.locked;
   useHeartbeat(scriptId, editable);
+  useBreadcrumb([
+    { label: review.exam.title, to: `/exams/${String(examId)}/queue` },
+    { label: review.script.student_name ?? review.script.student_code },
+  ]);
 
   const page = review.pages[pageIndex];
   const current: FlatPoint | undefined = points[focus];
+  const currentQuestion = current?.question ?? review.questions[0];
+
+  function say(text: string, tone: Tone = "info") {
+    setNotice({ text, tone });
+  }
 
   // When the focus moves to another point, keep it in view and show the page its evidence is on.
   const focusedId = current?.point.id;
   const focusedEvidence = current?.point.evidence ?? "";
   const pagesRef = useRef(review.pages);
   const editingRef = useRef(editing);
+  // Opening a script shows its top (student, total); only later focus moves scroll.
+  const firstFocus = useRef(true);
   useEffect(() => {
     pagesRef.current = review.pages;
     editingRef.current = editing;
   });
   useEffect(() => {
     if (focusedId === undefined) return;
-    pointItems.current.get(focusedId)?.scrollIntoView({ block: "nearest" });
+    if (firstFocus.current) firstFocus.current = false;
+    else pointItems.current.get(focusedId)?.scrollIntoView({ block: "nearest" });
     if (editingRef.current || !focusedEvidence) return;
     const onPage = pagesRef.current.findIndex(
       (p) =>
@@ -96,8 +134,8 @@ function ReviewScreen({
     if (editing) textarea.current?.focus();
   }, [editing]);
 
+  // The red pen layout also tells where each point's evidence lines are on the page.
   useEffect(() => {
-    if (!redPenOn) return;
     let cancelled = false;
     api
       .redPen(scriptId)
@@ -110,7 +148,7 @@ function ReviewScreen({
     return () => {
       cancelled = true;
     };
-  }, [review, redPenOn, scriptId]);
+  }, [review, scriptId]);
 
   function switchRedPen(on: boolean) {
     setRedPenOn(on);
@@ -121,7 +159,7 @@ function ReviewScreen({
     }
   }
 
-  function suggestComment(question: ScriptReview["questions"][number]) {
+  function suggestComment(question: ReviewQuestion) {
     const missed = question.points.filter((p) => {
       const marks = p.final_marks ?? p.proposed_marks;
       return marks !== null && marks < p.max_marks;
@@ -147,7 +185,7 @@ function ReviewScreen({
 
   type Step = (
     current: ScriptReview,
-  ) => Promise<{ review: ScriptReview; notice?: string | undefined } | null>;
+  ) => Promise<{ review: ScriptReview; notice?: string | undefined; tone?: Tone } | null>;
 
   function enqueue(work: Step) {
     setPending((n) => n + 1);
@@ -159,7 +197,7 @@ function ReviewScreen({
         if (result && alive.current) {
           latest.current = result.review;
           onChange(result.review);
-          if (result.notice) setNotice(result.notice);
+          if (result.notice) say(result.notice, result.tone);
         }
       } catch (err) {
         if (alive.current) setError(err);
@@ -184,9 +222,20 @@ function ReviewScreen({
     setEditing(false);
   }
 
+  function goToQuestion(questionId: number) {
+    const index = points.findIndex((p) => p.question.id === questionId);
+    if (index >= 0) setFocus(index);
+  }
+
+  function stepQuestion(delta: 1 | -1) {
+    const index = review.questions.findIndex((q) => q.id === currentQuestion?.id);
+    const target = review.questions[index + delta];
+    if (target) goToQuestion(target.id);
+  }
+
   function setMarks(item: FlatPoint, marks: number) {
     if (marks > item.point.max_marks) {
-      setNotice(t("review.marksTooHigh", { max: item.point.max_marks }));
+      say(t("review.marksTooHigh", { max: item.point.max_marks }));
       return;
     }
     run(() => api.setDecision(scriptId, item.point.id, { marks }));
@@ -208,7 +257,7 @@ function ReviewScreen({
 
   function accept(item: FlatPoint) {
     if (item.point.proposed_marks === null) {
-      setNotice(t("review.noProposal"));
+      say(t("review.noProposal"));
       return;
     }
     run(() => api.acceptPoint(scriptId, item.point.id));
@@ -227,11 +276,18 @@ function ReviewScreen({
   function confirm() {
     enqueue(async (current) => {
       if (!current.can_confirm) {
-        setNotice(t("review.cannotConfirm"));
+        say(t("review.cannotConfirm"));
         return null;
       }
-      return { review: await api.confirmScript(scriptId), notice: t("review.confirmed") };
+      const confirmed = await api.confirmScript(scriptId);
+      setStamped(true);
+      return { review: confirmed, notice: t("review.confirmed"), tone: "confirmed" };
     });
+  }
+
+  function reopen() {
+    setStamped(false);
+    run(() => api.reopenScript(scriptId), t("review.reopened"));
   }
 
   function rotateBy(pageId: number, delta: 90 | -90) {
@@ -270,7 +326,7 @@ function ReviewScreen({
       "confirm",
     ];
     if (needsEdit.includes(action.type) && !editable) {
-      setNotice(review.locked ? t("review.lockedNotice") : t("review.notReady"));
+      say(review.locked ? t("review.lockedNotice") : t("review.notReady"));
       return;
     }
     switch (action.type) {
@@ -278,9 +334,13 @@ function ReviewScreen({
       case "prevPoint":
         setFocus((f) => step(f, action.type === "nextPoint" ? 1 : -1, points.length));
         return;
+      case "nextQuestion":
+      case "prevQuestion":
+        stepQuestion(action.type === "nextQuestion" ? 1 : -1);
+        return;
       case "nextDeduction": {
         const next = nextDeduction(points, focus);
-        if (next === null) setNotice(t("review.noDeductions"));
+        if (next === null) say(t("review.noDeductions"));
         else setFocus(next);
         return;
       }
@@ -297,7 +357,10 @@ function ReviewScreen({
         if (current) cycleCategory(current);
         return;
       case "focusComment":
-        if (current) comments.current.get(current.question.id)?.focus();
+        if (currentQuestion) comments.current.get(currentQuestion.id)?.focus();
+        return;
+      case "toggleEvidence":
+        setShowEvidence((on) => !on);
         return;
       case "editTranscription":
         startEditing();
@@ -348,6 +411,14 @@ function ReviewScreen({
         return;
       }
       if (isTypingTarget(event.target)) return;
+      // Plain Enter on a focused button or link presses it; it does not confirm the script.
+      if (
+        event.key === "Enter" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        activatesOnEnter(event.target)
+      )
+        return;
       const action = actionForKey(event);
       if (!action) return;
       event.preventDefault();
@@ -360,72 +431,122 @@ function ReviewScreen({
   }, []);
 
   const name = review.script.student_name ?? review.script.student_code;
+  const confirmed = review.script.status === "confirmed";
+  const pageMarks = redPen?.pages.find((p) => p.page_id === page?.id && p.placed)?.marks;
+  const evidenceBands =
+    showEvidence && current
+      ? (pageMarks ?? []).filter(
+          (m) => m.point_id === current.point.id && ["tick", "cross", "partial"].includes(m.kind),
+        )
+      : [];
+  const location = current ? evidenceLocation(review.pages, current.point.evidence) : null;
+  const highlightLines =
+    showEvidence && location && location.pageIndex === pageIndex ? location.lines : [];
+  const finalTotal = review.totals.final_total;
+  const scoreClass = [
+    "desk-score",
+    confirmed ? "desk-score-confirmed" : "",
+    confirmed && stamped ? "desk-score-stamp" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <section className="review">
-      <div className="review-header">
-        <div>
-          <p className="muted">
-            <Link to={`/exams/${String(examId)}/queue`}>{review.exam.title}</Link> ·{" "}
-            {t("review.positionOf", {
-              position: review.navigation.position,
-              count: review.navigation.count,
-            })}
+      <div className="desk-bar">
+        <div className="desk-who">
+          <p className="desk-crumb">
+            <Link to={`/exams/${String(examId)}/queue`}>{review.exam.title}</Link>
+            {" · "}
+            <span className="desk-progress">
+              {t("review.positionOf", {
+                position: review.navigation.position,
+                count: review.navigation.count,
+              })}
+            </span>
           </p>
-          <h1>
-            {name} <span className="code">{review.script.student_code}</span>{" "}
+          <h1 className="desk-student">
+            <span>{name}</span> <span className="code">{review.script.student_code}</span>
             <span className={`badge badge-script-${review.script.status}`}>
+              {confirmed && <Icon name="check" size={14} />}
               {t(`scriptStatus.${review.script.status}`)}
             </span>
           </h1>
         </div>
-        <div className="review-summary" aria-live="polite">
-          <span>
-            {t("review.totals", {
-              final: review.totals.final_total ?? "–",
-              max: review.totals.max_total,
-            })}
-          </span>
-          <span className="muted">
-            {t("review.decided", {
-              decided: review.totals.decided_points,
-              total: review.totals.total_points,
-            })}
-          </span>
-          {review.totals.deductions > 0 && (
-            <span className="deduction-summary">
-              {t("review.deductionsTotal", {
-                count: review.totals.deductions,
-                marks: review.totals.marks_deducted,
-              })}
+
+        <div className="desk-total" aria-live="polite">
+          <p className={scoreClass}>
+            <span className="visually-hidden">
+              {t("review.totals", { final: finalTotal ?? "–", max: review.totals.max_total })}
             </span>
-          )}
+            <span className="desk-score-label" aria-hidden="true">
+              {t("review.totalLabel")}
+            </span>
+            <span
+              className={
+                finalTotal === null ? "desk-score-value desk-score-empty" : "desk-score-value"
+              }
+              aria-hidden="true"
+            >
+              {finalTotal ?? "–"}
+            </span>
+            <span className="desk-score-max" aria-hidden="true">
+              / {review.totals.max_total}
+            </span>
+          </p>
+          <div className="desk-meta">
+            <p className="desk-progress">
+              {t("review.decided", {
+                decided: review.totals.decided_points,
+                total: review.totals.total_points,
+              })}
+            </p>
+            {review.totals.deductions > 0 && (
+              <p className="deduction-summary">
+                {t("review.deductionsTotal", {
+                  count: review.totals.deductions,
+                  marks: review.totals.marks_deducted,
+                })}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="actions">
+
+        <div className="desk-actions">
           <button
             type="button"
+            className="button-secondary icon-button"
+            aria-label={t("review.previousScript")}
+            title={`${t("review.previousScript")} (K)`}
             disabled={review.navigation.previous_id === null}
             onClick={() => {
               goToScript(review.navigation.previous_id);
             }}
           >
-            {t("review.previousScript")}
+            <Icon name="prev" />
           </button>
           <button
             type="button"
+            className="button-secondary icon-button"
+            aria-label={t("review.nextScript")}
+            title={`${t("review.nextScript")} (J)`}
             disabled={review.navigation.next_id === null}
             onClick={() => {
               goToScript(review.navigation.next_id);
             }}
           >
-            {t("review.nextScript")}
+            <Icon name="next" />
           </button>
           <button
             type="button"
+            className="button-quiet icon-button"
+            aria-label={t("review.shortcuts")}
+            title={`${t("review.shortcuts")} (?)`}
             onClick={() => {
               setHelp(true);
             }}
           >
-            {t("review.shortcuts")}
+            <Icon name="keyboard" size={20} />
           </button>
           {review.ready && !review.locked && (
             <ConfirmButton
@@ -438,13 +559,8 @@ function ReviewScreen({
             />
           )}
           {review.locked ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                run(() => api.reopenScript(scriptId), t("review.reopened"));
-              }}
-            >
+            <button type="button" className="button-secondary" disabled={busy} onClick={reopen}>
+              <Icon name="undo" />
               {t("review.reopen")}
             </button>
           ) : (
@@ -452,44 +568,51 @@ function ReviewScreen({
               type="button"
               className="primary"
               disabled={busy || !review.can_confirm}
+              title={review.can_confirm ? undefined : t("review.cannotConfirm")}
               onClick={confirm}
             >
+              <Icon name="check" />
               {t("review.confirm")}
             </button>
           )}
         </div>
       </div>
 
-      {review.test_model && <TestModelBanner />}
-      {review.script.manual_reason && (
-        <p className="notice notice-warning" role="status">
-          {t("review.manualMarking")}{" "}
-          {t(`ai.manualReason.${review.script.manual_reason}`, {
-            defaultValue: t("ai.manualReason.unknown"),
-          })}
-        </p>
-      )}
-      {!review.ready && (
-        <p className="notice notice-warning" role="status">
-          {t("review.notReady")}
-        </p>
-      )}
-      {review.locked && (
-        <p className="notice" role="status">
-          {t("review.lockedNotice")}
-        </p>
-      )}
-      {review.marked_on_earlier_text && (
-        <p className="notice notice-warning" role="status">
-          {t("review.markedOnEarlierText")}
-        </p>
-      )}
-      <ErrorMessage error={error} />
-      {notice && (
-        <p className="notice" role="status">
-          {notice}
-        </p>
-      )}
+      <div className="desk-messages">
+        {review.test_model && <TestModelBanner />}
+        {review.script.manual_reason && (
+          <p className="notice notice-warning" role="status">
+            {t("review.manualMarking")}{" "}
+            {t(`ai.manualReason.${review.script.manual_reason}`, {
+              defaultValue: t("ai.manualReason.unknown"),
+            })}
+          </p>
+        )}
+        {!review.ready && (
+          <p className="notice notice-warning" role="status">
+            {t("review.notReady")}
+          </p>
+        )}
+        {review.locked && (
+          <p className="notice notice-confirmed" role="status">
+            {t("review.lockedNotice")}
+          </p>
+        )}
+        {review.marked_on_earlier_text && (
+          <p className="notice notice-warning" role="status">
+            {t("review.markedOnEarlierText")}
+          </p>
+        )}
+        <ErrorMessage error={error} />
+        {notice && (
+          <p
+            className={notice.tone === "confirmed" ? "notice notice-confirmed" : "notice"}
+            role="status"
+          >
+            {notice.text}
+          </p>
+        )}
+      </div>
 
       <div className="review-columns">
         <div className="review-left">
@@ -515,62 +638,78 @@ function ReviewScreen({
               onRetranscribe={() => {
                 run(() => api.retranscribePage(page.id), t("review.viewer.rereadQueued"));
               }}
-              redPen={
-                redPenOn
-                  ? redPen?.pages.find((p) => p.page_id === page.id && p.placed)?.marks
-                  : undefined
-              }
+              redPen={redPenOn ? pageMarks : undefined}
               redPenOn={redPenOn}
               onRedPen={switchRedPen}
+              evidence={evidenceBands}
+              showEvidence={showEvidence}
+              onShowEvidence={setShowEvidence}
             />
           ) : (
-            <p className="muted">{t("review.noPages")}</p>
+            <p className="panel empty-state">{t("review.noPages")}</p>
           )}
         </div>
 
         <div className="review-right">
-          {page && !page.is_cover && (
-            <TranscriptionPanel
-              page={page}
-              evidence={current?.point.evidence ?? ""}
-              editing={editing}
-              editable={editable}
-              draft={draft}
-              busy={busy}
-              textarea={textarea}
-              onDraft={setDraft}
-              onStart={startEditing}
-              onSave={saveTranscription}
-              onCancel={() => {
-                setEditing(false);
-              }}
-            />
+          {review.questions.length > 1 && (
+            <nav className="question-nav" aria-label={t("review.questions")}>
+              <ol>
+                {review.questions.map((question) => {
+                  const decided = question.points.every(
+                    (p) => p.final_marks !== null && p.final_category !== null,
+                  );
+                  return (
+                    <li key={question.id}>
+                      <button
+                        type="button"
+                        aria-current={question.id === currentQuestion?.id ? "true" : undefined}
+                        aria-label={t("review.questionNav", {
+                          label: question.label,
+                          final: question.final_total ?? "–",
+                          max: question.max_marks,
+                        })}
+                        onClick={() => {
+                          goToQuestion(question.id);
+                        }}
+                      >
+                        <span className={decided ? "qn-decided" : undefined}>{question.label}</span>
+                        <span className="qn-score">
+                          {question.final_total ?? "–"}/{question.max_marks}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </nav>
           )}
 
-          {review.questions.map((question) => (
-            <div key={question.id} className="card question">
+          {currentQuestion && (
+            <div className="checklist">
               <div className="question-head">
                 <h2>
-                  {question.label}{" "}
-                  <span className="muted">
+                  {t("review.questionTitle", { label: currentQuestion.label })}{" "}
+                  <span className="question-score">
                     {t("review.questionTotal", {
-                      final: question.final_total ?? "–",
-                      max: question.max_marks,
+                      final: currentQuestion.final_total ?? "–",
+                      max: currentQuestion.max_marks,
                     })}
                   </span>
                 </h2>
-                {question.deductions > 0 && (
+                {currentQuestion.deductions > 0 && (
                   <span className="deduction-summary">
                     {t("review.questionDeducted", {
-                      count: question.deductions,
-                      marks: question.marks_deducted,
+                      count: currentQuestion.deductions,
+                      marks: currentQuestion.marks_deducted,
                     })}
                   </span>
                 )}
               </div>
-              {question.prompt_text && <p className="muted">{question.prompt_text}</p>}
+              {currentQuestion.prompt_text && (
+                <p className="question-prompt">{currentQuestion.prompt_text}</p>
+              )}
               <ol className="points">
-                {question.points.map((point) => {
+                {currentQuestion.points.map((point) => {
                   const index = points.findIndex((p) => p.point.id === point.id);
                   const item = points[index];
                   if (!item) return null;
@@ -581,6 +720,7 @@ function ReviewScreen({
                       focused={index === focus}
                       editable={editable}
                       busy={busy}
+                      lines={evidenceLocation(review.pages, point.evidence)}
                       itemRef={(el) => {
                         if (el) pointItems.current.set(point.id, el);
                         else pointItems.current.delete(point.id);
@@ -601,56 +741,82 @@ function ReviewScreen({
                   );
                 })}
               </ol>
-              <label className="field">
+              <label className="field question-comment">
                 <span className="field-label">{t("review.comment")}</span>
                 <input
-                  key={`${String(question.id)}-${question.comment}`}
+                  key={`${String(currentQuestion.id)}-${currentQuestion.comment}`}
                   ref={(el) => {
-                    if (el) comments.current.set(question.id, el);
-                    else comments.current.delete(question.id);
+                    if (el) comments.current.set(currentQuestion.id, el);
+                    else comments.current.delete(currentQuestion.id);
                   }}
                   type="text"
                   maxLength={300}
-                  defaultValue={question.comment}
+                  defaultValue={currentQuestion.comment}
                   disabled={!editable}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === "Escape") e.currentTarget.blur();
                   }}
                   onBlur={(e) => {
                     const text = e.currentTarget.value.trim();
-                    if (text !== question.comment) {
-                      run(() => api.setComment(scriptId, question.id, text));
+                    if (text !== currentQuestion.comment) {
+                      const questionId = currentQuestion.id;
+                      run(() => api.setComment(scriptId, questionId, text));
                     }
                   }}
                 />
                 <span className="field-hint">{t("review.commentHint")}</span>
               </label>
-              {editable && review.exam.show_scheme_to_students && (
-                <button
-                  type="button"
-                  className="button-secondary"
-                  disabled={
-                    busy ||
-                    !question.points.some((p) => {
-                      const marks = p.final_marks ?? p.proposed_marks;
-                      return marks !== null && marks < p.max_marks;
-                    })
-                  }
-                  onClick={() => {
-                    suggestComment(question);
-                  }}
-                >
-                  {t("redPen.suggest")}
-                </button>
+              {editable && (
+                <div className="actions">
+                  {review.exam.show_scheme_to_students && (
+                    <button
+                      type="button"
+                      className="button-secondary button-small"
+                      disabled={
+                        busy ||
+                        !currentQuestion.points.some((p) => {
+                          const marks = p.final_marks ?? p.proposed_marks;
+                          return marks !== null && marks < p.max_marks;
+                        })
+                      }
+                      onClick={() => {
+                        suggestComment(currentQuestion);
+                      }}
+                    >
+                      <Icon name="pen" size={16} />
+                      {t("redPen.suggest")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="button-secondary button-small"
+                    disabled={busy}
+                    onClick={acceptAll}
+                  >
+                    {t("review.acceptAll")}
+                  </button>
+                </div>
               )}
             </div>
-          ))}
-          {editable && (
-            <div className="actions">
-              <button type="button" disabled={busy} onClick={acceptAll}>
-                {t("review.acceptAll")}
-              </button>
-            </div>
+          )}
+
+          {page && !page.is_cover && (
+            <TranscriptionPanel
+              page={page}
+              evidence={showEvidence ? (current?.point.evidence ?? "") : ""}
+              lines={highlightLines}
+              editing={editing}
+              editable={editable}
+              draft={draft}
+              busy={busy}
+              textarea={textarea}
+              onDraft={setDraft}
+              onStart={startEditing}
+              onSave={saveTranscription}
+              onCancel={() => {
+                setEditing(false);
+              }}
+            />
           )}
         </div>
       </div>
@@ -671,6 +837,7 @@ function PointRow({
   focused,
   editable,
   busy,
+  lines,
   itemRef,
   onFocus,
   onMarks,
@@ -681,6 +848,7 @@ function PointRow({
   focused: boolean;
   editable: boolean;
   busy: boolean;
+  lines: { pageIndex: number; lines: number[] } | null;
   itemRef: (el: HTMLLIElement | null) => void;
   onFocus: () => void;
   onMarks: (marks: number) => void;
@@ -696,7 +864,7 @@ function PointRow({
   const options = Array.from({ length: Math.floor(point.max_marks) + 1 }, (_, i) => i);
 
   return (
-    // Clicking anywhere on the point moves the keyboard focus there; keyboard users use j/k.
+    // Clicking anywhere on the point moves the keyboard focus there; keyboard users use ↑/↓.
     <li
       ref={itemRef}
       className={classes.join(" ")}
@@ -704,9 +872,12 @@ function PointRow({
       data-point-id={point.id}
       onClick={onFocus}
     >
+      <span className="point-sign">
+        <PenSign point={point} />
+      </span>
       <div className="point-head">
         <span className="point-description">{point.description}</span>
-        <span className="muted">{t("review.pointMax", { max: point.max_marks })}</span>
+        <span className="point-max">{t("review.pointMax", { max: point.max_marks })}</span>
         {point.deducted > 0 && (
           <span
             className="deduction-badge"
@@ -724,7 +895,7 @@ function PointRow({
       )}
       {point.proposed_marks !== null ? (
         <div className="proposal">
-          <span>
+          <span className="proposal-ai">
             {t("review.aiProposal", { marks: point.proposed_marks, max: point.max_marks })}
           </span>
           {point.error_category && (
@@ -735,6 +906,15 @@ function PointRow({
           {point.confidence !== null && (
             <span className={point.confidence < 0.6 ? "confidence low" : "confidence"}>
               {t("review.confidence", { percent: Math.round(point.confidence * 100) })}
+            </span>
+          )}
+          {lines && (
+            <span className="evidence-lines">
+              {t("review.evidenceLines", {
+                count: lines.lines.length,
+                lines: formatLines(lines.lines),
+                page: lines.pageIndex + 1,
+              })}
             </span>
           )}
           {point.evidence && <q className="evidence">{point.evidence}</q>}
@@ -749,7 +929,6 @@ function PointRow({
       )}
       <div className="decision">
         <span className="field-label">{t("review.teacherMarks")}</span>
-        <PenSign point={point} />
         <div className="marks-buttons" role="group" aria-label={t("review.teacherMarks")}>
           {options.map((marks) => (
             <button
@@ -811,9 +990,9 @@ function readRedPenSetting(): boolean {
   }
 }
 
-/** The red ✓ / ✗ for a point, as the student will see it (owner, 2026-10-15). Lighter while it
- * is only the AI's proposal. */
-function PenSign({ point }: { point: ScriptReview["questions"][number]["points"][number] }) {
+/** The red ✓ / ✗ for a point, as the student will see it. Lighter while it is only the AI's
+ * proposal. Its label says it in words, so colour is never the only signal. */
+function PenSign({ point }: { point: ReviewPoint }) {
   const { t } = useTranslation();
   const marks = point.final_marks ?? point.proposed_marks;
   if (marks === null) return null;
@@ -844,6 +1023,7 @@ function PenSign({ point }: { point: ScriptReview["questions"][number]["points"]
 function TranscriptionPanel({
   page,
   evidence,
+  lines,
   editing,
   editable,
   draft,
@@ -856,6 +1036,7 @@ function TranscriptionPanel({
 }: {
   page: ReviewPage;
   evidence: string;
+  lines: number[];
   editing: boolean;
   editable: boolean;
   draft: string;
@@ -869,12 +1050,24 @@ function TranscriptionPanel({
   const { t } = useTranslation();
   const text = page.transcription?.text ?? "";
   const source = page.transcription?.source;
+  // Each of the student's lines with its number, the evidence lines marked, matches inside.
+  const segments = highlight(text, evidence);
+  const rendered: { key: string; parts: { text: string; mark: boolean }[] }[] = [
+    { key: "0", parts: [] },
+  ];
+  for (const segment of segments) {
+    segment.text.split("\n").forEach((part, index) => {
+      if (index > 0) rendered.push({ key: String(rendered.length), parts: [] });
+      if (part) rendered.at(-1)?.parts.push({ text: part, mark: segment.mark });
+    });
+  }
+
   return (
-    <div className="card transcription">
+    <div className="transcription">
       <div className="question-head">
         <h2>{t("review.transcription")}</h2>
         {source && (
-          <span className="muted">
+          <span className="muted small">
             {source === "teacher" ? t("review.teacherVersion") : t("review.modelVersion")}
           </span>
         )}
@@ -912,7 +1105,7 @@ function TranscriptionPanel({
             <button type="button" className="primary" disabled={busy} onClick={onSave}>
               {t("review.saveTranscription")}
             </button>
-            <button type="button" onClick={onCancel}>
+            <button type="button" className="button-secondary" onClick={onCancel}>
               {t("common.cancel")}
             </button>
           </div>
@@ -920,21 +1113,39 @@ function TranscriptionPanel({
       ) : (
         <>
           {text ? (
-            <pre className="transcription-text">
-              {highlight(text, evidence).map((segment, index) =>
-                segment.mark ? (
-                  <mark key={index}>{segment.text}</mark>
-                ) : (
-                  <span key={index}>{segment.text}</span>
-                ),
-              )}
-            </pre>
+            <ol className="transcription-lines" aria-label={t("review.transcriptionLines")}>
+              {rendered.map((line, index) => (
+                <li
+                  key={line.key}
+                  className={lines.includes(index + 1) ? "line-evidence" : undefined}
+                >
+                  <span className="line-number" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <span>
+                    {line.parts.map((part, partIndex) =>
+                      part.mark ? (
+                        <mark key={partIndex}>{part.text}</mark>
+                      ) : (
+                        <span key={partIndex}>{part.text}</span>
+                      ),
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ol>
           ) : (
             <p className="muted">{t("review.noTranscription")}</p>
           )}
           {editable && (
             <div className="actions">
-              <button type="button" disabled={busy} onClick={onStart}>
+              <button
+                type="button"
+                className="button-secondary button-small"
+                disabled={busy}
+                onClick={onStart}
+              >
+                <Icon name="pen" size={16} />
                 {t("review.editTranscription")}
               </button>
             </div>

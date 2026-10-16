@@ -70,7 +70,7 @@ export function AiPanel({
   }
 
   return (
-    <div className="card">
+    <div className="panel">
       <h2>{t("ai.title")}</h2>
       <p className="muted">{t("ai.help")}</p>
       {problems.map((problem) => (

@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../api/endpoints";
 import type { RedPenMark, ReviewPage } from "../api/types";
-import { RedPenOverlay } from "./RedPenOverlay";
+import { Icon } from "../components/Icon";
+import { PageOverlay } from "./RedPenOverlay";
 import { isSideways, pan, transformFor, zoomIn, zoomOut, FIT } from "./viewer";
 import type { ViewState } from "./viewer";
 
@@ -21,10 +22,14 @@ interface Props {
   onResetRotation: () => void;
   onUndoAuto: () => void;
   onRetranscribe: () => void;
-  // Red pen marks for this page (owner, 2026-10-15); empty when switched off or not placed.
+  // Red pen marks for this page; undefined when switched off or not placed.
   redPen?: RedPenMark[] | undefined;
   redPenOn: boolean;
   onRedPen: (on: boolean) => void;
+  // Where the selected point's evidence lines are on this page (rule-blue bands).
+  evidence: RedPenMark[];
+  showEvidence: boolean;
+  onShowEvidence: (on: boolean) => void;
 }
 
 /** One page image with zoom (buttons, wheel, keyboard), pan (drag), rotation and a page strip.
@@ -56,107 +61,138 @@ export function PageViewer(props: Props) {
   return (
     <div className="viewer">
       <div className="viewer-toolbar" role="toolbar" aria-label={t("review.viewer.toolbar")}>
-        <span className="muted">
+        <span className="viewer-page">
           {t("review.viewer.pageOf", {
             page: props.pageIndex + 1,
             count: props.pages.length,
           })}
         </span>
+        <span className="toolbar-group">
+          <button
+            type="button"
+            onClick={() => {
+              onView(zoomOut(view));
+            }}
+            aria-label={t("review.viewer.zoomOut")}
+            title={`${t("review.viewer.zoomOut")} (−)`}
+          >
+            <Icon name="zoomOut" />
+          </button>
+          <span className="viewer-zoom">{Math.round(view.zoom * 100)}%</span>
+          <button
+            type="button"
+            onClick={() => {
+              onView(zoomIn(view));
+            }}
+            aria-label={t("review.viewer.zoomIn")}
+            title={`${t("review.viewer.zoomIn")} (+)`}
+          >
+            <Icon name="zoomIn" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onView(FIT);
+            }}
+            aria-label={t("review.viewer.fit")}
+            title={`${t("review.viewer.fit")} (F)`}
+          >
+            <Icon name="fit" />
+          </button>
+        </span>
+        <span className="toolbar-sep" aria-hidden="true" />
+        <span className="toolbar-group">
+          <button
+            type="button"
+            disabled={props.locked || props.busy}
+            onClick={() => {
+              props.onRotate(-90);
+            }}
+            aria-label={t("review.viewer.rotateLeft")}
+            title={`${t("review.viewer.rotateLeft")} (Shift+R)`}
+          >
+            <Icon name="rotateLeft" />
+          </button>
+          <button
+            type="button"
+            disabled={props.locked || props.busy}
+            onClick={() => {
+              props.onRotate(90);
+            }}
+            aria-label={t("review.viewer.rotateRight")}
+            title={`${t("review.viewer.rotateRight")} (R)`}
+          >
+            <Icon name="rotateRight" />
+          </button>
+          {page.rotation_teacher !== null && (
+            <button
+              type="button"
+              disabled={props.locked || props.busy}
+              onClick={props.onResetRotation}
+            >
+              {t("review.viewer.resetRotation")}
+            </button>
+          )}
+        </span>
+        <span className="toolbar-sep" aria-hidden="true" />
         <button
           type="button"
+          aria-pressed={props.showEvidence}
+          title={`${t("review.viewer.evidence")} (E)`}
           onClick={() => {
-            onView(zoomOut(view));
-          }}
-          aria-label={t("review.viewer.zoomOut")}
-        >
-          −
-        </button>
-        <span className="viewer-zoom">{Math.round(view.zoom * 100)}%</span>
-        <button
-          type="button"
-          onClick={() => {
-            onView(zoomIn(view));
-          }}
-          aria-label={t("review.viewer.zoomIn")}
-        >
-          +
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            onView(FIT);
+            props.onShowEvidence(!props.showEvidence);
           }}
         >
-          {t("review.viewer.fit")}
+          <Icon name={props.showEvidence ? "eye" : "eyeOff"} size={16} />
+          {t("review.viewer.evidence")}
         </button>
-        <button
-          type="button"
-          disabled={props.locked || props.busy}
-          onClick={() => {
-            props.onRotate(-90);
-          }}
-          aria-label={t("review.viewer.rotateLeft")}
-        >
-          ⟲
-        </button>
-        <button
-          type="button"
-          disabled={props.locked || props.busy}
-          onClick={() => {
-            props.onRotate(90);
-          }}
-          aria-label={t("review.viewer.rotateRight")}
-        >
-          ⟳
-        </button>
-        <label className="red-pen-switch">
+        <label className="viewer-switch">
           <input
             type="checkbox"
             checked={props.redPenOn}
             onChange={(e) => {
               props.onRedPen(e.target.checked);
             }}
-          />{" "}
+          />
           {t("redPen.show")}
         </label>
-        {page.rotation_teacher !== null && (
-          <button
-            type="button"
-            disabled={props.locked || props.busy}
-            onClick={props.onResetRotation}
-          >
-            {t("review.viewer.resetRotation")}
-          </button>
-        )}
       </div>
-      {page.auto_rotated && (
-        <p className="notice" role="status">
-          <span className="badge badge-auto">{t("review.viewer.autoRotated")}</span>{" "}
-          {t("review.viewer.autoRotatedHelp", {
-            degrees: page.rotation_auto,
-            confidence: Math.round((page.auto_rotation_confidence ?? 0) * 100),
-          })}{" "}
-          <button type="button" disabled={props.locked || props.busy} onClick={props.onUndoAuto}>
-            {t("review.viewer.undoAuto")}
-          </button>
-        </p>
-      )}
-      {page.rotated_after_transcription && !page.is_cover && (
-        <p className="notice notice-warning" role="status">
-          {page.retranscribe_pending
-            ? t("review.viewer.rereadPending")
-            : t("review.viewer.rotatedAfterTranscription")}{" "}
-          {!page.retranscribe_pending && (
+      <div className="viewer-notices">
+        {page.auto_rotated && (
+          <p className="notice" role="status">
+            <span className="badge badge-auto">{t("review.viewer.autoRotated")}</span>{" "}
+            {t("review.viewer.autoRotatedHelp", {
+              degrees: page.rotation_auto,
+              confidence: Math.round((page.auto_rotation_confidence ?? 0) * 100),
+            })}{" "}
             <button
               type="button"
+              className="button-secondary button-small"
               disabled={props.locked || props.busy}
-              onClick={props.onRetranscribe}
+              onClick={props.onUndoAuto}
             >
-              {t("review.viewer.reread")}
+              {t("review.viewer.undoAuto")}
             </button>
-          )}
-        </p>
-      )}
+          </p>
+        )}
+        {page.rotated_after_transcription && !page.is_cover && (
+          <p className="notice notice-warning" role="status">
+            {page.retranscribe_pending
+              ? t("review.viewer.rereadPending")
+              : t("review.viewer.rotatedAfterTranscription")}{" "}
+            {!page.retranscribe_pending && (
+              <button
+                type="button"
+                className="button-secondary button-small"
+                disabled={props.locked || props.busy}
+                onClick={props.onRetranscribe}
+              >
+                {t("review.viewer.reread")}
+              </button>
+            )}
+          </p>
+        )}
+      </div>
       <div
         className="viewer-stage"
         onPointerDown={onPointerDown}
@@ -165,7 +201,7 @@ export function PageViewer(props: Props) {
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
       >
-        {/* The scan and its red pen move, zoom and turn together. */}
+        {/* The scan, its margin line, the evidence and the red pen move, zoom and turn together. */}
         <div
           className="viewer-sheet"
           data-testid="viewer-sheet"
@@ -178,9 +214,10 @@ export function PageViewer(props: Props) {
             data-rotation={page.rotation}
             draggable={false}
           />
-          {props.redPen && props.redPen.length > 0 && (
-            <RedPenOverlay
+          {!page.is_cover && (
+            <PageOverlay
               marks={props.redPen}
+              evidence={props.evidence}
               width={page.width}
               height={page.height}
               rotation={page.rotation}
@@ -207,6 +244,7 @@ export function PageViewer(props: Props) {
               <img
                 src={api.pageImageUrl(p.id, "thumb")}
                 alt=""
+                loading="lazy"
                 style={{ transform: `rotate(${String(p.rotation)}deg)` }}
               />
             </button>

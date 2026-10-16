@@ -55,7 +55,7 @@ Browser (React/TS, Vite build) --> FastAPI app (backend/app) --> SQLite (WAL) vi
 - **Evaluation reports** must give, per subject: exact agreement, agreement within 1 mark, mean absolute difference, and over- versus under-marking counts (owner, 2026-10-15).
 - **Third-party notices:** after any dependency change run `cd backend && uv run python ../scripts/third_party_notices.py`; the check suite verifies it.
 - Request DB transactions commit before the response is sent (`Depends(..., scope="function")`, D-021).
-- Frontend: React + TypeScript strict, plain CSS with tokens (`src/styles.css`), same-origin `fetch` only (`src/api.ts`).
+- Frontend: React + TypeScript strict, plain CSS, same-origin `fetch` only (`src/api/client.ts`). **Design system "Marking desk": `docs/DESIGN.md`.** Every colour, size and radius is a token in `src/styles/tokens.css` (contrast checked by `tokens.test.ts`); marking red only for marks, confirmed green only for teacher confirmation. Fonts and icons are bundled files listed in `src/assets/assets.json`.
 
 ## Commands
 Run from the repository root. Requires `uv` and Node/npm. Python 3.12 is uv-managed (`uv python install 3.12`).

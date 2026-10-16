@@ -27,7 +27,7 @@ export function CsvImport({ onLoad }: { onLoad: (scheme: MarkSchemeInput) => voi
 
   const scheme = preview?.scheme;
   return (
-    <details className="card import">
+    <details className="panel import">
       <summary>{t("import.title")}</summary>
       <p className="muted">{t("import.help")}</p>
       <pre className="example">

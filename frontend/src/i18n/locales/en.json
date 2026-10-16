@@ -24,7 +24,11 @@
     "classes": "Classes",
     "users": "Staff accounts",
     "signOut": "Sign out",
-    "trainingData": "Models and training data"
+    "trainingData": "Models and training data",
+    "skip": "Skip to the main content",
+    "queue": "Marking queue",
+    "settings": "Settings",
+    "breadcrumb": "You are here"
   },
   "signIn": {
     "title": "Sign in",
@@ -35,13 +39,27 @@
     "submitting": "Signing in…"
   },
   "home": {
-    "title": "Your exams",
+    "title": "What needs you today",
     "newExam": "New exam",
-    "empty": "You have no exams yet. Choose “New exam” to set one up.",
+    "empty": "You have no exams yet. Choose “New exam” to set one up: give it a title, then enter or import its mark scheme.",
     "totalMarks": "Total marks",
     "waiting": "Waiting",
     "aiMarked": "AI marked",
-    "confirmed": "Confirmed"
+    "confirmed": "Confirmed",
+    "examsTitle": "Your exams",
+    "workLabel": "Your work, in order",
+    "needScans_one": "exam waiting for scans",
+    "needScans_other": "exams waiting for scans",
+    "needScansEmpty": "No exam is waiting for scans. Once an exam's mark scheme is ready, print its cover sheets; after the exam, upload the scans here.",
+    "toReview_one": "script waiting for review",
+    "toReview_other": "scripts waiting for review",
+    "toReviewEmpty": "Nothing to review. Scripts appear here when the AI has marked them; start AI marking from an exam's Marking tab.",
+    "scriptsToReview_one": "{{count}} to review",
+    "scriptsToReview_other": "{{count}} to review",
+    "confirmedScripts_one": "script confirmed",
+    "confirmedScripts_other": "scripts confirmed",
+    "confirmedEmpty": "No confirmed scripts yet. When you confirm a script's marks, its exam appears here with a link to the results.",
+    "confirmedOf": "{{confirmed}} of {{count}}"
   },
   "exam": {
     "title": "Title",
@@ -51,7 +69,9 @@
     "status": "Status",
     "saveDetails": "Save details",
     "showScheme": "Show the mark scheme to students",
-    "showSchemeHelp": "When on, printed scripts list the mark scheme points a student missed (“Missing:”), and review offers “Suggest from the mark scheme”. Your own comments always print."
+    "showSchemeHelp": "When on, printed scripts list the mark scheme points a student missed (“Missing:”), and review offers “Suggest from the mark scheme”. Your own comments always print.",
+    "detailsTitle": "Exam details",
+    "studentCopies": "Students' marked copies"
   },
   "examStatus": {
     "draft": "Draft",
@@ -97,7 +117,8 @@
     "lockedHelp": "The mark scheme can only be changed while the exam is a draft.",
     "marksCount_one": "{{count}} mark",
     "marksCount_other": "{{count}} marks",
-    "alsoAccept": "also accept"
+    "alsoAccept": "also accept",
+    "empty": "No questions yet. Choose “Add question”, or import the mark scheme from a CSV file."
   },
   "import": {
     "title": "Import from a CSV file",
@@ -301,11 +322,17 @@
   },
   "examTabs": {
     "label": "Exam sections",
-    "setup": "Questions and mark scheme",
+    "setup": "Mark scheme",
     "sheets": "Cover sheets",
     "scans": "Scans",
     "queue": "Marking",
-    "results": "Results"
+    "results": "Results",
+    "state": {
+      "done": "Done",
+      "action": "Needs action",
+      "progress": "In progress",
+      "later": "Not yet"
+    }
   },
   "sheets": {
     "needReady": "Mark the exam as ready (after completing the mark scheme) before printing cover sheets or uploading scans.",
@@ -366,7 +393,12 @@
       "no_answer_pages": "Check: only a cover sheet, no answer pages.",
       "more_than_usual": "Check: more pages than usual (typical: {{typical}}). Another student's pages may have been added.",
       "fewer_than_usual": "Check: fewer pages than usual (typical: {{typical}}). Some pages may be missing."
-    }
+    },
+    "discardOne": "Discard page {{number}} of {{file}}",
+    "discardShort": "Discard",
+    "noScripts": "No scripts yet. Upload the scanned stack above; each student's pages are placed behind their cover sheet.",
+    "returnPage": "Return page {{number}} of {{code}} to the unassigned pages",
+    "returnShort": "Unassign"
   },
   "ai": {
     "title": "AI marking",
@@ -447,14 +479,14 @@
     "nextScript": "Next script",
     "shortcuts": "Keyboard shortcuts",
     "shortcutsHelp": "Shortcuts do nothing while you are typing in a text box. Press Esc to leave the box.",
-    "confirm": "Confirm script",
-    "confirmed": "Script confirmed.",
+    "confirm": "Confirm marks",
+    "confirmed": "Marks confirmed.",
     "reopen": "Reopen for changes",
-    "reopened": "Script reopened. Confirm it again when you are done.",
-    "cannotConfirm": "Give every point a mark and a category before confirming.",
+    "reopened": "Marks reopened. Confirm them again when you are done.",
+    "cannotConfirm": "Give every point a mark and a category, then confirm the marks.",
     "manualMarking": "Mark this script by hand:",
     "notReady": "The AI has not finished with this script yet. You can look, but not change anything.",
-    "lockedNotice": "This script is confirmed. Reopen it to make changes.",
+    "lockedNotice": "These marks are confirmed. Reopen them to make changes.",
     "markedOnEarlierText": "The transcription was changed after the AI proposed its marks: the proposals were made on the earlier text.",
     "noPages": "This script has no pages.",
     "marksTooHigh": "This point is worth at most {{max}}.",
@@ -507,10 +539,11 @@
       "imageAlt": "Scanned page {{page}}",
       "strip": "Pages",
       "coverThumb": "Cover sheet",
-      "pageThumb": "Page {{page}}"
+      "pageThumb": "Page {{page}}",
+      "evidence": "Evidence"
     },
     "keys": {
-      "points": "Next / previous mark scheme point",
+      "points": "Previous / next mark scheme point",
       "deduction": "Next point where the AI deducted marks",
       "marks": "Give the focused point that many marks",
       "accept": "Accept the AI's proposal for the focused point",
@@ -523,9 +556,18 @@
       "zoom": "Zoom in / out / fit",
       "rotate": "Rotate the page right / left",
       "scripts": "Next / previous script",
-      "confirm": "Confirm the script",
-      "help": "Show or hide this list"
-    }
+      "confirm": "Confirm marks",
+      "help": "Show or hide this list",
+      "questions": "Previous / next question",
+      "evidence": "Show or hide the evidence on the page"
+    },
+    "totalLabel": "Total",
+    "questions": "Questions",
+    "questionNav": "Question {{label}}: {{final}} of {{max}}",
+    "questionTitle": "Question {{label}}",
+    "evidenceLines_one": "Line {{lines}}, page {{page}}",
+    "evidenceLines_other": "Lines {{lines}}, page {{page}}",
+    "transcriptionLines": "Transcription, numbered by line"
   },
   "results": {
     "title": "Class results",
@@ -541,7 +583,11 @@
     "exportsHelp": "Only confirmed scripts are exported. Marked PDFs show student codes only, never names.",
     "nothingToExport": "Confirm at least one script to export results.",
     "downloadCsv": "Download results (CSV)",
-    "classPdf": "Prepare marked PDFs for the class (one file for printing)"
+    "classPdf": "Prepare marked PDFs for the class (one file for printing)",
+    "print": "Print results",
+    "zeroShare": "Scored zero (confirmed)",
+    "zeroShareHelp": "“Scored zero” is the share of confirmed scripts with no marks on that question. A high share suggests a topic to reteach.",
+    "reteach": "many students scored zero: consider reteaching"
   },
   "exports": {
     "download": "Download {{name}}",
@@ -611,7 +657,8 @@
     "rotateLeft": "Turn {{code}} page {{page}} left",
     "rotateRight": "Turn {{code}} page {{page}} right",
     "firstNotice": "Check page orientation first: AI marking can start once every page is upright.",
-    "goTo": "Go to the pages"
+    "goTo": "Go to the pages",
+    "turned": "Shown turned {{degrees}}°"
   },
   "progress": {
     "title": "AI marking in progress",
@@ -644,5 +691,25 @@
     "signNone": "No marks for this point",
     "signPart": "{{marks}} of {{max}} marks for this point",
     "notPlaced": "The red pen could not be placed on this page: its marks are printed in the margin."
+  },
+  "markingQueue": {
+    "title": "Marking queue",
+    "lede": "Exams with scripts the AI has marked and you can review now, most waiting first.",
+    "empty": "Nothing to review. Scripts appear here when the AI has marked them; start AI marking from an exam's Marking tab.",
+    "toReview": "To review",
+    "withAi": "With the AI",
+    "open": "Open queue",
+    "openFor": "Open the marking queue for {{title}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Your account",
+    "school": "School",
+    "languageTitle": "Language",
+    "languageHelp": "Choose English or French from the Language menu at the top of any page. Your choice is saved with your account.",
+    "adminTitle": "School administration",
+    "usersHelp": "Add teachers, reset passwords and deactivate accounts.",
+    "classesHelp": "Create classes, assign teachers and add students.",
+    "trainingHelp": "See which AI models are in use and export training data."
   }
 }

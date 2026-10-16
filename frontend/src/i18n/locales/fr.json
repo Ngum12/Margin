@@ -24,7 +24,11 @@
     "classes": "Classes",
     "users": "Comptes du personnel",
     "signOut": "Se déconnecter",
-    "trainingData": "Modèles et données d'entraînement"
+    "trainingData": "Modèles et données d'entraînement",
+    "skip": "Aller au contenu principal",
+    "queue": "Copies à corriger",
+    "settings": "Paramètres",
+    "breadcrumb": "Vous êtes ici"
   },
   "signIn": {
     "title": "Connexion",
@@ -35,13 +39,27 @@
     "submitting": "Connexion…"
   },
   "home": {
-    "title": "Vos examens",
+    "title": "À faire aujourd'hui",
     "newExam": "Nouvel examen",
-    "empty": "Vous n'avez pas encore d'examen. Choisissez « Nouvel examen » pour en créer un.",
+    "empty": "Vous n'avez pas encore d'examen. Choisissez « Nouvel examen » pour en créer un : donnez-lui un titre, puis saisissez ou importez son barème.",
     "totalMarks": "Total des points",
     "waiting": "En attente",
     "aiMarked": "Corrigées par l'IA",
-    "confirmed": "Validées"
+    "confirmed": "Validées",
+    "examsTitle": "Vos examens",
+    "workLabel": "Votre travail, dans l'ordre",
+    "needScans_one": "examen en attente de numérisation",
+    "needScans_other": "examens en attente de numérisation",
+    "needScansEmpty": "Aucun examen n'attend de numérisation. Quand le barème d'un examen est prêt, imprimez ses fiches de couverture ; après l'examen, déposez les copies numérisées ici.",
+    "toReview_one": "copie à vérifier",
+    "toReview_other": "copies à vérifier",
+    "toReviewEmpty": "Rien à vérifier. Les copies apparaissent ici une fois corrigées par l'IA ; lancez la correction depuis l'onglet Correction d'un examen.",
+    "scriptsToReview_one": "{{count}} à vérifier",
+    "scriptsToReview_other": "{{count}} à vérifier",
+    "confirmedScripts_one": "copie validée",
+    "confirmedScripts_other": "copies validées",
+    "confirmedEmpty": "Aucune copie validée pour l'instant. Quand vous validez les notes d'une copie, son examen apparaît ici avec un lien vers les résultats.",
+    "confirmedOf": "{{confirmed}} sur {{count}}"
   },
   "exam": {
     "title": "Titre",
@@ -51,7 +69,9 @@
     "status": "Statut",
     "saveDetails": "Enregistrer les informations",
     "showScheme": "Montrer le barème aux élèves",
-    "showSchemeHelp": "Si activé, les copies imprimées indiquent les points du barème manqués (« Manque : ») et la correction propose « Suggérer à partir du barème ». Vos propres commentaires sont toujours imprimés."
+    "showSchemeHelp": "Si activé, les copies imprimées indiquent les points du barème manqués (« Manque : ») et la correction propose « Suggérer à partir du barème ». Vos propres commentaires sont toujours imprimés.",
+    "detailsTitle": "Informations sur l'examen",
+    "studentCopies": "Copies corrigées remises aux élèves"
   },
   "examStatus": {
     "draft": "Brouillon",
@@ -97,7 +117,8 @@
     "lockedHelp": "Le barème ne peut être modifié que lorsque l'examen est en brouillon.",
     "marksCount_one": "{{count}} point",
     "marksCount_other": "{{count}} points",
-    "alsoAccept": "accepter aussi"
+    "alsoAccept": "accepter aussi",
+    "empty": "Aucune question pour l'instant. Choisissez « Ajouter une question » ou importez le barème depuis un fichier CSV."
   },
   "import": {
     "title": "Importer depuis un fichier CSV",
@@ -301,11 +322,17 @@
   },
   "examTabs": {
     "label": "Sections de l'examen",
-    "setup": "Questions et barème",
+    "setup": "Barème",
     "sheets": "Fiches de couverture",
     "scans": "Copies scannées",
     "queue": "Correction",
-    "results": "Résultats"
+    "results": "Résultats",
+    "state": {
+      "done": "Terminé",
+      "action": "À faire",
+      "progress": "En cours",
+      "later": "Pas encore"
+    }
   },
   "sheets": {
     "needReady": "Marquez l'examen comme prêt (après avoir complété le barème) avant d'imprimer les fiches de couverture ou de téléverser les copies.",
@@ -366,7 +393,12 @@
       "no_answer_pages": "À vérifier : seulement une fiche de couverture, aucune page de réponse.",
       "more_than_usual": "À vérifier : plus de pages que d'habitude (habituel : {{typical}}). Les pages d'un autre élève ont peut-être été ajoutées.",
       "fewer_than_usual": "À vérifier : moins de pages que d'habitude (habituel : {{typical}}). Des pages manquent peut-être."
-    }
+    },
+    "discardOne": "Écarter la page {{number}} de {{file}}",
+    "discardShort": "Écarter",
+    "noScripts": "Aucune copie pour l'instant. Déposez la pile numérisée ci-dessus ; les pages de chaque élève sont placées derrière sa fiche de couverture.",
+    "returnPage": "Remettre la page {{number}} de {{code}} parmi les pages non attribuées",
+    "returnShort": "Retirer"
   },
   "ai": {
     "title": "Correction par l'IA",
@@ -447,14 +479,14 @@
     "nextScript": "Copie suivante",
     "shortcuts": "Raccourcis clavier",
     "shortcutsHelp": "Les raccourcis ne font rien pendant la saisie dans une zone de texte. Appuyez sur Échap pour quitter la zone.",
-    "confirm": "Confirmer la copie",
-    "confirmed": "Copie confirmée.",
+    "confirm": "Valider les notes",
+    "confirmed": "Notes validées.",
     "reopen": "Rouvrir pour modifier",
-    "reopened": "Copie rouverte. Confirmez-la à nouveau quand vous avez terminé.",
-    "cannotConfirm": "Donnez une note et une catégorie à chaque critère avant de confirmer.",
+    "reopened": "Notes rouvertes. Validez-les à nouveau quand vous avez terminé.",
+    "cannotConfirm": "Donnez une note et une catégorie à chaque critère, puis validez les notes.",
     "manualMarking": "Corrigez cette copie à la main :",
     "notReady": "L'IA n'a pas encore terminé cette copie. Vous pouvez la consulter, mais rien modifier.",
-    "lockedNotice": "Cette copie est confirmée. Rouvrez-la pour la modifier.",
+    "lockedNotice": "Ces notes sont validées. Rouvrez-les pour les modifier.",
     "markedOnEarlierText": "La transcription a été modifiée après les propositions de l'IA : elles portent sur le texte précédent.",
     "noPages": "Cette copie n'a aucune page.",
     "marksTooHigh": "Ce critère vaut au plus {{max}}.",
@@ -507,10 +539,11 @@
       "imageAlt": "Page scannée {{page}}",
       "strip": "Pages",
       "coverThumb": "Page de garde",
-      "pageThumb": "Page {{page}}"
+      "pageThumb": "Page {{page}}",
+      "evidence": "Preuves"
     },
     "keys": {
-      "points": "Critère suivant / précédent",
+      "points": "Critère précédent / suivant du barème",
       "deduction": "Critère suivant où l'IA a retiré des points",
       "marks": "Donner ce nombre de points au critère sélectionné",
       "accept": "Accepter la proposition de l'IA pour le critère sélectionné",
@@ -523,9 +556,18 @@
       "zoom": "Agrandir / réduire / ajuster",
       "rotate": "Tourner la page à droite / à gauche",
       "scripts": "Copie suivante / précédente",
-      "confirm": "Confirmer la copie",
-      "help": "Afficher ou masquer cette liste"
-    }
+      "confirm": "Valider les notes",
+      "help": "Afficher ou masquer cette liste",
+      "questions": "Question précédente / suivante",
+      "evidence": "Afficher ou masquer les preuves sur la page"
+    },
+    "totalLabel": "Total",
+    "questions": "Questions",
+    "questionNav": "Question {{label}} : {{final}} sur {{max}}",
+    "questionTitle": "Question {{label}}",
+    "evidenceLines_one": "Ligne {{lines}}, page {{page}}",
+    "evidenceLines_other": "Lignes {{lines}}, page {{page}}",
+    "transcriptionLines": "Transcription, numérotée par ligne"
   },
   "results": {
     "title": "Résultats de la classe",
@@ -541,7 +583,11 @@
     "exportsHelp": "Seules les copies confirmées sont exportées. Les PDF corrigés montrent uniquement les codes des élèves, jamais les noms.",
     "nothingToExport": "Confirmez au moins une copie pour exporter les résultats.",
     "downloadCsv": "Télécharger les résultats (CSV)",
-    "classPdf": "Préparer les PDF corrigés de la classe (un fichier à imprimer)"
+    "classPdf": "Préparer les PDF corrigés de la classe (un fichier à imprimer)",
+    "print": "Imprimer les résultats",
+    "zeroShare": "Zéro obtenu (copies validées)",
+    "zeroShareHelp": "« Zéro obtenu » est la part des copies validées sans aucun point à cette question. Une part élevée signale une notion à retravailler.",
+    "reteach": "beaucoup d'élèves ont obtenu zéro : notion à retravailler"
   },
   "exports": {
     "download": "Télécharger {{name}}",
@@ -611,7 +657,8 @@
     "rotateLeft": "Tourner la page {{page}} de {{code}} à gauche",
     "rotateRight": "Tourner la page {{page}} de {{code}} à droite",
     "firstNotice": "Vérifiez d'abord l'orientation des pages : la correction par IA peut commencer quand toutes les pages sont droites.",
-    "goTo": "Aller aux pages"
+    "goTo": "Aller aux pages",
+    "turned": "Affichée tournée de {{degrees}}°"
   },
   "progress": {
     "title": "Correction par IA en cours",
@@ -644,5 +691,25 @@
     "signNone": "Aucun point pour ce critère",
     "signPart": "{{marks}} point(s) sur {{max}} pour ce critère",
     "notPlaced": "Le stylo rouge n'a pas pu être placé sur cette page : ses notes sont imprimées dans la marge."
+  },
+  "markingQueue": {
+    "title": "Copies à corriger",
+    "lede": "Les examens dont des copies ont été corrigées par l'IA et peuvent être vérifiées maintenant, les plus en attente d'abord.",
+    "empty": "Rien à vérifier. Les copies apparaissent ici une fois corrigées par l'IA ; lancez la correction depuis l'onglet Correction d'un examen.",
+    "toReview": "À vérifier",
+    "withAi": "Chez l'IA",
+    "open": "Ouvrir la liste",
+    "openFor": "Ouvrir la liste des copies de {{title}}"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "account": "Votre compte",
+    "school": "Établissement",
+    "languageTitle": "Langue",
+    "languageHelp": "Choisissez le français ou l'anglais dans le menu Langue en haut de chaque page. Votre choix est enregistré avec votre compte.",
+    "adminTitle": "Administration de l'établissement",
+    "usersHelp": "Ajouter des enseignants, réinitialiser des mots de passe et désactiver des comptes.",
+    "classesHelp": "Créer des classes, attribuer les enseignants et ajouter les élèves.",
+    "trainingHelp": "Voir les modèles d'IA utilisés et exporter les données d'entraînement."
   }
 }

@@ -79,7 +79,7 @@ export function AiProgressPanel({
   const done = finished?.run === started ? finished : null;
   if (done && progress && !progress.running) {
     return (
-      <div className="card progress-done" role="status">
+      <div className="panel progress-done" role="status">
         <strong>{t("progress.finished")}</strong>{" "}
         {t("progress.finishedCounts", { ready: done.ready, manual: done.manual })}
       </div>
@@ -89,7 +89,7 @@ export function AiProgressPanel({
 
   const current = progress.scripts.find((s) => s.state === "working");
   return (
-    <div className="card progress-card">
+    <div className="panel progress-card">
       <h2>{t("progress.title")}</h2>
       <div
         className="progress-bar"

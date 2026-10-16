@@ -46,3 +46,7 @@ What a district hub (mode 2) and a Margin-hosted cloud (mode 3) will need beyond
 - **A data processing agreement template** for schools, districts and Margin (who controls the data, where it is stored, sub-processors: none for AI, retention, breach notification).
 - Mode 3 only: our own model servers sized for many schools (queueing, fair scheduling between schools), and monitoring that never includes student content.
 - Mode 3 only: **replace `MARGIN_ALLOW_PUBLIC_MODEL_HOST` with an explicit allowlist of approved model hosts** (for example `MARGIN_APPROVED_MODEL_HOSTS`). Private and loopback hosts are accepted as today; a public host is accepted only if it is on the list, never through a general on/off switch. When built, add a test that an unlisted public host is refused at start-up, even in cloud mode.
+
+## From the UI redesign (D-064)
+- **"Scripts confirmed this week" on the dashboard:** needs each exam's confirmations dated in the exam list API (for example `scripts.confirmed_this_week`). The redesign changed no API, so the dashboard shows all confirmed scripts for now.
+- **An "AI's short reason" per point:** the marker gives a category and evidence, not a written reason. A one-line reason field would need a prompt and schema change (and an evaluation).

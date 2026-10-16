@@ -144,11 +144,33 @@ def _font_components() -> list[Component]:
     ]
 
 
+def _web_asset_components() -> list[Component]:
+    """Fonts and icons bundled into the web app, listed in their manifest."""
+    folder = ROOT / "frontend" / "src" / "assets"
+    assets = json.loads((folder / "assets.json").read_text(encoding="utf-8"))
+    return [
+        Component(
+            asset["kind"],
+            asset["name"],
+            asset["version"],
+            asset["licence"],
+            [
+                (
+                    Path(asset["licence_file"]).name,
+                    (folder / asset["licence_file"]).read_text(encoding="utf-8"),
+                )
+            ],
+        )
+        for asset in assets
+    ]
+
+
 def collect() -> list[Component]:
     return (
         [_python_component(n) for n in _python_closure()]
         + _frontend_components()
         + _font_components()
+        + _web_asset_components()
     )
 
 

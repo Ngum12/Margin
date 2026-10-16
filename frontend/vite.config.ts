@@ -21,5 +21,7 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     restoreMocks: true,
     testTimeout: 15000,
+    // Let tokens.test.ts read the design tokens (other stylesheets stay stubbed in tests).
+    css: { include: [/tokens\.css/] },
   },
 });

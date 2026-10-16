@@ -1,0 +1,98 @@
+/* Design tokens: the one source of truth for colour, type, space and shape ("Marking desk",
+ * docs/DESIGN.md). Every text/background pair is checked for WCAG AA by tokens.test.ts.
+ * All fonts are bundled (src/assets/fonts); nothing is loaded from another host. */
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("../assets/fonts/AtkinsonHyperlegibleNext-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Literata";
+  src: url("../assets/fonts/Literata-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Fallback for any character the UI font lacks (downloaded only when one is needed). */
+@font-face {
+  font-family: "Noto Sans Margin";
+  src: url("../assets/fonts/NotoSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Red pen annotations only (overlay and marked PDF). */
+@font-face {
+  font-family: "Caveat";
+  src: url("../assets/fonts/Caveat-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+:root {
+  /* Colour */
+  --ink: #1b2a41; /* primary text, side rail */
+  --ink-2: #44546a; /* secondary text */
+  --ink-3: #5c6b80; /* disabled text */
+  --paper: #f4f6f8; /* app background */
+  --surface: #ffffff; /* working panels */
+  --rule: #c9d6e3; /* borders, dividers, evidence bands */
+  --field-border: #7d8da3; /* form controls: 3:1 against the surface */
+  --selected: #dce6f1; /* selected row or item */
+  --info-bg: #eaf0f7;
+  --link: #24538f;
+  --focus: #2f6fb3;
+  --rail-text: #e8edf3;
+  --rail-muted: #a9b6c6;
+  --rail-active: #2a3b57;
+  --rail-focus: #9cc3f0;
+  /* Marks, ticks, crosses, annotations and the margin line: nothing else. */
+  --mark-red: #b3261e;
+  /* "Confirmed by the teacher": nothing else. */
+  --confirmed: #2f5d4a;
+  --confirmed-bg: #e7f0eb;
+  /* Problems and destructive actions: never the marking red. */
+  --danger: #8c2f14;
+  --danger-bg: #fbede8;
+  --warn: #8a5a00;
+  --warn-bg: #fff6e0;
+  --warn-border: #f0d9a6;
+  --scrim: rgb(27 42 65 / 40%); /* behind dialogs */
+  --evidence: rgb(201 214 227 / 35%); /* --rule at 35 % */
+
+  /* Type */
+  --font-ui: "Atkinson Hyperlegible Next", "Noto Sans Margin", system-ui, "Segoe UI", sans-serif;
+  --font-title: "Literata", Georgia, "Noto Serif", serif;
+  --font-pen: "Caveat", "Segoe Print", cursive;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --text-sm: 13px;
+  --text-md: 15px; /* body */
+  --text-lg: 17px;
+  --text-xl: 21px;
+  --text-2xl: 28px;
+  --leading: 1.5;
+  --measure: 76ch; /* prose line length, under 80 characters */
+
+  /* Space (4 px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Shape */
+  --radius-control: 4px;
+  --radius-panel: 6px;
+  --shadow-overlay: 0 8px 24px rgb(27 42 65 / 18%), 0 2px 6px rgb(27 42 65 / 12%);
+
+  /* Layout */
+  --rail-width: 200px;
+  --rail-width-compact: 64px;
+  --topbar-height: 52px;
+}

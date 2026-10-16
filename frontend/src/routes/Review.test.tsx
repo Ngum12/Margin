@@ -300,7 +300,7 @@ describe("script review screen", () => {
     renderApp("/exams/7/review/5");
     await screen.findByRole("heading", { name: /Ama Fon/ });
 
-    await user.keyboard("e");
+    await user.keyboard("t");
     const editor = screen.getByRole("textbox", { name: en.review.transcription });
     expect(editor).toHaveFocus();
     await user.clear(editor);
@@ -590,6 +590,99 @@ describe("test-model output and re-running AI marking (owner, 2026-10-15)", () =
     );
     await user.click(screen.getByRole("button", { name: en.common.yes }));
     expect(await screen.findByText("AI marking started again for 1 script.")).toBeInTheDocument();
+  });
+});
+
+describe("the marking desk (design pass)", () => {
+  function twoQuestions(overrides: Partial<ScriptReview> = {}): ScriptReview {
+    const base = review();
+    const first = at(base.questions, 0);
+    return review({
+      questions: [
+        first,
+        {
+          ...first,
+          id: 12,
+          label: "1(b)",
+          prompt_text: "Name the gas.",
+          max_marks: 1,
+          points: [point({ id: 23, description: "Hydrogen", evidence: "Hydrogen", deducted: 0 })],
+          deductions: 0,
+          marks_deducted: 0,
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("shows one question at a time and moves between questions with the arrow keys", async () => {
+    setup(twoQuestions());
+    const user = userEvent.setup();
+    renderApp("/exams/7/review/5");
+    await screen.findByRole("heading", { name: /Ama Fon/ });
+
+    expect(screen.getByRole("heading", { name: /Question 1\(a\)/ })).toBeInTheDocument();
+    expect(screen.queryByText("Hydrogen", { selector: ".point-description" })).toBeNull();
+    await user.keyboard("{ArrowRight}");
+    expect(await screen.findByRole("heading", { name: /Question 1\(b\)/ })).toBeInTheDocument();
+    expect(screen.getByText("Hydrogen", { selector: ".point-description" })).toBeInTheDocument();
+    // The evidence line numbers are given beside the AI's proposal.
+    expect(screen.getByText("Line 2, page 2")).toBeInTheDocument();
+    await user.keyboard("{ArrowLeft}");
+    expect(await screen.findByRole("heading", { name: /Question 1\(a\)/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Question 1\(b\): – of 1/ }));
+    expect(screen.getByRole("heading", { name: /Question 1\(b\)/ })).toBeInTheDocument();
+  });
+
+  it("hides and shows the evidence with E", async () => {
+    setup();
+    const user = userEvent.setup();
+    renderApp("/exams/7/review/5");
+    await screen.findByText("conduct electricity", { selector: "mark" });
+
+    await user.keyboard("e");
+    expect(screen.queryByText("conduct electricity", { selector: "mark" })).toBeNull();
+    expect(screen.getByRole("button", { name: en.review.viewer.evidence })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await user.keyboard("e");
+    expect(screen.getByText("conduct electricity", { selector: "mark" })).toBeInTheDocument();
+  });
+
+  it("confirms with Enter and settles the total in the confirmed state", async () => {
+    const api = setup(review({ can_confirm: true }));
+    api.on("POST /api/scripts/5/confirm", [
+      200,
+      review({
+        locked: true,
+        script: { ...review().script, status: "confirmed" },
+        totals: { ...review().totals, final_total: 2 },
+      }),
+    ]);
+    const user = userEvent.setup();
+    renderApp("/exams/7/review/5");
+    await screen.findByRole("heading", { name: /Ama Fon/ });
+
+    await user.keyboard("{Enter}");
+
+    expect(await screen.findByText(en.review.confirmed)).toBeInTheDocument();
+    const total = screen.getByText("Total: 2 / 2").closest("p");
+    expect(total).toHaveClass("desk-score-confirmed");
+    expect(total).toHaveClass("desk-score-stamp");
+  });
+
+  it("lets Enter press a focused button instead of confirming", async () => {
+    const api = setup(review({ can_confirm: true }));
+    const user = userEvent.setup();
+    renderApp("/exams/7/review/5");
+    await screen.findByRole("heading", { name: /Ama Fon/ });
+
+    screen.getByRole("button", { name: en.review.shortcuts }).focus();
+    await user.keyboard("{Enter}");
+
+    expect(await screen.findByRole("dialog", { name: en.review.shortcuts })).toBeInTheDocument();
+    expect(calls(api, "POST", "/api/scripts/5/confirm")).toHaveLength(0);
   });
 });
 

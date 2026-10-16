@@ -7,6 +7,7 @@ import type { CoverSheetRow, ExamDetail, ScanPage, ScriptsOverview, Upload } fro
 import { errorMessage } from "../components/errors";
 import { ErrorMessage, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
+import { Icon } from "../components/Icon";
 import { ExamHeader } from "../exam/ExamHeader";
 
 const POLL_MS = 3000;
@@ -54,7 +55,7 @@ export default function Scans() {
     <section>
       <ExamHeader exam={data.exam} />
       {data.exam.status === "draft" ? (
-        <p className="card">{t("sheets.needReady")}</p>
+        <p className="panel empty-state">{t("sheets.needReady")}</p>
       ) : (
         <>
           <UploadPanel examId={examId} onUploaded={refresh} />
@@ -99,22 +100,28 @@ function UploadPanel({ examId, onUploaded }: { examId: number; onUploaded: () =>
   }
 
   return (
-    <div className="card">
+    <div className="panel">
       <h2>{t("scans.uploadTitle")}</h2>
       <p className="muted">{t("scans.uploadHelp")}</p>
-      <input
-        type="file"
-        accept="application/pdf,.pdf"
-        multiple
-        disabled={uploading}
-        aria-label={t("scans.choose")}
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? []);
-          e.target.value = "";
-          if (files.length > 0) void upload(files);
-        }}
-      />
-      {uploading && <p className="muted">{t("scans.uploading")}</p>}
+      <div className="upload-drop">
+        <input
+          type="file"
+          accept="application/pdf,.pdf"
+          multiple
+          disabled={uploading}
+          aria-label={t("scans.choose")}
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? []);
+            e.target.value = "";
+            if (files.length > 0) void upload(files);
+          }}
+        />
+      </div>
+      {uploading && (
+        <p className="muted" role="status">
+          {t("scans.uploading")}
+        </p>
+      )}
       <ul className="plain-list">
         {messages.map((m) => (
           <li key={m.name} className={m.ok ? "success" : "error"} role={m.ok ? "status" : "alert"}>
@@ -133,7 +140,7 @@ function UploadList({ uploads, onChange }: { uploads: Upload[]; onChange: () => 
   return (
     <div className="table-wrap card-table">
       <ErrorMessage error={error} />
-      <table>
+      <table className="data-table">
         <thead>
           <tr>
             <th>{t("scans.file")}</th>
@@ -160,7 +167,9 @@ function UploadList({ uploads, onChange }: { uploads: Upload[]; onChange: () => 
                 )}
               </td>
               <td className="row-actions">
-                <a href={api.originalUrl(u.id)}>{t("scans.original")}</a>
+                <a href={api.originalUrl(u.id)}>
+                  <Icon name="download" size={16} /> {t("scans.original")}
+                </a>
                 {u.status === "failed" && (
                   <button
                     type="button"
@@ -239,7 +248,7 @@ function Tray({
 
   const ids = [...selected];
   return (
-    <div className="card tray">
+    <div className="panel tray">
       <h2>
         {t("scans.trayTitle", { count: pages.filter((p) => p.state === "unassigned").length })}
       </h2>
@@ -299,21 +308,38 @@ function Tray({
               </span>
             </label>
             <PageThumb page={page} filenames={filenames} />
-            <p className="reason">
-              {page.state === "discarded"
-                ? t("scans.discarded")
-                : page.unassigned_reason
-                  ? t(`scans.reason.${page.unassigned_reason}`)
-                  : ""}
-              {page.detected_exam_title && ` (${page.detected_exam_title})`}
+            <p className={page.state === "discarded" ? "reason" : "reason reason-flag"}>
+              {page.state !== "discarded" && <Icon name="warning" size={14} />}
+              <span>
+                {page.state === "discarded"
+                  ? t("scans.discarded")
+                  : page.unassigned_reason
+                    ? t(`scans.reason.${page.unassigned_reason}`)
+                    : ""}
+                {page.detected_exam_title && ` (${page.detected_exam_title})`}
+              </span>
             </p>
-            {page.state === "discarded" && (
+            {page.state === "discarded" ? (
               <button
                 type="button"
-                className="button-secondary"
+                className="button-secondary button-small"
                 onClick={() => void act(() => api.unassignPages(examId, [page.id]))}
               >
+                <Icon name="undo" size={16} />
                 {t("scans.restore")}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="button-quiet button-small"
+                aria-label={t("scans.discardOne", {
+                  number: page.source_page_index + 1,
+                  file: filenames.get(page.upload_id) ?? "",
+                })}
+                onClick={() => void act(() => api.discardPages(examId, [page.id]))}
+              >
+                <Icon name="trash" size={16} />
+                {t("scans.discardShort")}
               </button>
             )}
           </li>
@@ -335,11 +361,10 @@ function ScriptList({
   onChange: () => void;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState<number | null>(null);
   const [error, setError] = useState<unknown>(null);
 
   return (
-    <div className="card">
+    <div className="panel">
       <h2>
         {t("scans.scriptsTitle", {
           count: overview.scripts.length,
@@ -347,53 +372,59 @@ function ScriptList({
         })}
       </h2>
       <ErrorMessage error={error} />
+      {overview.scripts.length === 0 && <p className="empty-state">{t("scans.noScripts")}</p>}
       {overview.scripts.length > 0 && (
-        <ul className="plain-list scripts">
+        <ul className="script-rows">
           {overview.scripts.map((script) => (
-            <li key={script.id}>
-              <button
-                type="button"
-                className="link-button"
-                aria-expanded={open === script.id}
-                onClick={() => {
-                  setOpen(open === script.id ? null : script.id);
-                }}
-              >
-                <span className="code">{script.student.code}</span>{" "}
-                {script.student.display_name ?? ""}{" "}
-                <span className="muted">
+            <li key={script.id} className="script-row">
+              <div className="script-row-who">
+                <span className="script-row-name">
+                  {script.student.display_name ?? (
+                    <span className="code">{script.student.code}</span>
+                  )}
+                </span>
+                {script.student.display_name && (
+                  <>
+                    <span className="code">{script.student.code}</span>{" "}
+                  </>
+                )}
+                <span className="muted small">
                   {t("scans.pageCount", { count: script.pages.length })}
                 </span>
-              </button>
-              {script.page_count_flag && (
-                <p className="warning-text">
-                  {t(`scans.pageFlag.${script.page_count_flag}`, {
-                    typical: overview.typical_page_count ?? "?",
-                  })}
-                </p>
-              )}
-              {open === script.id && (
-                <ul className="page-grid">
-                  {script.pages.map((page) => (
-                    <li key={page.id} className="page-card">
-                      <span className="muted">
-                        {t("scans.position", { number: page.position })}
-                      </span>
-                      <PageThumb page={page} filenames={filenames} />
-                      <button
-                        type="button"
-                        className="button-secondary"
-                        onClick={() => {
-                          setError(null);
-                          api.unassignPages(examId, [page.id]).then(onChange).catch(setError);
-                        }}
-                      >
-                        {t("scans.returnToTray")}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                {script.page_count_flag && (
+                  <p className="warning-text">
+                    {t(`scans.pageFlag.${script.page_count_flag}`, {
+                      typical: overview.typical_page_count ?? "?",
+                    })}
+                  </p>
+                )}
+              </div>
+              <ol className="script-row-pages" aria-label={script.student.code}>
+                {script.pages.map((page) => (
+                  <li key={page.id}>
+                    <PageThumb page={page} filenames={filenames} />
+                    <span className="muted small">
+                      {t("scans.position", { number: page.position })}
+                    </span>
+                    <button
+                      type="button"
+                      className="button-quiet button-small"
+                      aria-label={t("scans.returnPage", {
+                        number: page.position,
+                        code: script.student.code,
+                      })}
+                      title={t("scans.returnToTray")}
+                      onClick={() => {
+                        setError(null);
+                        api.unassignPages(examId, [page.id]).then(onChange).catch(setError);
+                      }}
+                    >
+                      <Icon name="undo" size={16} />
+                      {t("scans.returnShort")}
+                    </button>
+                  </li>
+                ))}
+              </ol>
             </li>
           ))}
         </ul>

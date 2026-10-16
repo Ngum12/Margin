@@ -69,6 +69,47 @@ function job(overrides: Partial<ExportJob> = {}): ExportJob {
   };
 }
 
+describe("results table (design pass)", () => {
+  it("sorts by a question and shows the share of confirmed scripts that scored zero", async () => {
+    const api = fakeApi();
+    api.on("GET /api/auth/me", [200, me()]);
+    const base = results();
+    const third = {
+      ...at(base.rows, 0),
+      script_id: 7,
+      student_code: "CCCCCC",
+      student_name: "Comfort",
+      marks: [2, 0],
+      total: 2,
+      percentage: 66.7,
+    };
+    api.on("GET /api/exams/7/results", [
+      200,
+      results({ rows: [...base.rows, third], confirmed_count: 2, script_count: 3 }),
+    ]);
+    const user = userEvent.setup();
+    renderApp("/exams/7/results");
+
+    const zeroRow = await screen.findByRole("row", {
+      name: (name) => name.startsWith(en.results.zeroShare),
+    });
+    // Question 1(b): one of the two confirmed scripts scored zero (50 %, worth reteaching).
+    expect(within(zeroRow).getByText("0%")).toBeInTheDocument();
+    expect(within(zeroRow).getByText(/50%/)).toBeInTheDocument();
+    expect(within(zeroRow).getByText(en.results.reteach)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /1\(a\)/ }));
+    const header = screen.getByRole("columnheader", { name: /1\(a\)/ });
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    const body = screen.getAllByRole("rowgroup")[1];
+    if (!body) throw new Error("no table body");
+    const codes = within(body)
+      .getAllByRole("row")
+      .map((row) => within(row).getByText(/^[A-Z]{6}$/).textContent);
+    expect(codes).toEqual(["CCCCCC", "AAAAAA", "BBBBBB"]);
+  });
+});
+
 describe("results screen", () => {
   it("shows confirmed marks, hides unconfirmed ones, and offers the exports", async () => {
     const api = fakeApi();

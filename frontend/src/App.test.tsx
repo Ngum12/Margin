@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import en from "./i18n/locales/en.json";
 import fr from "./i18n/locales/fr.json";
+import { at } from "./test/at";
 import { fakeApi, me } from "./test/fakeApi";
 import { renderApp } from "./test/render";
 
@@ -84,6 +85,44 @@ describe("sign in", () => {
   });
 });
 
+describe("what needs you today", () => {
+  it("counts the work in order and links to it", async () => {
+    const api = fakeApi();
+    api.on("GET /api/auth/me", [200, me()]);
+    api.on("GET /api/subjects", [200, []]);
+    const exam = at(EXAMS, 0);
+    api.on("GET /api/exams", [
+      200,
+      [
+        exam,
+        {
+          ...exam,
+          id: 8,
+          title: "Physics test",
+          status: "reviewing",
+          scripts: { waiting: 1, ai_marked: 3, confirmed: 2 },
+        },
+      ],
+    ]);
+    renderApp("/");
+
+    const work = await screen.findByRole("list", { name: en.home.workLabel });
+    const [scans, review, confirmed] = Array.from(work.children) as HTMLElement[];
+    if (!scans || !review || !confirmed) throw new Error("three steps expected");
+    expect(scans).toHaveTextContent(`1 ${en.home.needScans_one}`);
+    expect(within(scans).getByRole("link", { name: /Mock exam 1/ })).toHaveAttribute(
+      "href",
+      "/exams/7/scans",
+    );
+    expect(review).toHaveTextContent(`3 ${en.home.toReview_other}`);
+    expect(within(review).getByRole("link", { name: /Physics test/ })).toHaveAttribute(
+      "href",
+      "/exams/8/queue",
+    );
+    expect(confirmed).toHaveTextContent(`2 ${en.home.confirmedScripts_other}`);
+  });
+});
+
 describe("language", () => {
   it("switches the sign-in page to French before signing in", async () => {
     const api = fakeApi();
@@ -136,16 +175,27 @@ describe("roles", () => {
     expect(screen.queryByRole("link", { name: en.nav.users })).not.toBeInTheDocument();
   });
 
-  it("shows admin navigation to administrators", async () => {
+  it("shows the school's administration to administrators", async () => {
     const api = fakeApi();
     api.on("GET /api/auth/me", [200, me("admin")]);
-    api.on("GET /api/exams", [200, []]);
-    api.on("GET /api/subjects", [200, []]);
 
-    renderApp("/");
+    renderApp("/settings");
 
-    expect(await screen.findByRole("link", { name: en.nav.users })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: en.nav.classes })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: new RegExp(en.nav.users) })).toBeInTheDocument();
+    const rail = screen.getByRole("navigation", { name: en.nav.label });
+    expect(within(rail).getByRole("link", { name: en.nav.classes })).toBeInTheDocument();
+  });
+
+  it("keeps classes out of a teacher's side rail", async () => {
+    const api = fakeApi();
+    api.on("GET /api/auth/me", [200, me("teacher")]);
+
+    renderApp("/settings");
+
+    const rail = await screen.findByRole("navigation", { name: en.nav.label });
+    expect(within(rail).queryByRole("link", { name: en.nav.classes })).not.toBeInTheDocument();
+    expect(within(rail).getByRole("link", { name: en.nav.queue })).toBeInTheDocument();
+    expect(screen.queryByText(en.settings.adminTitle)).not.toBeInTheDocument();
   });
 });
 

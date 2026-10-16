@@ -1,14 +1,17 @@
-// Keyboard shortcuts of the script review screen (Phase 4 plan). Pure functions, unit-tested.
+// Keyboard shortcuts of the marking desk (review screen). Pure functions, unit-tested.
 
 export type ReviewAction =
   | { type: "nextPoint" }
   | { type: "prevPoint" }
+  | { type: "nextQuestion" }
+  | { type: "prevQuestion" }
   | { type: "nextDeduction" }
   | { type: "setMarks"; marks: number }
   | { type: "accept" }
   | { type: "acceptAll" }
   | { type: "cycleCategory" }
   | { type: "focusComment" }
+  | { type: "toggleEvidence" }
   | { type: "editTranscription" }
   | { type: "prevPage" }
   | { type: "nextPage" }
@@ -41,15 +44,31 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return false;
 }
 
+/** Enter on a focused button, link or switch keeps its own meaning (press it), not "confirm". */
+export function activatesOnEnter(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target instanceof HTMLButtonElement ||
+    target instanceof HTMLAnchorElement ||
+    target instanceof HTMLInputElement ||
+    target.tagName === "SUMMARY"
+  );
+}
+
 const SIMPLE: Record<string, ReviewAction> = {
-  j: { type: "nextPoint" },
-  k: { type: "prevPoint" },
+  j: { type: "nextScript" },
+  k: { type: "prevScript" },
+  ArrowDown: { type: "nextPoint" },
+  ArrowUp: { type: "prevPoint" },
+  ArrowRight: { type: "nextQuestion" },
+  ArrowLeft: { type: "prevQuestion" },
   d: { type: "nextDeduction" },
   a: { type: "accept" },
   A: { type: "acceptAll" },
   c: { type: "cycleCategory" },
   m: { type: "focusComment" },
-  e: { type: "editTranscription" },
+  e: { type: "toggleEvidence" },
+  t: { type: "editTranscription" },
   "[": { type: "prevPage" },
   "]": { type: "nextPage" },
   "+": { type: "zoomIn" },
@@ -58,8 +77,7 @@ const SIMPLE: Record<string, ReviewAction> = {
   f: { type: "zoomFit" },
   r: { type: "rotateRight" },
   R: { type: "rotateLeft" },
-  n: { type: "nextScript" },
-  p: { type: "prevScript" },
+  Enter: { type: "confirm" },
   "?": { type: "help" },
 };
 
@@ -68,24 +86,27 @@ export function actionForKey(event: KeyLike): ReviewAction | null {
   // Leave the browser's and the system's own shortcuts alone.
   if (event.ctrlKey || event.metaKey || event.altKey) return null;
   if (/^[0-9]$/.test(event.key)) return { type: "setMarks", marks: Number(event.key) };
+  if (event.shiftKey && event.key.startsWith("Arrow")) return null;
   return SIMPLE[event.key] ?? null;
 }
 
 /** For the help dialog (`?`): keys and the translation key of what they do. */
 export const SHORTCUTS: readonly { keys: string[]; label: string }[] = [
-  { keys: ["j", "k"], label: "review.keys.points" },
-  { keys: ["d"], label: "review.keys.deduction" },
+  { keys: ["J", "K"], label: "review.keys.scripts" },
+  { keys: ["←", "→"], label: "review.keys.questions" },
+  { keys: ["↑", "↓"], label: "review.keys.points" },
   { keys: ["0–9"], label: "review.keys.marks" },
-  { keys: ["a"], label: "review.keys.accept" },
+  { keys: ["E"], label: "review.keys.evidence" },
+  { keys: ["Enter"], label: "review.keys.confirm" },
+  { keys: ["D"], label: "review.keys.deduction" },
+  { keys: ["A"], label: "review.keys.accept" },
   { keys: ["Shift+A"], label: "review.keys.acceptAll" },
-  { keys: ["c"], label: "review.keys.category" },
-  { keys: ["m"], label: "review.keys.comment" },
-  { keys: ["e"], label: "review.keys.edit" },
+  { keys: ["C"], label: "review.keys.category" },
+  { keys: ["M"], label: "review.keys.comment" },
+  { keys: ["T"], label: "review.keys.edit" },
   { keys: ["Esc"], label: "review.keys.escape" },
   { keys: ["[", "]"], label: "review.keys.pages" },
-  { keys: ["+", "-", "f"], label: "review.keys.zoom" },
-  { keys: ["r", "Shift+R"], label: "review.keys.rotate" },
-  { keys: ["n", "p"], label: "review.keys.scripts" },
-  { keys: ["Ctrl+Enter"], label: "review.keys.confirm" },
+  { keys: ["+", "−", "F"], label: "review.keys.zoom" },
+  { keys: ["R", "Shift+R"], label: "review.keys.rotate" },
   { keys: ["?"], label: "review.keys.help" },
 ];

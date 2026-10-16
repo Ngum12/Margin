@@ -1,19 +1,23 @@
 import type { RedPenMark } from "../api/types";
 
-const RED = "#d01212";
-
-/** The red pen drawn over a page image (owner, 2026-10-15): the same layout as the marked PDF.
+/** What is drawn over a page image on the marking desk:
+ * - a thin mark-red margin line just left of the page, like an exercise book's;
+ * - rule-blue bands across the lines that hold the selected point's evidence;
+ * - the red pen (owner, 2026-10-15): the same layout as the marked PDF.
  *
- * The overlay sits on the stored image and turns with it, so its marks are drawn in the
- * upright page's frame (fractions from the server) and turned back to the stored frame here.
- * Marks still based on the AI's proposal (no teacher decision yet) are drawn lighter. */
-export function RedPenOverlay({
+ * The overlay sits on the stored image and turns with it, so everything is drawn in the upright
+ * page's frame (fractions from the server) and turned back to the stored frame here. Marks
+ * still based on the AI's proposal (no teacher decision yet) are drawn lighter. Colours come
+ * from the CSS tokens (`currentColor` is the marking red). */
+export function PageOverlay({
   marks,
+  evidence,
   width,
   height,
   rotation,
 }: {
-  marks: RedPenMark[];
+  marks: RedPenMark[] | undefined;
+  evidence: RedPenMark[];
   width: number; // stored image size in pixels
   height: number;
   rotation: number; // clockwise degrees applied to show the page upright
@@ -22,6 +26,7 @@ export function RedPenOverlay({
   const uprightW = sideways ? height : width;
   const uprightH = sideways ? width : height;
   const turnBack = `translate(${String(width / 2)} ${String(height / 2)}) rotate(${String(-rotation)}) translate(${String(-uprightW / 2)} ${String(-uprightH / 2)})`;
+  const marginX = -uprightW * 0.012;
 
   return (
     <svg
@@ -29,17 +34,41 @@ export function RedPenOverlay({
       viewBox={`0 0 ${String(width)} ${String(height)}`}
       preserveAspectRatio="none"
       aria-hidden="true"
-      data-testid="red-pen"
+      data-testid="page-overlay"
     >
       <g transform={turnBack}>
-        {marks.map((mark, index) => (
-          <RedPenShape
-            key={`${mark.kind}-${String(index)}`}
-            mark={mark}
-            w={uprightW}
-            h={uprightH}
-          />
-        ))}
+        <line
+          className="margin-line"
+          x1={marginX}
+          y1={0}
+          x2={marginX}
+          y2={uprightH}
+          strokeWidth={Math.max(2, uprightW * 0.0018)}
+        />
+        <g data-testid="evidence-bands">
+          {evidence.map((mark, index) => (
+            <rect
+              key={index}
+              className="evidence-band"
+              x={0}
+              y={(mark.y - mark.size * 0.75) * uprightH}
+              width={uprightW}
+              height={mark.size * 1.5 * uprightH}
+            />
+          ))}
+        </g>
+        {marks && marks.length > 0 && (
+          <g data-testid="red-pen">
+            {marks.map((mark, index) => (
+              <RedPenShape
+                key={`${mark.kind}-${String(index)}`}
+                mark={mark}
+                w={uprightW}
+                h={uprightH}
+              />
+            ))}
+          </g>
+        )}
       </g>
     </svg>
   );
@@ -51,7 +80,7 @@ function RedPenShape({ mark, w, h }: { mark: RedPenMark; w: number; h: number })
   const s = mark.size * h;
   const opacity = mark.pending ? 0.4 : 1;
   const stroke = {
-    stroke: RED,
+    stroke: "currentColor",
     strokeWidth: Math.max(2, s * 0.085),
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
@@ -71,7 +100,7 @@ function RedPenShape({ mark, w, h }: { mark: RedPenMark; w: number; h: number })
             y={y + s * 0.1}
             className="red-pen-text"
             fontSize={s * 0.55}
-            fill={RED}
+            fill="currentColor"
           >
             {mark.text}
           </text>
@@ -92,7 +121,7 @@ function RedPenShape({ mark, w, h }: { mark: RedPenMark; w: number; h: number })
           textAnchor="end"
           className="red-pen-text"
           fontSize={s * 0.95}
-          fill={RED}
+          fill="currentColor"
           opacity={opacity}
           data-kind="score"
         >
@@ -111,7 +140,13 @@ function RedPenShape({ mark, w, h }: { mark: RedPenMark; w: number; h: number })
             strokeWidth={Math.max(2, s * 0.06)}
             opacity={1}
           />
-          <text x={x} y={y + s * 0.3} className="red-pen-text" fontSize={s * 0.95} fill={RED}>
+          <text
+            x={x}
+            y={y + s * 0.3}
+            className="red-pen-text"
+            fontSize={s * 0.95}
+            fill="currentColor"
+          >
             {mark.text}
           </text>
         </g>

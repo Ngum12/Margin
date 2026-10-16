@@ -91,3 +91,18 @@ Dev transitive licences (from `package-lock.json`): MIT 203, Apache-2.0 18, ISC 
 - Before use, both ✓ (U+2713) and ✗ (U+2717) were checked to render. Noto Sans does not contain them; Noto Sans Symbols 2 does.
 - Embedded through ReportLab's built-in TrueType support: no new Python package.
 - Listed in `THIRD_PARTY_NOTICES.md` by `scripts/third_party_notices.py`.
+
+## Bundled web fonts and icons (UI redesign, requested by the owner 2026-10-16)
+
+The owner's redesign brief asked for these, bundled locally with their licences. No package was added. The files are copied into `frontend/src/assets/` and listed with SHA-256 checksums in `frontend/src/assets/assets.json`; `backend/tests/test_web_assets.py` checks them.
+
+| Asset | Version | Licence | Files | Source | Purpose |
+|---|---|---|---|---|---|
+| Literata | 3.103 | SIL Open Font License 1.1 | `Literata-SemiBold.woff2` | github.com/googlefonts/literata, release `3.103` (`3.103.zip`, `fonts/webfonts`) | Page titles, exam titles, student names |
+| Atkinson Hyperlegible Next | googlefonts/atkinson-hyperlegible-next commit 7925f50 | SIL Open Font License 1.1 | `AtkinsonHyperlegibleNext-Variable.woff2` (variable weight) | github.com/googlefonts/atkinson-hyperlegible-next, `fonts/webfonts/AtkinsonHyperlegibleNext[wght].woff2` at commit 7925f50f649b3813257faf2f4c0b381011f434f1 (no packaged releases) | All interface text, tables and numbers |
+| Noto Sans (web fallback) | 2.013 | SIL Open Font License 1.1 | `NotoSans-Regular.ttf` (same file as the PDF font) | as the PDF font above | Glyphs the interface font lacks; downloaded only when needed |
+| Caveat (web) | googlefonts/caveat commit 59745e8 | SIL Open Font License 1.1 | `Caveat-Regular.ttf` (already bundled) | as above | Red-pen annotations on screen |
+| Lucide icons | 1.58.0 | ISC (icons derived from Feather: MIT) | 34 icons copied as SVG path data into `src/components/icons.ts`; licence in `assets/icons/LICENSE-lucide.txt` | github.com/lucide-icons/lucide, `icons/*.svg` at tag `1.58.0` | Navigation and tool icons, used sparingly |
+
+- They are downloaded once from the official repositories above, and only the files listed are kept.
+- `scripts/third_party_notices.py` lists them in `THIRD_PARTY_NOTICES.md` from the manifest.

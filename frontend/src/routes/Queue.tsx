@@ -8,6 +8,7 @@ import { ErrorMessage, Loading } from "../components/ui";
 import { useLoad } from "../components/useLoad";
 import { AiPanel } from "../exam/AiPanel";
 import { AiProgressPanel } from "../exam/AiProgressPanel";
+import { Icon } from "../components/Icon";
 import { ExamHeader } from "../exam/ExamHeader";
 import { PageCheck } from "../exam/PageCheck";
 import { minutesSeconds } from "../review/focus";
@@ -36,7 +37,7 @@ export default function Queue() {
     <section>
       <ExamHeader exam={exam} />
       {queue.exam_status === "draft" ? (
-        <p className="card">{t("sheets.needReady")}</p>
+        <p className="panel empty-state">{t("sheets.needReady")}</p>
       ) : (
         <>
           {check.state.status === "ready" && (
@@ -54,7 +55,7 @@ export default function Queue() {
             onUpdate={setProgress}
             onFinished={reload}
           />
-          <div className="card">
+          <div className="panel">
             <h2>{t("queue.title")}</h2>
             <p className="muted">{t("queue.help")}</p>
             {queue.test_model_count > 0 && <TestModelBanner count={queue.test_model_count} />}
@@ -78,33 +79,35 @@ export default function Queue() {
               active={queue.average_active_seconds}
             />
             {queue.items.length === 0 ? (
-              <p className="muted">{t("queue.empty")}</p>
+              <p className="empty-state">{t("queue.empty")}</p>
             ) : (
-              <table className="table queue-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{t("queue.student")}</th>
-                    <th scope="col">{t("queue.status")}</th>
-                    <th scope="col">{t("queue.checks")}</th>
-                    <th scope="col">{t("queue.aiMarks")}</th>
-                    <th scope="col">{t("queue.teacherMarks")}</th>
-                    <th scope="col">{t("queue.reviewTime")}</th>
-                    <th scope="col">
-                      <span className="visually-hidden">{t("common.actions")}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {queue.items.map((item) => (
-                    <QueueRow
-                      key={item.script_id}
-                      examId={examId}
-                      item={item}
-                      live={progress?.scripts.find((s) => s.script_id === item.script_id)}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-wrap">
+                <table className="data-table queue-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("queue.student")}</th>
+                      <th scope="col">{t("queue.status")}</th>
+                      <th scope="col">{t("queue.checks")}</th>
+                      <th scope="col">{t("queue.aiMarks")}</th>
+                      <th scope="col">{t("queue.teacherMarks")}</th>
+                      <th scope="col">{t("queue.reviewTime")}</th>
+                      <th scope="col">
+                        <span className="visually-hidden">{t("common.actions")}</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {queue.items.map((item) => (
+                      <QueueRow
+                        key={item.script_id}
+                        examId={examId}
+                        item={item}
+                        live={progress?.scripts.find((s) => s.script_id === item.script_id)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>
@@ -207,7 +210,8 @@ function QueueRow({
   return (
     <tr>
       <td>
-        {item.student_name ?? "—"} <span className="code">{item.student_code}</span>
+        {item.student_name && <span className="strong-link">{item.student_name}</span>}{" "}
+        <span className="code">{item.student_code}</span>
       </td>
       <td>
         <span className={`badge badge-script-${item.status}`}>
@@ -252,9 +256,19 @@ function QueueRow({
         </span>
       </td>
       <td>{item.review_seconds === null ? "—" : <Duration seconds={item.review_seconds} />}</td>
-      <td>
+      <td className="row-end">
         {item.reviewable ? (
-          <Link to={href}>{item.status === "confirmed" ? t("queue.open") : t("queue.review")}</Link>
+          <Link
+            to={href}
+            className={
+              item.status === "confirmed"
+                ? "button button-secondary button-small"
+                : "button button-small"
+            }
+          >
+            {item.status === "confirmed" ? t("queue.open") : t("queue.review")}
+            <Icon name="next" size={16} />
+          </Link>
         ) : (
           <span className="muted">{t("queue.waitingForAi")}</span>
         )}

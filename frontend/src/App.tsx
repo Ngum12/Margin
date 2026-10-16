@@ -11,11 +11,13 @@ import Users from "./routes/admin/Users";
 import CoverSheets from "./routes/CoverSheets";
 import ExamSetup from "./routes/ExamSetup";
 import Home from "./routes/Home";
+import MarkingQueue from "./routes/MarkingQueue";
 import NewExam from "./routes/NewExam";
 import Queue from "./routes/Queue";
 import Results from "./routes/Results";
 import Review from "./routes/Review";
 import Scans from "./routes/Scans";
+import Settings from "./routes/Settings";
 import SignIn from "./routes/SignIn";
 
 export default function App() {
@@ -35,6 +37,22 @@ export default function App() {
           element={
             <RequireAuth>
               <Home />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/queue"
+          element={
+            <RequireAuth>
+              <MarkingQueue />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RequireAuth>
+              <Settings />
             </RequireAuth>
           }
         />

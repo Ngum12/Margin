@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../api/endpoints";
 import type { PageCheck as PageCheckData } from "../api/types";
+import { Icon } from "../components/Icon";
 import { ErrorMessage } from "../components/ui";
 import { rotate } from "../review/viewer";
 
@@ -50,11 +51,12 @@ export function PageCheck({
   }
 
   return (
-    <div className="card" id="page-check">
+    <div className="panel" id="page-check">
       <div className="question-head">
         <h2>{t("pageCheck.title")}</h2>
         {data.checked_at && (
-          <span className="badge badge-script-confirmed">
+          <span className="badge">
+            <Icon name="check" size={14} />
             {t("pageCheck.checkedOn", { date: new Date(data.checked_at).toLocaleString() })}
           </span>
         )}
@@ -98,6 +100,11 @@ export function PageCheck({
                           ? t("review.viewer.coverThumb")
                           : t("review.viewer.pageThumb", { page: index + 1 })}
                       </span>
+                      {page.rotation !== 0 && (
+                        <span className="page-turned">
+                          {t("pageCheck.turned", { degrees: page.rotation })}
+                        </span>
+                      )}
                       <span className="page-check-actions">
                         <button
                           type="button"
@@ -111,7 +118,7 @@ export function PageCheck({
                             void act(() => api.rotatePage(page.id, rotate(page.rotation, -90)))
                           }
                         >
-                          ⟲
+                          <Icon name="rotateLeft" size={16} />
                         </button>
                         <button
                           type="button"
@@ -125,7 +132,7 @@ export function PageCheck({
                             void act(() => api.rotatePage(page.id, rotate(page.rotation, 90)))
                           }
                         >
-                          ⟳
+                          <Icon name="rotateRight" size={16} />
                         </button>
                       </span>
                     </li>
@@ -136,6 +143,7 @@ export function PageCheck({
           </div>
           <div className="actions">
             <button type="button" disabled={busy} onClick={() => void confirm()}>
+              <Icon name="check" />
               {t("pageCheck.confirm")}
             </button>
           </div>

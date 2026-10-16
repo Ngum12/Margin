@@ -127,7 +127,8 @@ describe("scans screen", () => {
     renderApp("/exams/7/scans");
 
     expect(await screen.findByText("form5a.pdf")).toBeInTheDocument();
-    expect(screen.getByText(en.scans.uploadStatus.processed)).toBeInTheDocument();
+    const upload = screen.getByRole("row", { name: /form5a\.pdf/ });
+    expect(within(upload).getByText(en.scans.uploadStatus.processed)).toBeInTheDocument();
     expect(
       screen.getByText(/Cover sheet from another exam \(Economics mock\)/),
     ).toBeInTheDocument();

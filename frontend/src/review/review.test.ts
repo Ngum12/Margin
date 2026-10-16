@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import type { ReviewQuestion } from "../api/types";
-import { highlight } from "./evidence";
+import { evidenceLines, formatLines, highlight } from "./evidence";
 import { flatPoints, minutesSeconds, nextDeduction, step } from "./focus";
-import { actionForKey, isTypingTarget } from "./keyboard";
+import { actionForKey, activatesOnEnter, isTypingTarget } from "./keyboard";
 import type { KeyLike } from "./keyboard";
 import {
   FIT,
@@ -24,8 +24,14 @@ function key(k: string, mods: Partial<KeyLike> = {}): KeyLike {
 
 describe("keyboard map", () => {
   it("maps every documented shortcut", () => {
-    expect(actionForKey(key("j"))).toEqual({ type: "nextPoint" });
-    expect(actionForKey(key("k"))).toEqual({ type: "prevPoint" });
+    expect(actionForKey(key("j"))).toEqual({ type: "nextScript" });
+    expect(actionForKey(key("k"))).toEqual({ type: "prevScript" });
+    expect(actionForKey(key("ArrowDown"))).toEqual({ type: "nextPoint" });
+    expect(actionForKey(key("ArrowUp"))).toEqual({ type: "prevPoint" });
+    expect(actionForKey(key("ArrowRight"))).toEqual({ type: "nextQuestion" });
+    expect(actionForKey(key("ArrowLeft"))).toEqual({ type: "prevQuestion" });
+    expect(actionForKey(key("e"))).toEqual({ type: "toggleEvidence" });
+    expect(actionForKey(key("Enter"))).toEqual({ type: "confirm" });
     expect(actionForKey(key("d"))).toEqual({ type: "nextDeduction" });
     expect(actionForKey(key("0"))).toEqual({ type: "setMarks", marks: 0 });
     expect(actionForKey(key("7"))).toEqual({ type: "setMarks", marks: 7 });
@@ -33,7 +39,7 @@ describe("keyboard map", () => {
     expect(actionForKey(key("A", { shiftKey: true }))).toEqual({ type: "acceptAll" });
     expect(actionForKey(key("c"))).toEqual({ type: "cycleCategory" });
     expect(actionForKey(key("m"))).toEqual({ type: "focusComment" });
-    expect(actionForKey(key("e"))).toEqual({ type: "editTranscription" });
+    expect(actionForKey(key("t"))).toEqual({ type: "editTranscription" });
     expect(actionForKey(key("["))).toEqual({ type: "prevPage" });
     expect(actionForKey(key("]"))).toEqual({ type: "nextPage" });
     expect(actionForKey(key("+"))).toEqual({ type: "zoomIn" });
@@ -42,15 +48,14 @@ describe("keyboard map", () => {
     expect(actionForKey(key("f"))).toEqual({ type: "zoomFit" });
     expect(actionForKey(key("r"))).toEqual({ type: "rotateRight" });
     expect(actionForKey(key("R", { shiftKey: true }))).toEqual({ type: "rotateLeft" });
-    expect(actionForKey(key("n"))).toEqual({ type: "nextScript" });
-    expect(actionForKey(key("p"))).toEqual({ type: "prevScript" });
     expect(actionForKey(key("?", { shiftKey: true }))).toEqual({ type: "help" });
     expect(actionForKey(key("Enter", { ctrlKey: true }))).toEqual({ type: "confirm" });
     expect(actionForKey(key("Enter", { metaKey: true }))).toEqual({ type: "confirm" });
   });
 
   it("leaves browser shortcuts and other keys alone", () => {
-    expect(actionForKey(key("Enter"))).toBeNull();
+    expect(actionForKey(key("ArrowDown", { shiftKey: true }))).toBeNull();
+    expect(actionForKey(key("n"))).toBeNull();
     expect(actionForKey(key("r", { ctrlKey: true }))).toBeNull();
     expect(actionForKey(key("1", { altKey: true }))).toBeNull();
     expect(actionForKey(key("x"))).toBeNull();
@@ -69,6 +74,14 @@ describe("keyboard map", () => {
     expect(isTypingTarget(radio)).toBe(false);
     expect(isTypingTarget(document.body)).toBe(false);
     expect(isTypingTarget(null)).toBe(false);
+  });
+
+  it("lets Enter press a focused button or link instead of confirming", () => {
+    expect(activatesOnEnter(document.createElement("button"))).toBe(true);
+    expect(activatesOnEnter(document.createElement("a"))).toBe(true);
+    expect(activatesOnEnter(document.createElement("summary"))).toBe(true);
+    expect(activatesOnEnter(document.createElement("li"))).toBe(false);
+    expect(activatesOnEnter(document.body)).toBe(false);
   });
 });
 
@@ -161,5 +174,20 @@ describe("point focus", () => {
   it("formats review time", () => {
     expect(minutesSeconds(754.4)).toEqual({ minutes: 12, seconds: 34 });
     expect(minutesSeconds(59.6)).toEqual({ minutes: 1, seconds: 0 });
+  });
+});
+
+describe("evidence lines", () => {
+  it("numbers the lines that hold the evidence", () => {
+    const text = ["1(a) Metals conduct", "electricity well.", "1(b) Hydrogen"].join("\n");
+    expect(evidenceLines(text, "conduct electricity")).toEqual([1, 2]);
+    expect(evidenceLines(text, "hydrogen")).toEqual([3]);
+    expect(evidenceLines(text, "")).toEqual([]);
+  });
+
+  it("writes line numbers as short ranges", () => {
+    expect(formatLines([3, 4, 5, 8])).toBe("3–5, 8");
+    expect(formatLines([2])).toBe("2");
+    expect(formatLines([])).toBe("");
   });
 });

@@ -14,14 +14,17 @@ async function signIn(page: Page, username: string) {
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  const heading = page.getByRole("heading", { level: 1, name: /^(Your exams|Vos examens)$/ });
+  const heading = page.getByRole("heading", {
+    level: 1,
+    name: /^(What needs you today|À faire aujourd'hui)$/,
+  });
   await expect(heading).toBeVisible();
   // A test that stopped part-way (the French one) may have left the teacher in French: start
   // every test in English so one failure cannot cascade into the next.
-  if ((await heading.textContent()) === "Vos examens") {
+  if ((await heading.textContent()) !== "What needs you today") {
     await page.getByLabel("Langue").selectOption("en");
   }
-  await expect(page.getByRole("heading", { name: "Your exams" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What needs you today" })).toBeVisible();
 }
 
 function pageImage(page: Page) {
@@ -50,12 +53,12 @@ test("a teacher reviews and confirms a script using only the keyboard", async ({
   await page.goto("/exams/1/review/1");
   await expect(page.getByRole("heading", { name: /Ama Fon/ })).toBeVisible();
   const focused = page.locator("li.point-focused");
-  const confirm = page.getByRole("button", { name: "Confirm script" });
+  const confirm = page.getByRole("button", { name: "Confirm marks" });
   await expect(confirm).toBeDisabled();
 
   await page.keyboard.press("a"); // accept the first point
   await expect(focused.getByRole("button", { name: "1", pressed: true })).toBeVisible();
-  await page.keyboard.press("j");
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("0"); // second point: no marks
   await expect(focused.getByRole("button", { name: "0", pressed: true })).toBeVisible();
   await page.keyboard.press("c"); // change its category
@@ -67,10 +70,11 @@ test("a teacher reviews and confirms a script using only the keyboard", async ({
   await expect(page.getByText("Accepted 1 AI proposal.")).toBeVisible();
   await expect(page.getByText("3 of 3 points decided")).toBeVisible();
   await expect(confirm).toBeEnabled();
-  await page.keyboard.press("Control+Enter");
+  await page.keyboard.press("Enter");
 
-  await expect(page.getByText("Script confirmed.")).toBeVisible();
-  await expect(page.getByText("Total: 2 / 3")).toBeVisible();
+  await expect(page.getByText("Marks confirmed.")).toBeVisible();
+  await expect(page.getByText("Total: 2 / 3")).toBeAttached();
+  await expect(page.locator(".desk-score")).toHaveClass(/desk-score-confirmed/);
   await expect(page.getByRole("button", { name: "Reopen for changes" })).toBeVisible();
   await page.reload();
   await expect(page.locator(".badge-script-confirmed")).toHaveText("Confirmed");
@@ -111,11 +115,11 @@ test("mark a manual-marking script", async ({ page }) => {
   await expect(page.getByText(/Mark this script by hand/)).toBeVisible();
   await expect(page.getByText("No AI proposal: enter the marks yourself.").first()).toBeVisible();
 
-  for (const key of ["1", "j", "1", "j", "1"]) await page.keyboard.press(key);
+  for (const key of ["1", "ArrowDown", "1", "ArrowDown", "1"]) await page.keyboard.press(key);
   await expect(page.getByText("3 of 3 points decided")).toBeVisible();
   await page.keyboard.press("Control+Enter");
-  await expect(page.getByText("Script confirmed.")).toBeVisible();
-  await expect(page.getByText("Total: 3 / 3")).toBeVisible();
+  await expect(page.getByText("Marks confirmed.")).toBeVisible();
+  await expect(page.getByText("Total: 3 / 3")).toBeAttached();
 });
 
 test("results, CSV and marked PDFs for the confirmed scripts", async ({ page }) => {
@@ -151,8 +155,8 @@ test("the review screen in French", async ({ page }) => {
   await signIn(page, "alice");
   await page.goto("/exams/1/review/2");
   await page.getByLabel("Language").selectOption("fr");
-  await expect(page.getByRole("button", { name: "Confirmer la copie" })).toBeVisible();
-  await expect(page.getByText("Raccourcis clavier")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Valider les notes" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Raccourcis clavier" })).toBeVisible();
   await page.keyboard.press("?");
   await expect(page.getByRole("dialog", { name: "Raccourcis clavier" })).toContainText(
     "Critère suivant où l'IA a retiré des points",
@@ -160,7 +164,7 @@ test("the review screen in French", async ({ page }) => {
   await page.keyboard.press("Escape");
   // Back to English for the teacher's later sessions.
   await page.getByLabel("Langue").selectOption("en");
-  await expect(page.getByRole("button", { name: "Confirm script" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirm marks" })).toBeVisible();
 });
 
 test("check pages, start AI marking and follow its progress", async ({ page }) => {
