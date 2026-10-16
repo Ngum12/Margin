@@ -102,7 +102,7 @@ def request_print(
         kind=kind,
         language=actor.preferred_language.value,
         printer_uri=config.printer_uri,
-        duplex=config.duplex,
+        duplex=config.duplex if kind != "feedback" else False,
     )
     db.add(row)
     db.flush()
@@ -220,6 +220,8 @@ def build_document(db: Session, job: PrintJob, settings: Settings) -> bytes:
     if actor is None or not actor.is_active:
         raise ConflictError("Requester no longer active", code="hardware.print_changed")
     get_visible_exam(db, actor, exam.id)
+    if job.kind == "answer_sheets" and job.file_path:
+        return (settings.data_dir / job.file_path).read_bytes()
     for script_id in job.script_ids:
         script = db.get(Script, script_id)
         if script is None or script.exam_id != exam.id:
@@ -239,7 +241,9 @@ def build_document(db: Session, job: PrintJob, settings: Settings) -> bytes:
         return feedback_pdf(db, results, exam.title, job.language)
     _add_red_pen(db, results, settings, job.language)
     buffer = io.BytesIO()
-    write_marked_pdf(buffer, results, exam.title, settings.data_dir, job.language)
+    write_marked_pdf(
+        buffer, results, exam.title, settings.data_dir, job.language, duplex=job.duplex
+    )
     return buffer.getvalue()
 
 
@@ -322,6 +326,8 @@ def tick(factory: sessionmaker[Session], settings: Settings) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(document)
         job.file_path, job.status = relative.as_posix(), "submitting"
+        if job.kind == "feedback":
+            job.duplex = False  # Also protect jobs queued by an earlier application version.
         db.commit()
         try:
             job.printer_job_id = ipp.submit(

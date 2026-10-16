@@ -1,3 +1,4 @@
+import { AnswerSheets } from "../components/AnswerSheets";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
@@ -43,6 +44,7 @@ export default function CoverSheets() {
         <p className="card">{t("sheets.noStudents")}</p>
       ) : (
         <>
+          <AnswerSheets examId={examId} />
           <div className="card">
             <p>{t("sheets.help")}</p>
             <ErrorMessage error={error} />

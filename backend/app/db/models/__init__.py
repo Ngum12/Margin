@@ -16,6 +16,7 @@ from app.db.models.ai import (
     TranscriptionSource,
     WorkerHeartbeat,
 )
+from app.db.models.answer_sheets import AnswerSheet
 from app.db.models.audit import AuditEvent
 from app.db.models.classes import SchoolClass, Student
 from app.db.models.exams import Exam, ExamStatus, MarkSchemePoint, Question
@@ -33,6 +34,7 @@ from app.db.models.scans import (
 )
 
 __all__ = [
+    "AnswerSheet",
     "AuditEvent",
     "CoverSheet",
     "ErrorCategory",

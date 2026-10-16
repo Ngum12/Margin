@@ -50,6 +50,7 @@ from app.db.models import (
 from app.marks import to_half_marks
 from app.services import audit, exports, jobs, transcripts, uploads
 from app.services.ai_marking import exam_spec, mark_key, update_exam_progress
+from app.services.identification import identify_spare
 from app.subjects.registry import SubjectConfig, get_registry
 
 logger = logging.getLogger(__name__)
@@ -198,17 +199,20 @@ def _read_page(
 ) -> AiTranscription:
     """Read one answer page; if the Reader judges it not upright with enough confidence, turn it
     and read it once more, keeping the second read (orientation layer c, owner change 1)."""
+    from app.services.answer_sheets import grading_image
+
     image = settings.data_dir / page.image_path
     sidecar = image.with_suffix(".txt")
 
     def read() -> AiTranscription:
+        masked, rotation = grading_image(db, page, settings)
         return reader.transcribe(
             [
                 PageImage(
                     page.id,
-                    image,
+                    masked,
                     sidecar if sidecar.is_file() else None,
-                    rotation=page.effective_rotation,
+                    rotation=rotation,
                 )
             ],
             subject,
@@ -350,9 +354,13 @@ def transcribe_page(
             )
         )
         if done is None:
-            image = settings.data_dir / page.image_path
+            from app.services.answer_sheets import grading_image
+
+            image, image_rotation = grading_image(db, page, settings)
             try:
-                result = reader.transcribe([PageImage(page.id, image, rotation=rotation)], subject)
+                result = reader.transcribe(
+                    [PageImage(page.id, image, rotation=image_rotation)], subject
+                )
             except ModelOutputInvalidError:
                 logger.warning("Fresh read of page %s failed validation", page.id)
                 audit.record(
@@ -481,6 +489,7 @@ def export_dataset(
 
 
 HANDLERS = {
+    JobType.IDENTIFY_SPARE: identify_spare,
     JobType.PROCESS_UPLOAD: process_upload,
     JobType.TRANSCRIBE_SCRIPT: transcribe_script,
     JobType.MARK_SCRIPT: mark_script,

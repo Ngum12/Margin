@@ -182,6 +182,8 @@ def write_marked_pdf(
     exam_title: str,
     data_dir: Path,
     language: str,
+    *,
+    duplex: bool = False,
 ) -> int:
     """Write one PDF with every script in ``results``; returns the number of pages."""
     fonts.register()
@@ -192,5 +194,9 @@ def write_marked_pdf(
     for result in results:
         draw_script(canvas, result, exam_title, data_dir, language)
         pages += len(result.pages)
+        if duplex and len(result.pages) % 2:
+            # Never put another student's work on the reverse of this student's last page.
+            canvas.showPage()
+            pages += 1
     canvas.save()
     return pages

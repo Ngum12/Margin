@@ -120,6 +120,9 @@ def rerun_script(db: Session, actor: User | None, script: Script, settings: Sett
     if exam is None:  # pragma: no cover
         raise ConflictError("Exam missing", code="conflict")
     page_check.require_checked(exam)
+    from app.services.answer_sheets import require_complete
+
+    require_complete(db, exam.id, script.student_id)
     _rerun(db, actor, script, settings)
     _back_to_marking(exam)
 
@@ -139,7 +142,10 @@ def rerun_exam(db: Session, actor: User | None, exam: Exam, settings: Settings) 
     ]
     if not scripts:
         raise ConflictError("No unconfirmed scripts to re-run", code="ai.nothing_to_rerun")
+    from app.services.answer_sheets import require_complete
+
     for script in scripts:
+        require_complete(db, exam.id, script.student_id)
         _rerun(db, actor, script, settings)
     _back_to_marking(exam)
     audit.record(
@@ -167,8 +173,13 @@ def start_ai_marking(db: Session, actor: User, exam_id: int, settings: Settings)
     if not scripts:
         raise ConflictError("No scripts have been uploaded yet", code="ai.no_scripts")
     page_check.require_checked(exam)
+    from app.services.answer_sheets import readiness
+
     queued = 0
     for script in scripts:
+        missing, problems = readiness(db, exam.id, script.student_id)
+        if missing or problems:
+            continue
         if script.manual_reason is not None:
             continue
         if script.status == ScriptStatus.WAITING:
@@ -191,7 +202,7 @@ def start_ai_marking(db: Session, actor: User, exam_id: int, settings: Settings)
                 requeue=True,
             )
             queued += 1
-    if exam.status == ExamStatus.READY:
+    if queued and exam.status == ExamStatus.READY:
         exam.status = ExamStatus.MARKING
     audit.record(
         db,

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ScanInbox } from "../components/ScanInbox";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -17,7 +18,13 @@ function scriptCount(exam: ExamSummary): number {
  * confirmed. Real counts only, each linking to the work. */
 export default function Home() {
   const { t, i18n } = useTranslation();
-  const { state } = useLoad(() => api.exams(), []);
+  const { state, reload } = useLoad(() => api.exams(), []);
+  useEffect(() => {
+    const timer = setInterval(reload, 5000);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [reload]);
   const subjectName = useSubjectName();
   const today = new Intl.DateTimeFormat(i18n.language, {
     weekday: "long",

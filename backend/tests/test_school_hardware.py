@@ -309,6 +309,7 @@ def test_feedback_and_print_version_guards(
         job = db.get(PrintJob, job_id)
         assert script
         assert job
+        assert job.duplex is False
         assert printing.build_document(db, job, settings).startswith(b"%PDF")
         script.confirmed_at = utcnow() + timedelta(seconds=1)
         from app.errors import ConflictError

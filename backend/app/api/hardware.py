@@ -25,6 +25,7 @@ class AttendanceIn(BaseModel):
 def attendance(exam_id: int, db: DbSession, actor: CurrentUser) -> list[dict[str, object]]:
     from app.db.models import ExamAbsence, Student
     from app.services.access import get_visible_exam
+    from app.services.answer_sheets import readiness
 
     exam = get_visible_exam(db, actor, exam_id)
     absences = set(db.scalars(select(ExamAbsence.student_id).where(ExamAbsence.exam_id == exam.id)))
@@ -35,6 +36,9 @@ def attendance(exam_id: int, db: DbSession, actor: CurrentUser) -> list[dict[str
             "name": student.display_name or student.code,
             "absent": student.id in absences,
             "received": student.id in received,
+            "missing_pages": readiness(db, exam.id, student.id)[0]
+            if student.id in received
+            else [],
         }
         for student in db.scalars(
             select(Student).where(Student.class_id == exam.class_id).order_by(Student.id)
@@ -96,6 +100,7 @@ class PrintIn(BaseModel):
 class AssignIn(BaseModel):
     exam_id: int
     student_id: int
+    page_number: int | None = Field(default=None, ge=1, le=1000)
 
 
 class RetryIn(BaseModel):
@@ -194,6 +199,8 @@ def intake(db: DbSession, actor: CurrentUser) -> dict[str, object]:
                 "page": p.source_index + 1,
                 "reason": p.reason,
                 "exam_id": p.exam_id,
+                "suggested_student_id": p.suggested_student_id,
+                "answer_sheet_id": p.answer_sheet_id,
             }
             for p in pages
         ],
@@ -234,7 +241,7 @@ def intake_image(
 
 @router.post("/intake/{item_id}/assign", status_code=204)
 def assign_page(item_id: int, body: AssignIn, db: DbSession, actor: CurrentUser) -> Response:
-    scan_inbox.assign(db, actor, item_id, body.exam_id, body.student_id)
+    scan_inbox.assign(db, actor, item_id, body.exam_id, body.student_id, body.page_number)
     return Response(status_code=204)
 
 

@@ -6,7 +6,14 @@ import { ErrorMessage } from "./ui";
 
 interface Intake {
   batches: { id: number; status: string }[];
-  pages: { id: number; page: number; reason: string; exam_id: number | null }[];
+  pages: {
+    id: number;
+    page: number;
+    reason: string;
+    exam_id: number | null;
+    suggested_student_id?: number | null;
+    answer_sheet_id?: number | null;
+  }[];
   quarantine: { id: number; error_code: string }[];
 }
 interface ExamChoice {
@@ -83,7 +90,9 @@ export function ScanInbox() {
 function MatchPage({ page, reload }: { page: Intake["pages"][number]; reload: () => void }) {
   const { t } = useTranslation();
   const [examId, setExamId] = useState(page.exam_id ?? 0);
-  const [studentId, setStudentId] = useState(0);
+  const [studentId, setStudentId] = useState<number | null>(null);
+  const matchedStudentId = studentId ?? page.suggested_student_id ?? 0;
+  const [pageNumber, setPageNumber] = useState(1);
   const [error, setError] = useState<unknown>(null);
   const exams = useLoad(() => request<ExamChoice[]>("GET", "/api/exams"), []);
   const schoolClass =
@@ -103,6 +112,21 @@ function MatchPage({ page, reload }: { page: Intake["pages"][number]; reload: ()
         {t("hardware.openPage", { page: page.page })}
       </a>
       <p>{t(`hardware.reason.${page.reason}`)}</p>
+      {page.suggested_student_id && <p>{t("answerSheets.verifySuggestion")}</p>}
+      {page.reason === "spare" && (
+        <label>
+          {t("answerSheets.pageNumber")}
+          <input
+            type="number"
+            min="1"
+            max="1000"
+            value={pageNumber}
+            onChange={(e) => {
+              setPageNumber(Number(e.target.value));
+            }}
+          />
+        </label>
+      )}
       <label>
         {t("hardware.exam")}
         <select
@@ -124,7 +148,7 @@ function MatchPage({ page, reload }: { page: Intake["pages"][number]; reload: ()
       <label>
         {t("hardware.student")}
         <select
-          value={studentId}
+          value={matchedStudentId}
           onChange={(e) => {
             setStudentId(Number(e.target.value));
           }}
@@ -139,10 +163,10 @@ function MatchPage({ page, reload }: { page: Intake["pages"][number]; reload: ()
         </select>
       </label>
       <button
-        disabled={!examId || !studentId}
+        disabled={!examId || !matchedStudentId}
         onClick={() => {
           void request("POST", `/api/intake/${String(page.id)}/assign`, {
-            json: { exam_id: examId, student_id: studentId },
+            json: { exam_id: examId, student_id: matchedStudentId, page_number: pageNumber },
           })
             .then(reload)
             .catch(setError);

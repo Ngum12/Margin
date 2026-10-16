@@ -461,7 +461,10 @@ def undecided_points(db: Session, script: Script) -> list[int]:
 
 
 def confirm(db: Session, actor: User, script_id: int) -> None:
+    from app.services.answer_sheets import require_complete
+
     script = _editable_script(db, actor, script_id)
+    require_complete(db, script.exam_id, script.student_id)
     missing = undecided_points(db, script)
     if missing:
         raise ConflictError(

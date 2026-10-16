@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, Boolean, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.clock import utcnow
@@ -37,6 +37,7 @@ class ScanBatch(IdMixin, Base):
 
     school_id: Mapped[int] = mapped_column(ForeignKey("school.id"), index=True)
     sha256: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger)
     source_name: Mapped[str] = mapped_column(String(255))
     stored_path: Mapped[str] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(30), default="pending")
@@ -48,6 +49,9 @@ class IntakePage(IdMixin, Base):
     __tablename__ = "intake_page"
     __table_args__ = (UniqueConstraint("batch_id", "source_index"),)
 
+    answer_sheet_id: Mapped[int | None] = mapped_column(ForeignKey("answer_sheet.id"))
+    suggested_student_id: Mapped[int | None] = mapped_column(ForeignKey("student.id"))
+    identification_model: Mapped[str | None] = mapped_column(String(100))
     batch_id: Mapped[int] = mapped_column(ForeignKey("scan_batch.id"), index=True)
     source_index: Mapped[int] = mapped_column(Integer)
     image_path: Mapped[str] = mapped_column(String(500))

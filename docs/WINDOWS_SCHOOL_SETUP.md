@@ -64,10 +64,20 @@ accept PDF just because they advertise IPP; Settings checks this capability.
 
 ## Teacher workflow currently implemented
 
-- Prepare an exam and QR covers using the existing exam screens.
+- Prepare an exam, then open **Answer sheets**. Choose the number of pages per
+  student and any spare sheets. Print directly, or prepare a PDF as a fallback.
+  Each answer page has its own anonymous QR, student identification and page number.
+  Pages can be shuffled or rotated; QR tokens route them to the correct exam/student.
+- Spares have a Name line. The local model may suggest a student, but the teacher
+  must confirm the student and physical page number. Missing numbered pages and
+  duplicates remain blocked from marking/confirmation until resolved.
+- A4 stickers use 40-label stock, 45.7 × 25.4 mm (4 columns × 10 rows), with
+  9.85 mm side margins and 21.5 mm top/bottom margins. Print at 100% and test alignment
+  on plain paper first. Place labels upright at the top of the answer page. Labels
+  use student codes; the default answer sheets show names.
 - In **cover-sheet mode**, keep each student's cover and plain answers together.
   Different exams may appear in one scan, but plain pages must follow their cover.
-  Arbitrarily shuffled pages require per-page QR sheets, a subsequent build item.
+  Use the default per-page QR sheets for arbitrary page order.
 - Scan to **Margin**. Recognised stacks appear in their exams automatically.
   The dashboard lists pages needing attention. Administrators assign pages with
   no identifiable exam; teachers can resolve pages already scoped to their exams.
@@ -97,3 +107,8 @@ See [BLUEPRINT_AUDIT.md](BLUEPRINT_AUDIT.md) for the remaining implementation or
 Do not treat this guide as evidence of a real-device acceptance test. Verify
 large ADF batches, duplex orientation, interrupted writes, QR readability,
 printer completion reporting and power-cut recovery with the school's equipment.
+
+Feedback slips, blank answer sheets and labels print single-sided. Full marked
+reprints can use duplex; Margin pads odd-length scripts with a blank reverse so
+two students never share one physical sheet. Inspect paper handling on the actual
+printer during installation.

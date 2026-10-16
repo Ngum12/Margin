@@ -45,27 +45,27 @@ Margin takes the other road:
 
 ```mermaid
 flowchart LR
-    A[Print cover sheets<br/>QR + student code] --> B[Students answer<br/>on paper]
-    B --> C[Scan the class stack<br/>one PDF]
-    C --> D[Margin splits it<br/>by cover sheet]
+    A[Print answer sheets<br/>anonymous QR on every page] --> B[Students answer<br/>on paper]
+    B --> C[Copier scans to Margin<br/>PDF or images]
+    C --> D[Margin routes each page<br/>and flags missing pages]
     D --> E[Check page orientation<br/>one click per page]
     E --> F[Local AI reads each page<br/>and proposes marks with evidence]
     F --> G[Teacher reviews<br/>at the marking desk]
-    G --> H[Results, CSV and<br/>red-pen marked PDFs]
+    G --> H[Print feedback slips<br/>or full marked copies]
 ```
 
 1. **Set up the exam:** type the mark scheme or import it as CSV. It reads like a printed one.
-2. **Print cover sheets.** Each student's sheet goes on top of their answers.
-3. **Scan the whole stack** and upload it. Margin places every page behind the right student.
+2. **Print answer sheets.** Each page has an anonymous QR; spare sheets and A4 labels are available.
+3. **Scan to Margin** from the copier. Margin archives and routes the pages automatically.
    Anything it is not sure about goes to a tray with a plain reason, never a guess.
 4. **AI marking runs in the background**, often overnight: a progress bar, an estimated time
    left, and the page being read right now.
 5. **Review at the marking desk.** For each mark scheme point the AI gives a proposed mark, its
    evidence lines in the student's answer, a category ("conceptual error", "language /
    expression"…) and its confidence. The scripts that most need attention come first.
-6. **Confirm and hand back.** Each student gets a marked PDF that looks like a teacher's red
-   pen: ticks beside the lines that earned marks, the score in the margin, comments in
-   handwriting, and the total circled.
+6. **Confirm and print.** Return original papers with a one-page feedback slip, or choose a
+   full marked reprint. Print one student, a selection, all confirmed or not yet printed.
+   The queue distinguishes sent, printed, failed and uncertain jobs. PDF download remains available.
 
 ## The marking desk
 

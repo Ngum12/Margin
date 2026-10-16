@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.clock import utcnow
 from app.config import Settings
 from app.db.models import (
+    AnswerSheet,
     CoverSheet,
     Exam,
     ExamAbsence,
@@ -206,10 +207,30 @@ def process_upload(factory: sessionmaker[Session], settings: Settings, upload_id
             if tokens
             else {}
         )
+        owners.update(
+            {
+                s.token: SheetOwner(s.exam_id, s.student_id, s.page_number, s.id)
+                for s in db.scalars(
+                    select(AnswerSheet).where(
+                        AnswerSheet.token.in_(tokens), AnswerSheet.active.is_(True)
+                    )
+                )
+            }
+        )
+        received = {
+            (student, number)
+            for student, number in db.execute(
+                select(Script.student_id, Page.position)
+                .join(Page, Page.script_id == Script.id)
+                .where(Script.exam_id == exam_id, Page.state == PageState.ASSIGNED)
+            )
+            if number is not None
+        }
         placements = place_pages(
             result.pages,
             exam_id=exam_id,
             lookup=owners.get,
+            received_pages=received,
             students_with_pages=_students_with_pages(db, exam_id, upload_id),
         )
 
@@ -219,6 +240,7 @@ def process_upload(factory: sessionmaker[Session], settings: Settings, upload_id
             rendered = by_index[placement.index]
             page = Page(
                 upload_id=upload_id,
+                answer_sheet_id=placement.sheet_id,
                 source_page_index=placement.index,
                 image_path=(pages_rel / rendered.image).as_posix(),
                 thumb_path=(pages_rel / rendered.thumb).as_posix(),
@@ -231,17 +253,28 @@ def process_upload(factory: sessionmaker[Session], settings: Settings, upload_id
                 detected_exam_id=placement.detected_exam_id,
             )
             if placement.student_id is not None:
-                script = _script_for(db, exam_id, placement.student_id)
-                page.state = PageState.ASSIGNED
-                page.script_id = script.id
-                page.position = _next_position(db, script.id)
+                if db.scalar(
+                    select(ExamAbsence.id).where(
+                        ExamAbsence.exam_id == exam_id,
+                        ExamAbsence.student_id == placement.student_id,
+                    )
+                ):
+                    page.unassigned_reason = UnassignedReason.ABSENT_STUDENT
+                else:
+                    script = _script_for(db, exam_id, placement.student_id)
+                    if script.status != ScriptStatus.WAITING:
+                        page.unassigned_reason = UnassignedReason.SCRIPT_LOCKED
+                    else:
+                        page.state = PageState.ASSIGNED
+                        page.script_id = script.id
+                        page.position = placement.page_number or _next_position(db, script.id)
             if placement.related_index is not None:
                 page.related_page_id = rows[placement.related_index].id
             db.add(page)
             db.flush()
             rows[placement.index] = page
 
-        assigned = sum(1 for p in placements if p.student_id is not None)
+        assigned = sum(1 for p in rows.values() if p.state == PageState.ASSIGNED)
         if assigned:
             exam = db.get(Exam, exam_id)
             if exam is not None:
@@ -438,6 +471,8 @@ def _require_editable(script: Script | None) -> None:
 def _compact_positions(db: Session, script: Script) -> None:
     db.flush()
     db.refresh(script)
+    if any(p.answer_sheet_id for p in script.pages):
+        return
     for position, page in enumerate(script.pages, start=1):
         page.position = position
 
@@ -451,10 +486,37 @@ def assign_pages(
         raise NotFoundError("Student")
     if any(p.state == PageState.ASSIGNED for p in found.pages):
         raise ConflictError("Some pages are already in a script", code="page.already_assigned")
+    if db.scalar(
+        select(ExamAbsence.id).where(
+            ExamAbsence.exam_id == found.exam.id, ExamAbsence.student_id == student.id
+        )
+    ):
+        raise ConflictError("Resolve absence first", code="hardware.absent_has_scan")
     script = _script_for(db, found.exam.id, student.id)
     _require_editable(script)
     position = _next_position(db, script.id)
     for page in found.pages:
+        sheet = db.get(AnswerSheet, page.answer_sheet_id) if page.answer_sheet_id else None
+        if sheet:
+            if sheet.exam_id != found.exam.id or (
+                sheet.student_id is not None and sheet.student_id != student.id
+            ):
+                raise ConflictError("QR belongs to another student", code="sheets.wrong_student")
+            if sheet.spare and sheet.student_id is None:
+                from app.services.answer_sheets import readiness
+
+                missing, _ = readiness(db, found.exam.id, student.id)
+                sheet.student_id = student.id
+                sheet.page_number = missing[0] if missing else position
+            position = sheet.page_number
+            if db.scalar(
+                select(Page.id).where(
+                    Page.script_id == script.id,
+                    Page.position == position,
+                    Page.state == PageState.ASSIGNED,
+                )
+            ):
+                raise ConflictError("Page already received", code="sheets.duplicate_page")
         page.state = PageState.ASSIGNED
         page.script_id = script.id
         page.position = position

@@ -108,7 +108,7 @@
     "saved": "Mark scheme saved.",
     "save": "Save mark scheme",
     "saveFirst": "Save your changes first",
-    "nowReady": "The exam is ready. Cover sheets come next.",
+    "nowReady": "The exam is ready. Print answer sheets next.",
     "markReady": "Mark as ready",
     "backToDraft": "Return to draft",
     "confirmDelete": "Delete this exam and its mark scheme? This cannot be undone.",
@@ -282,6 +282,12 @@
       "print_failed": "The document could not be prepared. Check the confirmed marks and retry.",
       "print_busy": "A print is being sent. Wait for its status before reopening.",
       "absent_has_scan": "Resolve the absence or received pages before continuing."
+    },
+    "sheets": {
+      "pages_locked": "Page counts cannot be reduced after scanning. Resolve the existing pages first.",
+      "duplicate_page": "This numbered page is already received. Discard the duplicate or correct the page number.",
+      "wrong_student": "This QR belongs to another exam or student. Check the identification.",
+      "incomplete": "Resolve missing pages, duplicates and unmatched spare sheets before marking or confirming."
     }
   },
   "issues": {
@@ -336,7 +342,7 @@
   "examTabs": {
     "label": "Exam sections",
     "setup": "Mark scheme",
-    "sheets": "Cover sheets",
+    "sheets": "Answer sheets",
     "scans": "Scans",
     "queue": "Marking",
     "results": "Results",
@@ -400,7 +406,10 @@
       "other_exam": "Cover sheet from another exam",
       "duplicate_in_upload": "The same cover sheet appears twice in this file.",
       "already_uploaded": "This student already has pages from an earlier upload.",
-      "returned_by_teacher": "Returned to the tray by a teacher."
+      "returned_by_teacher": "Returned to the tray by a teacher.",
+      "absent_student": "A scan arrived for an absent student. Check the attendance record.",
+      "spare_sheet": "Unassigned spare sheet: confirm the student and page number.",
+      "script_locked": "This script is already being marked. Reopen its intake before changing pages."
     },
     "pageFlag": {
       "no_answer_pages": "Check: only a cover sheet, no answer pages.",
@@ -804,14 +813,18 @@
       "sent": "Sent to printer",
       "printed": "Printed",
       "failed": "Failed",
-      "unknown": "Check printer output"
+      "unknown": "Check printer output",
+      "document_ready": "PDF ready"
     },
     "reason": {
       "qr_unreadable": "No readable, recognised QR. Confirm the correct student.",
       "already_uploaded": "This student already has scanned pages. Check for a duplicate.",
       "script_locked": "This script is already being marked. Reopen its intake before changing pages.",
       "exam_not_ready": "Confirm the exam setup first.",
-      "absent": "A scan arrived for an absent student. Check the attendance record."
+      "absent": "A scan arrived for an absent student. Check the attendance record.",
+      "spare": "Unassigned spare sheet: confirm the student and page number.",
+      "retired_sheet": "This sheet was superseded. Check the issued page count.",
+      "duplicate_page": "This numbered page is already received. Check and discard duplicates."
     },
     "selectStudents": "Choose students",
     "printSelected": "Print selected",
@@ -824,5 +837,23 @@
     "undoAbsence": "Undo absence",
     "removeBatch": "Remove batch from active work (original retained)",
     "discardPage": "Discard this page"
+  },
+  "answerSheets": {
+    "title": "QR answer sheets",
+    "help": "Every page has its own anonymous QR. Print in register order, scan in any order, and keep the originals.",
+    "layout": "Sheet format",
+    "answer": "Answer sheets (recommended)",
+    "labels": "A4 QR sticker labels",
+    "cover": "QR cover sheets",
+    "pages": "Pages per student",
+    "spares": "Extra unassigned sheets",
+    "labelHelp": "40-label A4 stock: 45.7 × 25.4 mm, 4 columns × 10 rows. Print at 100%, without fit-to-page. Stick one numbered label on each page. Use blue or black pen, not pencil.",
+    "coverHelp": "Keep each cover above its plain answer pages. Plain pages cannot be identified when shuffled.",
+    "print": "Print answer sheets",
+    "pdf": "Prepare PDF instead",
+    "download": "Download PDF",
+    "verifySuggestion": "Suggested match from the local model. Check the written name before confirming.",
+    "pageNumber": "Page number for this spare",
+    "missing": "Missing pages: {{pages}}"
   }
 }

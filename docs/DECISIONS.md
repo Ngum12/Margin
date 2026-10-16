@@ -484,3 +484,38 @@ failed the frontend strict template-expression lint: new URL builders interpolat
 numeric IDs directly. They now convert IDs explicitly with String, matching the
 existing frontend convention. A separate typecheck caught an Attendance import
 before its JSX insertion; the component is now mounted on the scans screen.
+
+
+## D-069 — Per-page anonymous QR sheets and safe spare identification (2026-10-16)
+
+Answer sheets map random checked tokens to exam, student and physical page number.
+Spare sheets remain unassigned until a teacher confirms their student/page; local
+name recognition only suggests an identity. Names are masked from generated-sheet
+grading derivatives while colour originals remain unchanged. Sticker labels carry
+student codes rather than names, so arbitrary sticker placement does not require
+masking handwriting. A4 label stock is explicitly specified, not assumed universal.
+
+Migration tests initially failed because Alembic applied the naming convention
+twice to existing CHECK constraints being dropped. Both drop and create operations
+now use op.f for the fully qualified existing names. The populated-database,
+upgrade/downgrade and duplicate-constraint tests are rerun after this correction.
+
+The first new manual-upload test expected 201; the existing asynchronous upload
+contract correctly returns 202 Accepted. Corrected that assertion to 202 after
+checking the route and successful worker processing; routing assertions remain.
+
+While integrating blank-sheet printing, review found that applying the school's
+duplex default to a class of one-page feedback slips would put different students
+on opposite sides. Feedback slips and blank sheets/labels now print single-sided.
+Full reprints honour duplex with blank padding after each odd-length script, so
+each student's next script starts on a fresh sheet. This is a privacy boundary,
+not merely a paper-layout preference.
+
+The new duplex regression initially used a context manager on PDFium page/text
+objects, which this pinned PDFium wrapper does not support. The test now explicitly
+closes those handles in finally blocks; it still checks all four physical sides.
+
+The full item-2 check found one frontend-test lint error: Vitest's expect.any
+returns any, forbidden by this repository's strict assignment rule. The regression
+now asserts the request token's presence separately rather than putting an untyped
+matcher into an expected object. All functional tests passed in that run.

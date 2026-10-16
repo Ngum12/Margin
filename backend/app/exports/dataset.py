@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageDraw
 from sqlalchemy.orm import Session
 
 from app.db.models import Exam, MarkDecision, School, Script, TranscriptionSource
@@ -64,11 +64,15 @@ class DatasetCounts:
     pages: int
 
 
-def _upright_jpeg(path: Path, rotation: int) -> bytes:
+def _upright_jpeg(path: Path, rotation: int, *, mask_header: bool = False) -> bytes:
     if rotation % 360 == 0:
         return path.read_bytes()
     with Image.open(path) as source:
         image = source.convert("RGB").rotate(-(rotation % 360), expand=True)
+        if mask_header:
+            ImageDraw.Draw(image).rectangle(
+                (0, 0, image.width, round(image.height * 42 / 297)), fill="white"
+            )
         buffer = io.BytesIO()
         image.save(buffer, "JPEG", quality=90)
         return buffer.getvalue()
@@ -103,11 +107,21 @@ def write_dataset(
             for result in script_results(db, exam, scripts, with_pages=True):
                 code = result.script.student.code
                 pages = []
+                from app.db.models import AnswerSheet
+
                 for number, result_page in enumerate(result.pages, 1):
                     page = result_page.page
                     name = f"images/{exam.id}_{code}_p{number}.jpg"
+                    sheet = (
+                        db.get(AnswerSheet, page.answer_sheet_id) if page.answer_sheet_id else None
+                    )
                     archive.writestr(
-                        name, _upright_jpeg(data_dir / page.image_path, page.effective_rotation)
+                        name,
+                        _upright_jpeg(
+                            data_dir / page.image_path,
+                            page.effective_rotation,
+                            mask_header=bool(sheet and sheet.layout != "labels"),
+                        ),
                     )
                     versions = transcripts.page_versions(db, page.id)
                     final = transcripts.current(versions)

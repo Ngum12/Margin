@@ -126,7 +126,10 @@ export type UnassignedReason =
   | "other_exam"
   | "duplicate_in_upload"
   | "already_uploaded"
-  | "returned_by_teacher";
+  | "returned_by_teacher"
+  | "absent_student"
+  | "spare_sheet"
+  | "script_locked";
 
 export interface CoverSheetRow {
   student_id: number;

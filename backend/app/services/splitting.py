@@ -17,7 +17,9 @@ from app.sheets.tokens import PayloadProblem, parse_payload
 @dataclass(frozen=True)
 class SheetOwner:
     exam_id: int
-    student_id: int
+    student_id: int | None
+    page_number: int | None = None
+    sheet_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -30,9 +32,12 @@ class Placement:
     detected_exam_id: int | None = None
     # Clockwise degrees from the most recent cover's QR orientation (orientation layer b).
     rotation_stack: int = 0
+    page_number: int | None = None
+    sheet_id: int | None = None
 
 
 class _Kind(Enum):
+    ANSWER_SHEET = "answer_sheet"
     ANSWER = "answer"
     GOOD_COVER = "good_cover"
     PROBLEM_COVER = "problem_cover"
@@ -41,6 +46,8 @@ class _Kind(Enum):
 @dataclass(frozen=True)
 class _Classified:
     kind: _Kind
+    page_number: int | None = None
+    sheet_id: int | None = None
     student_id: int | None = None
     reason: UnassignedReason | None = None
     detected_exam_id: int | None = None
@@ -72,6 +79,13 @@ def _classify(
                 reason=UnassignedReason.OTHER_EXAM,
                 detected_exam_id=owner.exam_id,
             )
+        if owner.sheet_id is not None:
+            return _Classified(
+                _Kind.ANSWER_SHEET,
+                student_id=owner.student_id,
+                page_number=owner.page_number,
+                sheet_id=owner.sheet_id,
+            )
         return _Classified(_Kind.GOOD_COVER, student_id=owner.student_id)
     if page.qr_damaged:
         return _Classified(_Kind.PROBLEM_COVER, reason=UnassignedReason.QR_DAMAGED)
@@ -86,12 +100,15 @@ def place_pages(
     exam_id: int,
     lookup: Callable[[str], SheetOwner | None],
     students_with_pages: set[int],
+    received_pages: set[tuple[int, int]] | None = None,
 ) -> list[Placement]:
     """Place pages in scan order.
 
     ``lookup`` maps a token to its sheet owner. ``students_with_pages`` holds students who already
     have pages from earlier uploads of this exam; their sheets are not merged automatically.
     """
+    received_pages = received_pages or set()
+    seen_sheet_pages: set[tuple[int, int]] = set()
     placements: list[Placement] = []
     seen_in_upload: set[int] = set()
     current_student: int | None = None
@@ -105,6 +122,30 @@ def place_pages(
         if info.kind is not _Kind.ANSWER:
             stack_rotation = page.qr_rotation
         rotation = stack_rotation
+
+        if info.kind is _Kind.ANSWER_SHEET:
+            current_student, problem_cover = None, page.index
+            key = (info.student_id or 0, info.page_number or 0)
+            issue = None
+            if info.student_id is None:
+                issue = UnassignedReason.SPARE_SHEET
+            elif key in received_pages:
+                issue = UnassignedReason.ALREADY_UPLOADED
+            elif key in seen_sheet_pages:
+                issue = UnassignedReason.DUPLICATE_IN_UPLOAD
+            seen_sheet_pages.add(key)
+            placements.append(
+                Placement(
+                    page.index,
+                    False,
+                    info.student_id if issue is None else None,
+                    issue,
+                    rotation_stack=page.qr_rotation,
+                    page_number=info.page_number,
+                    sheet_id=info.sheet_id,
+                )
+            )
+            continue
 
         if info.kind is _Kind.GOOD_COVER and info.student_id is not None:
             reason: UnassignedReason | None = None

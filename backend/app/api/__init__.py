@@ -1,6 +1,18 @@
 from fastapi import APIRouter
 
-from app.api import ai, auth, classes, exams, hardware, health, results, review, scans, users
+from app.api import (
+    ai,
+    answer_sheets,
+    auth,
+    classes,
+    exams,
+    hardware,
+    health,
+    results,
+    review,
+    scans,
+    users,
+)
 
 api_router = APIRouter()
 api_router.include_router(health.router)
@@ -14,3 +26,5 @@ api_router.include_router(review.router)
 api_router.include_router(results.router)
 
 api_router.include_router(hardware.router)
+
+api_router.include_router(answer_sheets.router)

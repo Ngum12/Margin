@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../api/client";
 import { ErrorMessage } from "./ui";
@@ -9,6 +9,7 @@ interface Row {
   name: string;
   absent: boolean;
   received: boolean;
+  missing_pages?: number[];
 }
 
 export function Attendance({ examId }: { examId: number }) {
@@ -17,6 +18,12 @@ export function Attendance({ examId }: { examId: number }) {
     () => request<Row[]>("GET", `/api/exams/${String(examId)}/attendance`),
     [examId],
   );
+  useEffect(() => {
+    const timer = setInterval(reload, 5000);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [reload]);
   const [error, setError] = useState<unknown>(null);
   if (state.status !== "ready") return null;
   return (
@@ -32,6 +39,9 @@ export function Attendance({ examId }: { examId: number }) {
                 : row.received
                   ? "hardware.received"
                   : "hardware.awaiting",
+            )}
+            {row.missing_pages && row.missing_pages.length > 0 && (
+              <span> · {t("answerSheets.missing", { pages: row.missing_pages.join(", ") })}</span>
             )}
             {!row.received && (
               <button

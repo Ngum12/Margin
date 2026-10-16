@@ -108,7 +108,7 @@
     "saved": "Barème enregistré.",
     "save": "Enregistrer le barème",
     "saveFirst": "Enregistrez d'abord vos modifications",
-    "nowReady": "L'examen est prêt. Étape suivante : les fiches de couverture.",
+    "nowReady": "L’examen est prêt. Imprimez les feuilles de réponse.",
     "markReady": "Marquer comme prêt",
     "backToDraft": "Repasser en brouillon",
     "confirmDelete": "Supprimer cet examen et son barème ? Cette action est irréversible.",
@@ -282,6 +282,12 @@
       "print_failed": "Le document n’a pas pu être préparé. Vérifiez les notes confirmées puis réessayez.",
       "print_busy": "Une impression est en cours d’envoi. Attendez son état avant de rouvrir.",
       "absent_has_scan": "Vérifiez l’absence ou les pages reçues avant de continuer."
+    },
+    "sheets": {
+      "pages_locked": "Le nombre de pages ne peut pas diminuer après numérisation. Vérifiez les pages existantes.",
+      "duplicate_page": "Cette page numérotée est déjà reçue. Écartez le doublon ou corrigez le numéro.",
+      "wrong_student": "Ce QR appartient à un autre examen ou élève. Vérifiez son identification.",
+      "incomplete": "Vérifiez les pages manquantes, les doublons et les feuilles non attribuées avant de corriger ou confirmer."
     }
   },
   "issues": {
@@ -336,7 +342,7 @@
   "examTabs": {
     "label": "Sections de l'examen",
     "setup": "Barème",
-    "sheets": "Fiches de couverture",
+    "sheets": "Feuilles de réponse",
     "scans": "Copies scannées",
     "queue": "Correction",
     "results": "Résultats",
@@ -400,7 +406,10 @@
       "other_exam": "Fiche de couverture d'un autre examen",
       "duplicate_in_upload": "La même fiche de couverture apparaît deux fois dans ce fichier.",
       "already_uploaded": "Cet élève a déjà des pages issues d'un téléversement précédent.",
-      "returned_by_teacher": "Remise dans les pages non attribuées par un enseignant."
+      "returned_by_teacher": "Remise dans les pages non attribuées par un enseignant.",
+      "absent_student": "Une copie est arrivée pour un élève absent. Vérifiez sa présence.",
+      "spare_sheet": "Feuille supplémentaire : confirmez l’élève et le numéro de page.",
+      "script_locked": "La correction a commencé. Vérifiez la copie avant de modifier ses pages."
     },
     "pageFlag": {
       "no_answer_pages": "À vérifier : seulement une fiche de couverture, aucune page de réponse.",
@@ -804,14 +813,18 @@
       "sent": "Envoyé à l’imprimante",
       "printed": "Imprimé",
       "failed": "Échec",
-      "unknown": "Vérifier les pages imprimées"
+      "unknown": "Vérifier les pages imprimées",
+      "document_ready": "PDF prêt"
     },
     "reason": {
       "qr_unreadable": "Aucun QR reconnu et lisible. Confirmez l’élève.",
       "already_uploaded": "Cet élève a déjà des pages. Vérifiez les doublons.",
       "script_locked": "La correction a commencé. Vérifiez la copie avant de modifier ses pages.",
       "exam_not_ready": "Confirmez d’abord la préparation de l’examen.",
-      "absent": "Une copie est arrivée pour un élève absent. Vérifiez sa présence."
+      "absent": "Une copie est arrivée pour un élève absent. Vérifiez sa présence.",
+      "spare": "Feuille supplémentaire : confirmez l’élève et le numéro de page.",
+      "retired_sheet": "Cette feuille a été remplacée. Vérifiez le nombre de pages prévu.",
+      "duplicate_page": "Cette page numérotée est déjà reçue. Vérifiez les doublons."
     },
     "selectStudents": "Choisir les élèves",
     "printSelected": "Imprimer la sélection",
@@ -824,5 +837,23 @@
     "undoAbsence": "Annuler l’absence",
     "removeBatch": "Retirer le lot du travail en cours (original conservé)",
     "discardPage": "Écarter cette page"
+  },
+  "answerSheets": {
+    "title": "Feuilles de réponse QR",
+    "help": "Chaque page porte son propre QR anonyme. Imprimez dans l’ordre du registre, numérisez dans n’importe quel ordre et conservez les originaux.",
+    "layout": "Format des feuilles",
+    "answer": "Feuilles de réponse (recommandé)",
+    "labels": "Étiquettes QR A4",
+    "cover": "Fiches de couverture QR",
+    "pages": "Pages par élève",
+    "spares": "Feuilles supplémentaires non attribuées",
+    "labelHelp": "Planche A4 de 40 étiquettes : 45,7 × 25,4 mm, 4 colonnes × 10 lignes. Imprimez à 100 %, sans ajustement. Collez une étiquette numérotée sur chaque page. Stylo bleu ou noir, pas de crayon.",
+    "coverHelp": "Gardez chaque couverture au-dessus de ses réponses. Les pages ordinaires mélangées ne peuvent pas être identifiées.",
+    "print": "Imprimer les feuilles",
+    "pdf": "Préparer un PDF",
+    "download": "Télécharger le PDF",
+    "verifySuggestion": "Correspondance proposée par le modèle local. Vérifiez le nom manuscrit avant de confirmer.",
+    "pageNumber": "Numéro de cette page supplémentaire",
+    "missing": "Pages manquantes : {{pages}}"
   }
 }

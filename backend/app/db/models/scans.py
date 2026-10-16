@@ -101,6 +101,9 @@ class PageState(StrEnum):
 class UnassignedReason(StrEnum):
     """Why a page could not be placed automatically. Shown to teachers (translated)."""
 
+    ABSENT_STUDENT = "absent_student"
+    SPARE_SHEET = "spare_sheet"
+    SCRIPT_LOCKED = "script_locked"
     BEFORE_FIRST_COVER = "before_first_cover"
     FOLLOWS_UNASSIGNED_COVER = "follows_unassigned_cover"
     QR_DAMAGED = "qr_damaged"
@@ -119,6 +122,7 @@ class Page(IdMixin, Base):
     __tablename__ = "page"
     __table_args__ = (UniqueConstraint("upload_id", "source_page_index"),)
 
+    answer_sheet_id: Mapped[int | None] = mapped_column(ForeignKey("answer_sheet.id"))
     upload_id: Mapped[int] = mapped_column(ForeignKey("upload.id"), index=True)
     # 0-based index in the uploaded PDF.
     source_page_index: Mapped[int] = mapped_column(Integer)

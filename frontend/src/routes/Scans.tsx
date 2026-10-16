@@ -39,14 +39,12 @@ export default function Scans() {
   const data = state.status === "ready" ? state.data : null;
   const refresh = reload;
 
-  const busy = data?.uploads.some((u) => u.status === "pending" || u.status === "processing");
   useEffect(() => {
-    if (!busy) return;
     const timer = window.setInterval(refresh, POLL_MS);
     return () => {
       window.clearInterval(timer);
     };
-  }, [busy, refresh]);
+  }, [refresh]);
 
   if (state.status === "error") return <ErrorMessage error={state.error} />;
   if (!data) return <Loading />;

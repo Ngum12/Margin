@@ -11,12 +11,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.clock import utcnow
 from app.config import Settings
 from app.db.models import (
+    AnswerSheet,
     CoverSheet,
     Exam,
     ExamAbsence,
     ExamStatus,
     Hardware,
     IntakePage,
+    JobType,
     Page,
     PageState,
     ScanBatch,
@@ -30,7 +32,7 @@ from app.db.models import (
 )
 from app.errors import ConflictError, NotFoundError
 from app.pdf.runner import RenderError, render_pdf
-from app.services import audit, page_check, uploads
+from app.services import audit, jobs, page_check, uploads
 from app.services.access import get_visible_exam
 from app.sheets.tokens import parse_payload
 
@@ -88,8 +90,17 @@ def receive(db: Session, school_id: int, source: Path, settings: Settings) -> Sc
             school_id=school_id,
             sha256=sha,
             source_name=source.name[:255],
+            size_bytes=before.st_size,
             stored_path=relative.as_posix(),
         )
+        if db.scalar(
+            select(Upload.id)
+            .join(Exam)
+            .join(SchoolClass)
+            .where(Upload.sha256 == sha, SchoolClass.school_id == school_id)
+            .limit(1)
+        ):
+            batch.status = "duplicate"
         db.add(batch)
         db.flush()
         hardware(db, school_id).last_scan_at = utcnow()
@@ -115,12 +126,26 @@ def attach(
     *,
     is_cover: bool = False,
 ) -> Page:
+    if exam.status == ExamStatus.DRAFT:
+        raise ConflictError("Exam not ready", code="exam.sheets_need_ready")
     if db.scalar(
         select(ExamAbsence.id).where(
             ExamAbsence.exam_id == exam.id, ExamAbsence.student_id == student.id
         )
     ):
         raise ConflictError("Student marked absent", code="hardware.absent_has_scan")
+    sheet = db.get(AnswerSheet, item.answer_sheet_id) if item.answer_sheet_id else None
+    if sheet and db.scalar(
+        select(Page.id)
+        .join(Script, Page.script_id == Script.id)
+        .where(
+            Script.exam_id == exam.id,
+            Script.student_id == student.id,
+            Page.position == sheet.page_number,
+            Page.state == PageState.ASSIGNED,
+        )
+    ):
+        raise ConflictError("Page already received", code="sheets.duplicate_page")
     script = uploads._script_for(db, exam.id, student.id)
     if script.status != ScriptStatus.WAITING:
         raise ConflictError("Script pages are locked", code="script.locked")
@@ -134,7 +159,7 @@ def attach(
             original_filename=batch.source_name,
             stored_path=batch.stored_path,
             sha256=batch.sha256,
-            size_bytes=0,
+            size_bytes=batch.size_bytes or 0,
             status=UploadStatus.PROCESSED,
             processed_at=utcnow(),
         )
@@ -142,6 +167,7 @@ def attach(
         db.flush()
     page = Page(
         upload_id=upload.id,
+        answer_sheet_id=item.answer_sheet_id,
         source_page_index=item.source_index,
         image_path=item.image_path,
         thumb_path=item.thumb_path,
@@ -151,7 +177,7 @@ def attach(
         is_cover=is_cover,
         state=PageState.ASSIGNED,
         script_id=script.id,
-        position=uploads._next_position(db, script.id),
+        position=sheet.page_number if sheet else uploads._next_position(db, script.id),
     )
     db.add(page)
     db.flush()
@@ -190,10 +216,57 @@ def process(factory: sessionmaker[Session], settings: Settings, batch_id: int) -
                 .where(SchoolClass.school_id == batch.school_id)
             )
         }
+        page_owners = {
+            s.token: s
+            for s in db.scalars(
+                select(AnswerSheet)
+                .join(Exam)
+                .join(SchoolClass)
+                .where(SchoolClass.school_id == batch.school_id)
+            )
+        }
         current: CoverSheet | None = None
         rotation = 0
         for image in rendered.pages:
             token = parse_payload(image.qr_texts[0]).token if len(image.qr_texts) == 1 else None
+            sheet = page_owners.get(token or "")
+            if sheet is not None:
+                current = None
+                rotation = 0
+                item = IntakePage(
+                    batch_id=batch.id,
+                    source_index=image.index,
+                    answer_sheet_id=sheet.id,
+                    image_path=(relative / image.image).as_posix(),
+                    thumb_path=(relative / image.thumb).as_posix(),
+                    width=image.width,
+                    height=image.height,
+                    rotation=image.qr_rotation,
+                    exam_id=sheet.exam_id,
+                    reason="spare" if sheet.student_id is None else "retired_sheet",
+                )
+                db.add(item)
+                db.flush()
+                exam = db.get(Exam, sheet.exam_id)
+                student = db.get(Student, sheet.student_id) if sheet.student_id else None
+                if sheet.spare and sheet.student_id is None:
+                    jobs.enqueue(
+                        db,
+                        JobType.IDENTIFY_SPARE,
+                        {"intake_page_id": item.id},
+                        f"identify-spare:{item.id}",
+                        max_attempts=settings.job_max_attempts,
+                    )
+                if sheet.active and exam and student:
+                    try:
+                        attach(db, batch, item, exam, student)
+                    except ConflictError as exc:
+                        item.reason = {
+                            "sheets.duplicate_page": "duplicate_page",
+                            "hardware.absent_has_scan": "absent",
+                            "exam.sheets_need_ready": "exam_not_ready",
+                        }.get(exc.code, "script_locked")
+                continue
             owner = owners.get(token or "")
             is_cover = owner is not None
             reason: str | None = None
@@ -248,7 +321,14 @@ def process(factory: sessionmaker[Session], settings: Settings, batch_id: int) -
         db.commit()
 
 
-def assign(db: Session, actor: User, item_id: int, exam_id: int, student_id: int) -> None:
+def assign(
+    db: Session,
+    actor: User,
+    item_id: int,
+    exam_id: int,
+    student_id: int,
+    page_number: int | None = None,
+) -> None:
     exam = get_visible_exam(db, actor, exam_id)
     item = db.get(IntakePage, item_id)
     batch = db.get(ScanBatch, item.batch_id) if item else None
@@ -264,6 +344,16 @@ def assign(db: Session, actor: User, item_id: int, exam_id: int, student_id: int
         raise NotFoundError("Page")
     if item.page_id or item.discarded or exam.status == ExamStatus.DRAFT:
         raise ConflictError("Page cannot be assigned", code="page.already_assigned")
+    sheet = db.get(AnswerSheet, item.answer_sheet_id) if item.answer_sheet_id else None
+    if sheet:
+        if sheet.exam_id != exam.id or (not sheet.spare and sheet.student_id != student.id):
+            raise ConflictError(
+                "QR belongs to another student or exam", code="sheets.wrong_student"
+            )
+        if sheet.spare:
+            sheet.student_id = student.id
+            sheet.page_number = page_number or 1
+            sheet.active = True
     attach(db, batch, item, exam, student)
     audit.record(
         db,
