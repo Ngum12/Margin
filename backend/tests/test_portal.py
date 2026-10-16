@@ -320,15 +320,12 @@ def test_release_waits_for_whole_class_and_student_cookie_is_not_staff_cookie(
     portal_data: dict[str, Any],
     alice: ApiUser,
 ) -> None:
-    missing = factory.student(world.class_a, "CCCCCC")
+    factory.student(world.class_a, "CCCCCC")  # Later enrolment does not change an old exam roster.
+    pending = portal_data["script_ids"][1]
+    assert alice.post(f"/api/scripts/{pending}/reopen").status_code == 200
     response = alice.put(f"/api/exams/{portal_data['exam_id']}/release", json={"released": True})
     assert response.status_code == 409
-    assert (
-        alice.put(
-            f"/api/exams/{portal_data['exam_id']}/attendance/{missing.id}", json={"absent": True}
-        ).status_code
-        == 204
-    )
+    assert alice.post(f"/api/scripts/{pending}/confirm").status_code == 200
     publish(alice, portal_data)
     client, _ = sign_in(app, portal_data)
     from app.auth.sessions import SESSION_COOKIE_NAME

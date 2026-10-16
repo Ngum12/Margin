@@ -129,3 +129,9 @@ The owner's redesign brief asked for these, bundled locally with their licences.
 
 No external Office/OCR service. Legacy binary DOC conversion requires separately
 installed LibreOffice; it is not installed by Python package setup.
+
+## Approved register and report-card packages (2026-10-16)
+
+Owner-approved with the blueprint: openpyxl **3.1.5** (MIT), and its pinned dependency
+et-xmlfile **2.0.0** (MIT). XLSX import/export only; no macros, external links or
+formulas are accepted during register import. Existing defusedxml guards XML parsing.

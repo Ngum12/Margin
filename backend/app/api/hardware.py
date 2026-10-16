@@ -13,6 +13,7 @@ from app.services import audit, ipp, printing, scan_inbox, uploads
 from app.services.access import get_visible_script, visible_exams
 from app.services.exports import require_confirmed
 from app.services.results import script_results
+from app.services.roster import eligible_student, exam_students
 
 router = APIRouter(tags=["hardware"])
 
@@ -23,7 +24,7 @@ class AttendanceIn(BaseModel):
 
 @router.get("/exams/{exam_id}/attendance")
 def attendance(exam_id: int, db: DbSession, actor: CurrentUser) -> list[dict[str, object]]:
-    from app.db.models import ExamAbsence, Student
+    from app.db.models import ExamAbsence
     from app.services.access import get_visible_exam
     from app.services.answer_sheets import readiness
 
@@ -40,9 +41,7 @@ def attendance(exam_id: int, db: DbSession, actor: CurrentUser) -> list[dict[str
             if student.id in received
             else [],
         }
-        for student in db.scalars(
-            select(Student).where(Student.class_id == exam.class_id).order_by(Student.id)
-        )
+        for student in exam_students(db, exam)
     ]
 
 
@@ -55,7 +54,7 @@ def set_attendance(
 
     exam = get_visible_exam(db, actor, exam_id)
     student = db.get(Student, student_id)
-    if not student or student.class_id != exam.class_id:
+    if not student or not eligible_student(exam, student):
         raise NotFoundError("Student")
     if body.absent and db.scalar(
         select(Script.id).where(Script.exam_id == exam.id, Script.student_id == student.id)

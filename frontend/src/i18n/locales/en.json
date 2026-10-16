@@ -312,6 +312,11 @@
       "remark_closed": "The remark window has closed.",
       "remark_limit": "The request limit has been reached.",
       "reason_required": "Give a reason for changing released marks."
+    },
+    "roster": {
+      "invalid": "Could not read this register. Use an XLSX/CSV name column or edit the preview manually.",
+      "duplicate_code": "A student code appears more than once.",
+      "order": "Include each active student exactly once."
     }
   },
   "issues": {
@@ -1061,5 +1066,37 @@
     "average": "Class average: {{marks}}",
     "pointOnPage": "Tap the place on your page (optional)",
     "examNumber": "Exam {{number}}"
+  },
+  "register": {
+    "title": "Class registers",
+    "import": "Import a class list",
+    "help": "Use XLSX or CSV with Name and optional Code columns, paste one name per line, or photograph a register. Check every row before confirming.",
+    "file": "Excel, CSV, text or register photo",
+    "paste": "Paste names from your register",
+    "preview": "Prepare preview",
+    "current": "Current register",
+    "orderHint": "This order is used for new answer sheets and class print jobs. Removing a student keeps their history.",
+    "up": "Move up",
+    "down": "Move down",
+    "restore": "Restore to class",
+    "remove": "Remove from register",
+    "history": "Exam history",
+    "noHistory": "No exams yet.",
+    "check": "Check and confirm the list",
+    "reuse": "To keep an existing record, enter its student code. A blank code creates a new student; names never merge automatically.",
+    "original": "Download original register",
+    "possibleDuplicate": "This name already exists. Check the code before creating another record.",
+    "addRow": "Add a student",
+    "confirm": "Confirm class list",
+    "report": "School report cards",
+    "excel": "Export results to Excel",
+    "term": "Term",
+    "status": {
+      "queued": "Waiting for the local worker",
+      "running": "Reading the register locally",
+      "failed": "Register read failed; retry or paste the list",
+      "succeeded": "Preparing preview"
+    },
+    "retry": "Retry"
   }
 }

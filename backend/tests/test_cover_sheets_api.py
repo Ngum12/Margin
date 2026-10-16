@@ -31,7 +31,7 @@ def test_prepare_creates_one_sheet_per_student(alice: ApiUser, exam: dict[str, A
     after = alice.post(f"/api/exams/{exam['id']}/cover-sheets").json()
 
     assert [r["has_sheet"] for r in before] == [False, False]
-    assert [(r["code"], r["has_sheet"]) for r in after] == [("AAAAAA", True), ("BBBBBB", True)]
+    assert [(r["code"], r["has_sheet"]) for r in after] == [("BBBBBB", True), ("AAAAAA", True)]
 
 
 def test_tokens_are_stable_and_new_students_get_sheets(

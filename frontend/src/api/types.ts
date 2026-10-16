@@ -45,6 +45,8 @@ export interface SchoolClass {
 }
 
 export interface Student {
+  is_active?: boolean;
+  register_position?: number;
   id: number;
   class_id: number;
   code: string;

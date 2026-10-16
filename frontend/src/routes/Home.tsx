@@ -50,6 +50,9 @@ export default function Home() {
           <h1>{t("home.title")}</h1>
           <p className="page-lede">{t("studio.deskIntro")}</p>
         </div>
+        <Link className="button button-secondary" to="/registers">
+          {t("register.title")}
+        </Link>
         <Link className="button button-secondary" to="/student-access">
           {t("portal.access")}
         </Link>

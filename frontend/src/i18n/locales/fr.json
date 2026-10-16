@@ -312,6 +312,11 @@
       "remark_closed": "Le délai de révision est terminé.",
       "remark_limit": "La limite de demandes est atteinte.",
       "reason_required": "Indiquez le motif de modification des notes publiées."
+    },
+    "roster": {
+      "invalid": "Lecture impossible. Utilisez une colonne Nom en XLSX/CSV ou modifiez l’aperçu.",
+      "duplicate_code": "Un code élève apparaît plusieurs fois.",
+      "order": "Incluez chaque élève actif une seule fois."
     }
   },
   "issues": {
@@ -1061,5 +1066,37 @@
     "average": "Moyenne de classe : {{marks}}",
     "pointOnPage": "Touchez l’endroit sur votre page (facultatif)",
     "examNumber": "Examen {{number}}"
+  },
+  "register": {
+    "title": "Registres de classe",
+    "import": "Importer une liste de classe",
+    "help": "Utilisez XLSX ou CSV avec colonnes Nom et Code facultatif, collez un nom par ligne ou photographiez le registre. Vérifiez chaque ligne avant confirmation.",
+    "file": "Excel, CSV, texte ou photo du registre",
+    "paste": "Coller les noms du registre",
+    "preview": "Préparer l’aperçu",
+    "current": "Registre actuel",
+    "orderHint": "Cet ordre sert aux nouvelles feuilles et impressions de classe. Retirer un élève conserve son historique.",
+    "up": "Monter",
+    "down": "Descendre",
+    "restore": "Réintégrer",
+    "remove": "Retirer du registre",
+    "history": "Historique des examens",
+    "noHistory": "Aucun examen pour le moment.",
+    "check": "Vérifier et confirmer la liste",
+    "reuse": "Pour conserver un dossier existant, indiquez son code élève. Un code vide crée un élève ; les noms ne sont jamais fusionnés automatiquement.",
+    "original": "Télécharger le registre original",
+    "possibleDuplicate": "Ce nom existe déjà. Vérifiez le code avant de créer un autre dossier.",
+    "addRow": "Ajouter un élève",
+    "confirm": "Confirmer la liste",
+    "report": "Bulletins scolaires",
+    "excel": "Exporter les résultats vers Excel",
+    "term": "Trimestre",
+    "status": {
+      "queued": "En attente du traitement local",
+      "running": "Lecture locale du registre",
+      "failed": "Lecture échouée ; réessayez ou collez la liste",
+      "succeeded": "Préparation de l’aperçu"
+    },
+    "retry": "Réessayer"
   }
 }

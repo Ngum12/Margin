@@ -22,7 +22,7 @@ def student_counts(db: Session, class_ids: list[int]) -> dict[int, int]:
         return {}
     rows = db.execute(
         select(Student.class_id, func.count())
-        .where(Student.class_id.in_(class_ids))
+        .where(Student.class_id.in_(class_ids), Student.is_active.is_(True))
         .group_by(Student.class_id)
     )
     return dict(rows.all())

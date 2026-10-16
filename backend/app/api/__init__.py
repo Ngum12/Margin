@@ -12,6 +12,7 @@ from app.api import (
     portal,
     results,
     review,
+    roster,
     scans,
     scheme_documents,
     users,
@@ -37,3 +38,5 @@ api_router.include_router(scheme_documents.router)
 api_router.include_router(capture.router)
 
 api_router.include_router(portal.router)
+
+api_router.include_router(roster.router)

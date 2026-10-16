@@ -12,6 +12,7 @@ from app.db.types import str_enum
 
 class JobType(StrEnum):
     IDENTIFY_SPARE = "identify_spare"
+    EXTRACT_ROSTER = "extract_roster"
     EXTRACT_SCHEME = "extract_scheme"
     PROCESS_UPLOAD = "process_upload"
     TRANSCRIBE_SCRIPT = "transcribe_script"

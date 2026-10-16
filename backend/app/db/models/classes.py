@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, IdMixin, TimestampMixin, UTCDateTime
@@ -28,6 +28,8 @@ class Student(IdMixin, TimestampMixin, Base):
     school_id: Mapped[int] = mapped_column(ForeignKey("school.id"), index=True)
     class_id: Mapped[int] = mapped_column(ForeignKey("school_class.id"), index=True)
     # Pseudonymous code printed on cover sheets and the only identifier models ever see.
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    register_position: Mapped[int] = mapped_column(Integer, default=0)
     code: Mapped[str] = mapped_column(String(16))
     # Optional real name. Local database only: never sent to a model, never logged.
     display_name: Mapped[str | None] = mapped_column(String(200))

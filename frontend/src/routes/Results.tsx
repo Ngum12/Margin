@@ -1,3 +1,4 @@
+import { SchoolReport } from "../components/SchoolReport";
 import { ReleaseControls } from "../components/PortalControls";
 import { PrintControls } from "../components/SchoolHardware";
 import { useState } from "react";
@@ -45,6 +46,7 @@ export default function Results() {
   return (
     <section>
       <ExamHeader exam={exam} />
+      <SchoolReport examId={examId} />
       <ReleaseControls examId={examId} />
       <PrintControls
         examId={examId}

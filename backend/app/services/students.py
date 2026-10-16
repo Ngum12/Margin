@@ -2,7 +2,7 @@
 
 import secrets
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.clock import utcnow
@@ -49,15 +49,20 @@ def list_students(db: Session, actor: User, class_id: int) -> list[Student]:
     get_visible_class(db, actor, class_id)
     return list(
         db.scalars(
-            visible_students(actor).where(Student.class_id == class_id).order_by(Student.code)
+            visible_students(actor)
+            .where(Student.class_id == class_id)
+            .order_by(Student.register_position, Student.id)
         )
     )
 
 
 def add_students(db: Session, actor: User, class_id: int, names: list[str]) -> list[Student]:
-    require_admin(actor)
     school_class = get_visible_class(db, actor, class_id)
     codes = generate_codes(db, actor.school_id, len(names))
+    last_position = (
+        db.scalar(select(func.max(Student.register_position)).where(Student.class_id == class_id))
+        or 0
+    )
     students = [
         Student(
             school_id=actor.school_id,
@@ -65,8 +70,9 @@ def add_students(db: Session, actor: User, class_id: int, names: list[str]) -> l
             code=code,
             display_name=name or None,
             training_consent=False,
+            register_position=last_position + index + 1,
         )
-        for code, name in zip(codes, names, strict=True)
+        for index, (code, name) in enumerate(zip(codes, names, strict=True))
     ]
     db.add_all(students)
     db.flush()
@@ -91,7 +97,6 @@ def update_student(
     class_id: int | None,
     display_name_set: bool,
 ) -> Student:
-    require_admin(actor)
     student = get_visible_student(db, actor, student_id)
     before = _snapshot(student)
     if display_name_set:

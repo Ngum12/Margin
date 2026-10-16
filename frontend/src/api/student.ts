@@ -33,6 +33,7 @@ export interface Remark {
   }[];
 }
 export interface StudentExam {
+  term?: string;
   id: number;
   exam_id: number;
   title: string;

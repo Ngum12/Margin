@@ -609,3 +609,28 @@ media type; rotation creates a lossless PNG preview without changing the archive
 The assertion checks the JPEG bytes and matching media type. Initial frontend
 checks also caught a missing JSX fragment around the new reopen-reason input and
 an impure render-time clock read; these were corrected before functional checks.
+
+## D074 — Registers keep student identity and exam membership (2026-10-16)
+
+Imports are drafts until a teacher confirms. Existing student codes are explicit
+identity matches; similar names never merge automatically. Removal sets an active
+flag and retains history. Teachers can manage their own class rosters; school
+creation and training consent remain admin-only. The old admin-only add-student
+permission expectation is superseded by this approved blueprint.
+
+Register position, not random code order, drives sheets and printing. The first
+focused run caught a cover-sheet test expecting alphabetical codes even though
+its fixture inserted B before A. Its expected order now follows the register.
+Exam membership freezes once scans exist; later enrolment does not create a
+missing-script problem on an older exam. The release test now checks an actual
+unconfirmed exam member, retaining its release gate and cookie-isolation checks.
+
+XLSX is read locally with approved openpyxl/et-xmlfile. Archive sizes are bounded;
+formulas, macros and external workbook links are refused. Report-card exports
+escape formula-like text and leave absent/unconfirmed totals blank. Register OCR
+uses the local model only, with model/prompt provenance and per-page checkpoints.
+Real register-photo accuracy still requires school documents.
+
+The first register UI test selected the shared language dropdown while the lazy
+register route was loading. It now waits for the class option and selects the
+control by its accessible Class label; the edit-before-confirm assertion remains.

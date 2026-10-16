@@ -119,7 +119,7 @@ export default function StudentPortal() {
                     }}
                   >
                     <span>
-                      {e.subject} · {e.date}
+                      {e.subject} · {e.term} · {e.date}
                     </span>
                     <strong>{e.title}</strong>
                     <span>

@@ -46,6 +46,8 @@ class ConsentIn(ApiModel):
 
 
 class StudentOut(ApiModel):
+    is_active: bool
+    register_position: int
     id: int
     class_id: int
     code: str

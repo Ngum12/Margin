@@ -41,9 +41,9 @@ def prepare(
     )
     if received and any(s.active and not s.spare and s.page_number > pages for s in existing):
         raise ConflictError("Cannot reduce pages after scanning", code="sheets.pages_locked")
-    students = list(
-        db.scalars(select(Student).where(Student.class_id == exam.class_id).order_by(Student.id))
-    )
+    from app.services.roster import exam_students
+
+    students = exam_students(db, exam, refresh=True)
     found = {
         (s.student_id, s.page_number): s for s in existing if not s.spare and s.layout == layout
     }

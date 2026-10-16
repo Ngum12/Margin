@@ -34,6 +34,8 @@ class Exam(IdMixin, TimestampMixin, Base):
     class_id: Mapped[int] = mapped_column(ForeignKey("school_class.id"), index=True)
     # References a subject config file (app/subjects/configs), not a table. See D-017.
     subject_code: Mapped[str] = mapped_column(String(50))
+    roster_student_ids: Mapped[list[int] | None] = mapped_column(JSON)
+    term: Mapped[str] = mapped_column(String(200), default="")
     title: Mapped[str] = mapped_column(String(200))
     exam_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[ExamStatus] = mapped_column(

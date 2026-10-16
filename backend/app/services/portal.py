@@ -64,7 +64,9 @@ def release(db: Session, actor: User, exam_id: int, data: ReleaseIn) -> Exam:
             db.scalars(select(CoverSheet.student_id).where(CoverSheet.exam_id == exam.id))
         )
         expected.update(s.student_id for s in scripts)
-        expected.update(db.scalars(select(Student.id).where(Student.class_id == exam.class_id)))
+        from app.services.roster import exam_students
+
+        expected.update(s.id for s in exam_students(db, exam))
         absent = set(
             db.scalars(select(ExamAbsence.student_id).where(ExamAbsence.exam_id == exam.id))
         )
@@ -125,6 +127,7 @@ def detail(db: Session, student: Student, script_id: int) -> dict[str, Any]:
         "exam_id": exam.id,
         "title": exam.title,
         "subject": exam.subject_code,
+        "term": exam.term,
         "date": str(exam.exam_date) if exam.exam_date else str(exam.created_at.date()),
         "total": from_half_marks(result.total_half or 0),
         "maximum": from_half_marks(result.max_half),

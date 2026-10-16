@@ -119,7 +119,6 @@ def test_teacher_can_list_own_students(alice: ApiUser, world: World, factory: Fa
         ("post", "/api/users", {"username": "eve", "display_name": "Eve", "password": "x" * 12}),
         ("post", "/api/classes", {"name": "X", "academic_year": "2026/2027", "teacher_id": 1}),
         ("patch", "/api/classes/{class_a}", {"name": "Renamed"}),
-        ("post", "/api/classes/{class_a}/students", {"names": ["New"]}),
     ],
 )
 def test_admin_only_actions_are_refused_for_teachers(

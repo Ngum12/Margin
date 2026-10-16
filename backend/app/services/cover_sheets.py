@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import CoverSheet, Exam, ExamStatus, Student, User
 from app.errors import ConflictError
-from app.services import audit
+from app.services import audit, roster
 from app.services.access import get_visible_exam
 from app.sheets.cover_pdf import SheetInfo, SheetStudent, build_cover_sheets_pdf
 from app.sheets.tokens import new_token
@@ -29,9 +29,7 @@ def _require_not_draft(exam: Exam) -> None:
 
 
 def _class_students(db: Session, exam: Exam) -> list[Student]:
-    return list(
-        db.scalars(select(Student).where(Student.class_id == exam.class_id).order_by(Student.code))
-    )
+    return roster.exam_students(db, exam, refresh=True)
 
 
 def _sheets_by_student(db: Session, exam: Exam) -> dict[int, CoverSheet]:

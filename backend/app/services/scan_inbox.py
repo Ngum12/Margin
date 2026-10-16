@@ -36,6 +36,7 @@ from app.errors import ConflictError, NotFoundError
 from app.pdf.runner import RenderError, render_pdf
 from app.services import audit, jobs, page_check, uploads
 from app.services.access import get_visible_exam
+from app.services.roster import eligible_student
 from app.sheets.tokens import parse_payload
 
 EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".tif", ".tiff"}
@@ -343,7 +344,7 @@ def assign(
         or not batch
         or batch.school_id != actor.school_id
         or not student
-        or student.class_id != exam.class_id
+        or not eligible_student(exam, student)
         or (
             not actor.is_admin
             and item.exam_id != exam.id

@@ -92,7 +92,10 @@ def request_print(
         if not scripts:
             raise ConflictError("No confirmed scripts to print", code="export.nothing_confirmed")
         # Stable insertion order is the initial register order; roster imports preserve it.
-        scripts.sort(key=lambda s: s.student_id)
+        from app.services.roster import exam_students
+
+        positions = {s.id: i for i, s in enumerate(exam_students(db, exam))}
+        scripts.sort(key=lambda s: (positions.get(s.student_id, len(positions)), s.student_id))
     elif not actor.is_admin or kind != "test":
         raise NotFoundError("Exam")
     row = PrintJob(

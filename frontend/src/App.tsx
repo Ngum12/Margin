@@ -20,6 +20,7 @@ import Scans from "./routes/Scans";
 import Settings from "./routes/Settings";
 import SignIn from "./routes/SignIn";
 
+const Registers = lazy(() => import("./routes/Registers"));
 const StudentPortal = lazy(() => import("./routes/StudentPortal"));
 const Remarks = lazy(() => import("./routes/Remarks"));
 const StudentAccess = lazy(() => import("./routes/StudentAccess"));
@@ -44,6 +45,14 @@ export default function App() {
         }
       >
         <Routes>
+          <Route
+            path="/registers"
+            element={
+              <RequireAuth>
+                <Registers />
+              </RequireAuth>
+            }
+          />
           <Route path="/student/*" element={<StudentPortal />} />
           <Route
             path="/remarks"

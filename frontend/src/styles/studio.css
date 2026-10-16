@@ -1398,3 +1398,11 @@ textarea {
   color: var(--mark-red);
   font-size: 2rem;
 }
+
+.register-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+  margin-block: var(--space-3);
+}

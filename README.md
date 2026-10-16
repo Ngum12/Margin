@@ -243,3 +243,23 @@ network configuration. Follow [Windows school setup](docs/WINDOWS_SCHOOL_SETUP.m
 The public hostname exposes only the student portal; staff, scanner, printer and
 model endpoints remain private. DNS, certificates, router forwarding and external
 phone access need verification at the school.
+
+### Class registers and report cards
+
+Open **Class registers** on the dashboard. Import `.xlsx` or `.csv` with a `Name`
+(or `Nom`) column and an optional `Code` column, paste one name per line, or select
+a register photo/PDF for local reading. Check and edit the preview, then press
+**Confirm class list**. An existing Margin student code reuses that record; a
+blank code creates a new record. Names never merge automatically. Legacy `.xls`
+files must be saved as `.xlsx` or CSV first.
+
+Use the up/down buttons to arrange register order. Removing a student keeps their
+exam history; the record can be restored. Exam membership is preserved once scans
+arrive, so later class transfers do not alter an old exam's attendance. Teachers
+can manage their own classes; training consent remains an admin decision.
+
+**Results → School report cards** sets the term and exports an Excel workbook in
+register order, with question marks, totals, percentages and status. Absent and
+unconfirmed students have blank marks. The results screen remains printable and
+shows question averages and the share scoring zero. Student history is available
+from the register and, for released work, from the student's own portal.

@@ -6,7 +6,7 @@ On-premise AI marking assistant for secondary schools. Full requirements: `PROJE
 The owner approved the eight-item end-to-end blueprint and dependencies on 2026-10-16,
 with Windows as the school deployment target. The blueprint supersedes the original
 brief's portal exclusion, pseudonymous-only printed sheets and phase-stop rule.
-Build items 1–5 are committed; item 6 is in progress. Document import currently
+Build items 1–6 are committed; item 7 is in progress. Document import currently
 supports PDF/DOCX/images/text, with legacy binary DOC conversion still unavailable.
 Continue the approved build order without requesting approval between items.
 Run `python scripts/check.py` in full, read its output and commit after each item.

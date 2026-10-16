@@ -38,6 +38,7 @@ from app.errors import ConflictError, NotFoundError
 from app.pdf.runner import RenderError, render_pdf
 from app.services import audit, jobs, page_check
 from app.services.access import get_visible_exam, visible_exams
+from app.services.roster import class_students, eligible_student, exam_students
 from app.services.splitting import SheetOwner, place_pages
 
 logger = logging.getLogger(__name__)
@@ -394,7 +395,10 @@ def students_without_scripts(db: Session, actor: User, exam_id: int) -> list[Stu
         db.scalars(
             select(Student)
             .where(
-                Student.class_id == exam.class_id,
+                Student.id.in_(
+                    [s.id for s in exam_students(db, exam)]
+                    + [s.id for s in class_students(db, exam.class_id)]
+                ),
                 Student.id.not_in(with_scripts),
                 Student.id.not_in(
                     select(ExamAbsence.student_id).where(ExamAbsence.exam_id == exam.id)
@@ -495,7 +499,7 @@ def assign_pages(
 ) -> Script:
     found = _exam_pages(db, actor, exam_id, page_ids)
     student = db.get(Student, student_id)
-    if student is None or student.class_id != found.exam.class_id:
+    if student is None or not eligible_student(found.exam, student):
         raise NotFoundError("Student")
     if any(p.state == PageState.ASSIGNED for p in found.pages):
         raise ConflictError("Some pages are already in a script", code="page.already_assigned")

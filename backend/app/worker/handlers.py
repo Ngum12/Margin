@@ -53,6 +53,7 @@ from app.services import audit, exports, jobs, transcripts, uploads
 from app.services.ai_marking import exam_spec, mark_key, update_exam_progress
 from app.services.answer_sheets import require_complete
 from app.services.identification import identify_spare
+from app.services.roster import extract as extract_roster
 from app.services.scheme_documents import extract as extract_scheme
 from app.subjects.registry import SubjectConfig, get_registry
 
@@ -503,6 +504,7 @@ def export_dataset(
 
 
 HANDLERS = {
+    JobType.EXTRACT_ROSTER: extract_roster,
     JobType.EXTRACT_SCHEME: extract_scheme,
     JobType.IDENTIFY_SPARE: identify_spare,
     JobType.PROCESS_UPLOAD: process_upload,
